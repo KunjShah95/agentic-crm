@@ -1,0 +1,337 @@
+// Agentic CRM — Phase 1 data model
+// Prisma 7 (prisma-client generator, driver adapters)
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum ActivityType {
+  NOTE
+  EMAIL
+  CALL
+  MEETING
+  TASK
+}
+
+model Workspace {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  createdAt DateTime @default(now())
+
+  members           WorkspaceMember[]
+  invites           WorkspaceInvite[]
+  contacts          Contact[]
+  deals             Deal[]
+  orgs              Organization[]
+  stages            PipelineStage[]
+  activities        Activity[]
+  tags              Tag[]
+  subscription      Subscription?
+  socialConnections SocialConnection[]
+  socialEvents      SocialEvent[]
+  usageEvents       UsageEvent[]
+  usageCounters     UsageCounter[]
+
+  @@index([slug])
+}
+
+model Subscription {
+  id               String    @id @default(cuid())
+  workspaceId      String    @unique
+  stripeCustomerId String    @unique
+  stripeSubId      String?   @unique
+  plan             String
+  status           String
+  currentPeriodEnd DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model PlanLimits {
+  plan              String @id
+  maxSeats          Int
+  maxContacts       Int
+  maxSocialAccounts Int
+  msgPerMonth       Int
+  webhookPerDay     Int
+  agentCreditsPerMo Int      @default(0)
+}
+
+model SocialConnection {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  provider          String
+  externalAccountId String
+  displayName       String?
+  accessTokenEnc    String
+  refreshTokenEnc   String?
+  expiresAt         DateTime?
+  status            String    @default("active")
+  lastSyncAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, provider, externalAccountId])
+  @@index([provider, status])
+}
+
+model SocialEvent {
+  id          String    @id
+  workspaceId String
+  provider    String
+  type        String
+  payload     Json
+  dedupeKey   String    @unique
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace  Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activities Activity[]
+
+  @@index([workspaceId, provider])
+}
+
+model UsageEvent {
+  id          String   @id @default(cuid())
+  workspaceId String
+  kind        String
+  count       Int      @default(1)
+  createdAt   DateTime @default(now())
+  meta        Json?
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, kind, createdAt])
+}
+
+model UsageCounter {
+  workspaceId String
+  kind        String
+  period      String
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, kind, period])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  passwordHash String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+
+  memberships   WorkspaceMember[]
+  ownedContacts Contact[]
+  ownedDeals    Deal[]
+}
+
+model WorkspaceMember {
+  workspaceId String
+  userId      String
+  role        Role     @default(MEMBER)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([workspaceId, userId])
+  @@index([userId])
+}
+
+model WorkspaceInvite {
+  id          String   @id @default(cuid())
+  workspaceId String
+  email       String
+  role        Role
+  token       String   @unique
+  expiresAt   DateTime
+  accepted    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([email])
+}
+
+model Contact {
+  id             String   @id @default(cuid())
+  workspaceId    String
+  firstName      String
+  lastName       String
+  email          String?
+  phone          String?
+  linkedinUrl    String?
+  jobTitle       String?
+  organizationId String?
+  ownerId        String?
+  handles        Json?
+  createdBy      String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  owner        User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deals        Deal[]
+  activities   Activity[]
+  tags         ContactTag[]
+
+  @@index([workspaceId])
+  @@index([organizationId])
+  @@index([ownerId])
+  @@index([email])
+  @@index([createdAt])
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  domain      String?
+  industry    String?
+  size        String?
+  website     String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+  deals     Deal[]
+
+  @@index([workspaceId])
+  @@index([domain])
+}
+
+model PipelineStage {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  order       Int
+  color       String   @default("#6366f1")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deals     Deal[]
+
+  @@index([workspaceId])
+  @@unique([workspaceId, order])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  workspaceId       String
+  title             String
+  contactId         String?
+  organizationId    String?
+  stageId           String
+  value             Float?
+  currency          String    @default("USD")
+  probability       Int?
+  expectedCloseDate DateTime?
+  ownerId           String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  owner        User          @relation(fields: [ownerId], references: [id], onDelete: Restrict)
+  stage        PipelineStage @relation(fields: [stageId], references: [id], onDelete: Restrict)
+  workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  activities   Activity[]
+  tags         DealTag[]
+
+  @@index([workspaceId])
+  @@index([stageId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model Activity {
+  id            String       @id @default(cuid())
+  workspaceId   String
+  type          ActivityType
+  contactId     String?
+  dealId        String?
+  body          String?
+  scheduledAt   DateTime?
+  completedAt   DateTime?
+  assigneeId    String?
+  source        String       @default("manual")
+  socialEventId String?
+  createdBy     String
+  createdAt     DateTime     @default(now())
+
+  contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  socialEvent SocialEvent? @relation(fields: [socialEventId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([dealId])
+  @@index([assigneeId])
+  @@index([createdAt])
+  @@index([source])
+  @@index([socialEventId])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  color       String   @default("#64748b")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contacts  ContactTag[]
+  deals     DealTag[]
+
+  @@index([workspaceId])
+}
+
+model ContactTag {
+  contactId String
+  tagId     String
+  createdAt DateTime @default(now())
+
+  contact Contact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([contactId, tagId])
+}
+
+model DealTag {
+  dealId String
+  tagId  String
+  createdAt DateTime @default(now())
+
+  deal Deal @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([dealId, tagId])
+}
