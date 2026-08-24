@@ -1,6 +1,22 @@
 import { db } from "@/lib/db"
 import { requireQuota, periodKeyFor } from "@/modules/billing/quota"
 import { Prisma } from "@/lib/generated/prisma/client"
+import {
+  checkRateLimit,
+  shouldRequeue as queueShouldRequeue,
+  getRetryDelay as queueGetRetryDelay,
+  RateLimitedError as QueueRateLimitedError,
+  DLQ_MAX_ATTEMPTS as QUEUE_DLQ_MAX,
+  moveToDLQ,
+  handleJobFailure,
+} from "@/modules/social/queue"
+
+// Re-export rate-limit / DLQ helpers so tests can import from worker
+export const DLQ_MAX_ATTEMPTS = QUEUE_DLQ_MAX
+export const RateLimitedError = QueueRateLimitedError
+export const shouldRequeue = queueShouldRequeue
+export const getRetryDelay = queueGetRetryDelay
+export { checkRateLimit, moveToDLQ, handleJobFailure }
 
 export type IngestSocialEventParams = {
   workspaceId: string
@@ -236,7 +252,11 @@ export async function ingestSocialEvent(params: IngestSocialEventParams): Promis
     // ignore
   }
 
-  // 3) Quota gate — must pass before creating activity
+  // 3) Rate limit: token bucket per provider:workspaceId (Redis or in-memory fallback)
+  // On 429, throws RateLimitedError which caller (queue worker) should requeue with delay = retryAfter
+  await checkRateLimit(normalizedProvider, workspaceId)
+
+  // 3b) Quota gate — must pass before creating activity
   // Use requireQuota which checks UsageCounter vs PlanLimits
   await requireQuota(workspaceId, "social_messages")
 

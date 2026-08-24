@@ -42,6 +42,26 @@ describe("verifyXWebhook", () => {
   })
 })
 
+describe("Rate limit backoff", () => {
+  it("requeues on 429 with delay", async () => {
+    const { shouldRequeue } = await import("@/worker/social-ingest")
+    expect(shouldRequeue({ status: 429 })).toBe(true)
+    expect(shouldRequeue({ status: 500 })).toBe(false)
+    expect(shouldRequeue({ status: 429, retryAfter: 30 })).toBe(true)
+  })
+  it("computes retry delay from retryAfter header", async () => {
+    const { getRetryDelay } = await import("@/worker/social-ingest")
+    expect(getRetryDelay({ status: 429, retryAfter: 5 }, 0)).toBe(5000)
+    expect(getRetryDelay({ status: 429 }, 1)).toBeGreaterThan(0)
+  })
+  it("queue DLQ helpers exist", async () => {
+    const q = await import("@/modules/social/queue")
+    expect(typeof q.shouldRequeue).toBe("function")
+    expect(typeof q.getRetryDelay).toBe("function")
+    expect(q.DLQ_MAX_ATTEMPTS).toBe(5)
+  })
+})
+
 describe("SocialConnection encrypt", () => {
   it("encrypts and decrypts", async () => {
     const { encrypt, decrypt } = await import("@/modules/social/connections")
