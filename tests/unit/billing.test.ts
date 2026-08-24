@@ -106,3 +106,13 @@ describe("PlanLimits", () => {
     }
   })
 })
+
+describe("mapStripePlan", () => {
+  it("maps Stripe subscription.updated to plan", async () => {
+    const { mapStripePlan } = await import("@/modules/billing/stripe")
+    expect(mapStripePlan("price_pro_xxx")).toBe("pro")
+    expect(mapStripePlan("price_scale_xxx")).toBe("scale")
+    expect(mapStripePlan("price_unknown")).toBe("free")
+    expect(mapStripePlan("")).toBe("free")
+  })
+})
