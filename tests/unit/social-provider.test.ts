@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest"
-import { XDirectProvider } from "@/modules/social/providers/x"
+import crypto from "crypto"
+import { XDirectProvider, verifyXWebhook } from "@/modules/social/providers/x"
 
 describe("SocialProvider normalize", () => {
   it("normalizes X DM", () => {
@@ -11,6 +12,33 @@ describe("SocialProvider normalize", () => {
       },
     } as unknown as never)
     expect(result.body).toBe("hi")
+  })
+})
+
+describe("verifyXWebhook", () => {
+  it("rejects bad signature", () => {
+    const prev = process.env.X_CONSUMER_SECRET
+    process.env.X_CONSUMER_SECRET = "test_secret_123"
+    const rawBody = JSON.stringify({ event: "test" })
+    const badSig = "sha256=invalidsignature0000000000000000000000000000"
+    expect(verifyXWebhook({ headers: { "x-twitter-webhooks-signature": badSig }, rawBody })).toBe(false)
+    // valid signature should return true
+    const validSig = `sha256=${crypto.createHmac("sha256", "test_secret_123").update(rawBody).digest("base64")}`
+    expect(verifyXWebhook({ headers: { "x-twitter-webhooks-signature": validSig }, rawBody })).toBe(true)
+    // missing rawBody / no verifiable material -> false
+    expect(verifyXWebhook({ headers: {}, body: {} })).toBe(false)
+    if (prev === undefined) delete process.env.X_CONSUMER_SECRET
+    else process.env.X_CONSUMER_SECRET = prev
+  })
+
+  it("rejects CRC with bad signature header using timingSafeEqual", () => {
+    const prev = process.env.X_CONSUMER_SECRET
+    process.env.X_CONSUMER_SECRET = "crc_secret"
+    const crc = "test_crc_token"
+    const bad = "sha256=badbadbadbadbadbadbadbadbadbadbadbadbadbad"
+    expect(verifyXWebhook({ headers: { "x-twitter-webhooks-signature": bad }, query: { crc_token: crc } })).toBe(false)
+    if (prev === undefined) delete process.env.X_CONSUMER_SECRET
+    else process.env.X_CONSUMER_SECRET = prev
   })
 })
 
