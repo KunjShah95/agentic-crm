@@ -41,6 +41,17 @@ export async function POST(req: Request) {
   }
   if (!priceId) priceId = process.env.STRIPE_PRICE_PRO ?? "price_pro_xxx"
 
+  // Validate priceId allowlist: only env-configured prices or price_ prefix
+  {
+    const allowed = new Set(
+      [process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_SCALE].filter(Boolean) as string[]
+    )
+    const isAllowed = allowed.has(priceId) || priceId.startsWith("price_")
+    if (!isAllowed) {
+      return NextResponse.json({ error: "Invalid priceId" }, { status: 400 })
+    }
+  }
+
   const existing = await db.subscription.findUnique({ where: { workspaceId } })
   const customerId = existing?.stripeCustomerId ?? null
 
