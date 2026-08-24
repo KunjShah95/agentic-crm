@@ -12,3 +12,10 @@ test.describe("Billing", () => {
     await expect(page.getByText(/billing|plan/i).first()).toBeVisible()
   })
 })
+
+test.describe("Social", () => {
+  test("social settings shows connect buttons", async ({ page }) => {
+    await page.goto("/testws/settings/social")
+    await expect(page.getByText(/connect x/i)).toBeVisible()
+  })
+})
