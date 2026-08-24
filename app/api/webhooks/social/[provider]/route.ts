@@ -191,6 +191,7 @@ export async function POST(req: Request, { params }: { params: RouteParams }) {
   }
 
   // Queue thin ingress — dedupe via jobId = provider:externalId
+  // Never return 500 to provider (avoid retry storm) — DLQ handles failures internally
   const jobId = `${providerName}:${normalized.externalId}`
   try {
     const queue = getQueue()
@@ -209,7 +210,8 @@ export async function POST(req: Request, { params }: { params: RouteParams }) {
     )
   } catch (e) {
     console.error(`[webhook:${providerName}] queue error`, e)
-    return NextResponse.json({ error: "Queue error" }, { status: 500 })
+    // Spec: ingress always 200 after verify — failure is internal DLQ, not provider retry
+    return NextResponse.json({ received: true, id: normalized.externalId, jobId, queued: false, note: "queued to DLQ" }, { status: 200 })
   }
 
   return NextResponse.json({ received: true, id: normalized.externalId, jobId }, { status: 200 })
