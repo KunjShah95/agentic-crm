@@ -124,3 +124,5 @@ export const workspaceSchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Slug can only contain lowercase letters, numbers and dashes")
     .max(48),
 })
+
+export * from "./validators/re"

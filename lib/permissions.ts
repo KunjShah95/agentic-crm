@@ -29,6 +29,13 @@ export function canManageBilling(role: Role) {
   return role === "OWNER" || role === "ADMIN"
 }
 
+export function canManageInventory(role: Role) {
+  return role === "OWNER" || role === "ADMIN"
+}
+export function canViewInventory(role: Role) {
+  return true
+}
+
 export type Membership = {
   role: Role
   workspaceId: string
