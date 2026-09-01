@@ -77,8 +77,7 @@ model Workspace {
   payments          Payment[]
   documentTemplates DocumentTemplate[]
   generatedDocuments GeneratedDocument[]
-  webhookEvents     WebhookEvent[]
-  auditLogs         AuditLog[]
+  webhookEvents WebhookEvent[]
 
   @@index([slug])
 }
@@ -258,37 +257,15 @@ model GeneratedDocument {
 }
 
 model WebhookEvent {
-  id          String    @id @default(cuid())
+  id String @id @default(cuid())
   workspaceId String?
-  source      String
-  payload     Json
-  dedupeKey   String    @unique
-  status      String    @default("PENDING")
-  error       String?
-  attempts    Int       @default(0)
+  source String
+  payload Json
+  dedupeKey String @unique
   processedAt DateTime?
-  createdAt   DateTime  @default(now())
-
-  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId, source])
-  @@index([status])
-}
-
-model AuditLog {
-  id          String   @id @default(cuid())
-  workspaceId String
-  actorId     String?
-  action      String
-  entity      String
-  entityId    String?
-  meta        Json?
-  createdAt   DateTime @default(now())
-
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-
-  @@index([workspaceId, entity])
-  @@index([createdAt])
+  createdAt DateTime @default(now())
+  workspace Workspace? @relation(fields:[workspaceId], references:[id], onDelete:Cascade)
+  @@index([source, processedAt])
 }
 
 model SocialConnection {
