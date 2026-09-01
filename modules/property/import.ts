@@ -23,6 +23,8 @@ export async function importUnitsCsv({
   const s = await auth()
   if (!s?.user?.id) throw new Error("Unauthorized")
   await requireWorkspaceMember(workspaceId, s.user.id)
+  const project = await db.project.findFirst({ where: { id: projectId, workspaceId } })
+  if (!project) throw new Error("Project not found in this workspace")
   const rows = parseUnitsCsv(csv)
   let created = 0
   for (const r of rows) {
