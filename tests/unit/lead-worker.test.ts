@@ -7,7 +7,6 @@ const db = vi.hoisted(() => ({
   deal: { create: vi.fn(), count: vi.fn() },
   activity: { create: vi.fn() },
   workspaceMember: { findMany: vi.fn() },
-  auditLog: { create: vi.fn() },
 }))
 vi.mock("@/lib/db", () => ({ db }))
 
@@ -26,7 +25,6 @@ beforeEach(() => {
   db.deal.count.mockResolvedValue(0)
   db.activity.create.mockResolvedValue({ id: "a1" })
   db.workspaceMember.findMany.mockResolvedValue([{ userId: "u1", role: "MEMBER" }])
-  db.auditLog.create.mockResolvedValue({ id: "al1" })
 })
 
 describe("processLead", () => {

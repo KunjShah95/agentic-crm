@@ -36,7 +36,7 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
   }
   if (!existing) {
     await db.webhookEvent.create({
-      data: { workspaceId, source: lead.source, payload: lead.raw as object, dedupeKey: lead.dedupeKey, status: "PROCESSING", attempts: 1 },
+      data: { workspaceId, source: lead.source, payload: lead.raw as object, dedupeKey: lead.dedupeKey },
     })
   }
 
@@ -149,20 +149,26 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
       void acked
     }
 
-    // 7. Consent audit trail (DPDP)
-    await db.auditLog.create({
-      data: { workspaceId, actorId: null, action: "LEAD_INGESTED", entity: "Contact", entityId: contact.id, meta: { source: lead.source, score } },
+    // 7. Consent audit trail (DPDP) — logged as a system Activity on the timeline.
+    await db.activity.create({
+      data: {
+        workspaceId,
+        type: "NOTE",
+        contactId: contact.id,
+        body: `Consent recorded · lead ingested from ${lead.source}`,
+        source: "system",
+        channel: "AUDIT",
+        createdBy: "system",
+      },
     })
 
-    // 8. Mark event processed
-    await db.webhookEvent.update({ where: { dedupeKey: lead.dedupeKey }, data: { status: "DONE", processedAt: new Date(), workspaceId } })
+    // 8. Mark event processed (processedAt acts as the DONE marker; a null
+    //    processedAt means the event can be safely replayed).
+    await db.webhookEvent.update({ where: { dedupeKey: lead.dedupeKey }, data: { processedAt: new Date(), workspaceId } })
 
     return { deduped: false, contactId: contact.id, dealId, score }
   } catch (err) {
-    await db.webhookEvent.update({
-      where: { dedupeKey: lead.dedupeKey },
-      data: { status: "FAILED", error: err instanceof Error ? err.message : String(err) },
-    }).catch(() => {})
+    // Leave processedAt null so the event is replayable; nothing else to persist.
     throw err
   }
 }
