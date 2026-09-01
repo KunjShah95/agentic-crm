@@ -6,6 +6,7 @@ import {
   Building2,
   CheckSquare,
   KanbanSquare,
+  MessageSquare,
   Search,
   Settings,
   Share2,
@@ -21,6 +22,7 @@ const NAV = [
   { href: "deals", label: "Deals", icon: KanbanSquare },
   { href: "organizations", label: "Organizations", icon: Building2 },
   { href: "projects", label: "Projects", icon: Building2 },
+  { href: "inbox", label: "Inbox", icon: MessageSquare },
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "search", label: "Search", icon: Search },
 ]
