@@ -10,6 +10,8 @@ export async function generateCostSheet({ workspaceId, data }: { workspaceId: st
   if (!s?.user?.id) throw new Error("Unauthorized")
   await requireWorkspaceMember(workspaceId, s.user.id)
   const p = costSheetSchema.parse(data) as any
+  const unit = await db.unit.findFirst({ where: { id: p.unitId, workspaceId } })
+  if (!unit) throw new Error("Unit not found in this workspace")
   const total = calcTotal({ basePrice: p.basePrice, gst: p.gst, stampDuty: p.stampDuty, otherCharges: p.otherCharges })
   const existing = await db.costSheet.count({ where: { unitId: p.unitId } })
   const sheet = await db.costSheet.create({ data: { ...p, workspaceId, total, version: existing + 1, otherCharges: p.otherCharges ?? {} } })
