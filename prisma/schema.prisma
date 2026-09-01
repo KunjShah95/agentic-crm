@@ -24,12 +24,39 @@ enum ActivityType {
   TASK
 }
 
+enum UnitStatus {
+  AVAILABLE
+  HOLD
+  BOOKED
+  SOLD
+}
+
+enum UnitConfig {
+  BHK1
+  BHK2
+  BHK3
+  BHK4
+  VILLA
+  PLOT
+  SHOP
+  OFFICE
+}
+
+enum DocumentKind {
+  DEMAND_LETTER
+  ALLOTMENT
+  BOOKING_FORM
+  RECEIPT
+  POSSESSION
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   name      String
   slug      String   @unique
   plan      String   @default("free")
   createdAt DateTime @default(now())
+  settingsJson Json?
 
   members           WorkspaceMember[]
   invites           WorkspaceInvite[]
@@ -44,6 +71,12 @@ model Workspace {
   socialEvents      SocialEvent[]
   usageEvents       UsageEvent[]
   usageCounters     UsageCounter[]
+  projects          Project[]
+  units             Unit[]
+  costSheets        CostSheet[]
+  payments          Payment[]
+  documentTemplates DocumentTemplate[]
+  generatedDocuments GeneratedDocument[]
 
   @@index([slug])
 }
@@ -72,6 +105,154 @@ model PlanLimits {
   msgPerMonth       Int
   webhookPerDay     Int
   agentCreditsPerMo Int      @default(0)
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  reraNo      String?
+  address     String?
+  city        String   @default("Ahmedabad")
+  type        String   @default("RESIDENTIAL")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  towers      Tower[]
+  units       Unit[]
+  plans       PaymentPlan[]
+  @@index([workspaceId])
+  @@unique([workspaceId, name])
+}
+
+model Tower {
+  id        String   @id @default(cuid())
+  projectId String
+  name      String
+  floors    Int      @default(10)
+  createdAt DateTime @default(now())
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  floorsRel Floor[]
+  @@index([projectId])
+}
+
+model Floor {
+  id      String @id @default(cuid())
+  towerId String
+  number  Int
+  tower   Tower  @relation(fields: [towerId], references: [id], onDelete: Cascade)
+  units   Unit[]
+  @@unique([towerId, number])
+}
+
+model Unit {
+  id         String     @id @default(cuid())
+  workspaceId String
+  projectId  String
+  floorId    String?
+  unitNo     String
+  config     UnitConfig @default(BHK2)
+  area       Float?
+  carpetArea Float?
+  builtUp    Float?
+  facing     String?
+  price      Float?
+  status     UnitStatus @default(AVAILABLE)
+  holdUntil  DateTime?
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+  workspace  Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  project    Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  floor      Floor?    @relation(fields: [floorId], references: [id], onDelete: SetNull)
+  costSheets CostSheet[]
+  deals      Deal[]
+  @@index([workspaceId])
+  @@index([projectId])
+  @@index([status])
+  @@unique([projectId, unitNo])
+}
+
+model CostSheet {
+  id           String   @id @default(cuid())
+  workspaceId  String
+  unitId       String
+  dealId       String?
+  version      Int      @default(1)
+  basePrice    Float
+  gst          Float    @default(0)
+  stampDuty    Float    @default(0)
+  otherCharges Json?
+  total        Float
+  currency     String   @default("INR")
+  createdAt    DateTime @default(now())
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  unit         Unit     @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  deal         Deal?    @relation("CostSheetDeal", fields: [dealId], references: [id], onDelete: SetNull)
+  dealsViaCostSheet Deal[] @relation("DealCostSheet")
+  @@index([workspaceId])
+  @@index([unitId])
+}
+
+model PaymentPlan {
+  id          String   @id @default(cuid())
+  projectId   String
+  name        String
+  createdAt   DateTime @default(now())
+  project     Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  milestones  PaymentMilestone[]
+  deals       Deal[]
+  @@index([projectId])
+}
+model PaymentMilestone {
+  id       String @id @default(cuid())
+  planId   String
+  label    String
+  pct      Float
+  order    Int
+  plan     PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  @@index([planId])
+}
+model Payment {
+  id          String   @id @default(cuid())
+  workspaceId String
+  dealId      String
+  milestoneId String?
+  amount      Float
+  dueDate     DateTime?
+  status      String   @default("DUE")
+  receiptNo   String?
+  paidAt      DateTime?
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deal        Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  @@index([workspaceId])
+  @@index([dealId])
+}
+model DocumentTemplate {
+  id          String       @id @default(cuid())
+  workspaceId String
+  kind        DocumentKind
+  name        String
+  bodyHtml    String
+  reraAligned Boolean @default(true)
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  generatedDocuments GeneratedDocument[]
+  @@index([workspaceId, kind])
+}
+model GeneratedDocument {
+  id          String   @id @default(cuid())
+  workspaceId String
+  dealId      String?
+  unitId      String?
+  templateId  String
+  renderedHtml String
+  pdfUrl      String?
+  eSignStatus String   @default("PENDING")
+  createdAt   DateTime @default(now())
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  template    DocumentTemplate @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  @@index([workspaceId])
 }
 
 model SocialConnection {
@@ -192,6 +373,12 @@ model Contact {
   createdBy      String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  leadSource     String?
+  leadScore      Int?
+  requirementsJson Json?
+  kycJson        Json?
+  consentAt      DateTime?
+  optedOut      Boolean  @default(false)
 
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   owner        User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
@@ -255,6 +442,10 @@ model Deal {
   ownerId           String
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  unitId            String?
+  paymentPlanId     String?
+  bookingStage      String?
+  costSheetId       String?
 
   contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -263,6 +454,11 @@ model Deal {
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   activities   Activity[]
   tags         DealTag[]
+  unit         Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  paymentPlan  PaymentPlan?  @relation(fields: [paymentPlanId], references: [id], onDelete: SetNull)
+  costSheet    CostSheet?    @relation("DealCostSheet", fields: [costSheetId], references: [id], onDelete: SetNull)
+  payments     Payment[]
+  costSheetsAsDeal CostSheet[] @relation("CostSheetDeal")
 
   @@index([workspaceId])
   @@index([stageId])
@@ -285,6 +481,9 @@ model Activity {
   socialEventId String?
   createdBy     String
   createdAt     DateTime     @default(now())
+  channel       String?
+  templateId    String?
+  direction     String?
 
   contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
   deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
