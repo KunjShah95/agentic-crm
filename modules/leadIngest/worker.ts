@@ -9,6 +9,7 @@ import { db } from "@/lib/db"
 import { normalizeLead } from "./normalize"
 import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
+import { sendWhatsApp, renderWaTemplate } from "@/modules/whatsapp/adapter"
 
 export type ProcessLeadInput = {
   workspaceId: string
@@ -62,6 +63,7 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     let contact = orConds.length
       ? await db.contact.findFirst({ where: { workspaceId, OR: orConds } })
       : null
+    const isNewContact = !contact
 
     if (!contact) {
       contact = await db.contact.create({
@@ -120,6 +122,32 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
         createdBy: "system",
       },
     })
+
+    // 6b. Auto-ack via WhatsApp for brand-new leads with a phone (opt-in gate)
+    let acked = false
+    if (isNewContact && lead.phone && !contact.optedOut) {
+      const body = renderWaTemplate("lead_ack", {
+        name: lead.firstName,
+        project: lead.project ?? "our project",
+        workspace: "our team",
+      })
+      const res = await sendWhatsApp({ to: lead.phone, body })
+      await db.activity.create({
+        data: {
+          workspaceId,
+          type: "NOTE",
+          contactId: contact.id,
+          dealId: dealId ?? null,
+          body,
+          source: "system",
+          channel: "WHATSAPP",
+          direction: "OUT",
+          createdBy: "system",
+        },
+      })
+      acked = res.mock ? false : true
+      void acked
+    }
 
     // 7. Consent audit trail (DPDP)
     await db.auditLog.create({
