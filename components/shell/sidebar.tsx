@@ -20,6 +20,7 @@ const NAV = [
   { href: "contacts", label: "Contacts", icon: Users },
   { href: "deals", label: "Deals", icon: KanbanSquare },
   { href: "organizations", label: "Organizations", icon: Building2 },
+  { href: "projects", label: "Projects", icon: Building2 },
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "search", label: "Search", icon: Search },
 ]
