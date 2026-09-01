@@ -7,7 +7,6 @@ const db = vi.hoisted(() => ({
   deal: { create: vi.fn(), count: vi.fn() },
   activity: { create: vi.fn() },
   workspaceMember: { findMany: vi.fn() },
-  auditLog: { create: vi.fn() },
 }))
 vi.mock("@/lib/db", () => ({ db }))
 
@@ -25,7 +24,6 @@ beforeEach(() => {
   db.deal.count.mockResolvedValue(0)
   db.activity.create.mockResolvedValue({ id: "a1" })
   db.workspaceMember.findMany.mockResolvedValue([{ userId: "u1" }, { userId: "u2" }])
-  db.auditLog.create.mockResolvedValue({ id: "al1" })
 })
 
 describe("lead ingest pipeline", () => {
@@ -37,14 +35,13 @@ describe("lead ingest pipeline", () => {
     })
     expect(r.deduped).toBe(false)
     expect(r.score).toBeGreaterThan(50)
-    // marks event processed
-    expect(db.webhookEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "DONE" }) }))
-    // audit trail written
-    expect(db.auditLog.create).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ action: "LEAD_INGESTED" }) }))
-    // auto-ack: an outbound WHATSAPP activity exists alongside the inbound LEAD activity
+    // marks event processed (processedAt = DONE marker)
+    expect(db.webhookEvent.update).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ processedAt: expect.any(Date) }) }))
+    // auto-ack + inbound lead + consent audit all land on the timeline
     const channels = db.activity.create.mock.calls.map((c) => c[0].data.channel)
     expect(channels).toContain("LEAD")
     expect(channels).toContain("WHATSAPP")
+    expect(channels).toContain("AUDIT")
   })
 
   it("second identical webhook is deduped", async () => {
