@@ -249,7 +249,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <span className="flex size-8 items-center justify-center rounded-[9px] bg-[#0A0E1E] text-white"><span className="text-[16px] leading-none">◐</span></span>
               <span className="text-[13px] font-semibold tracking-[0.18em]">LOOP</span>
               <span className="hidden text-[13px] font-light tracking-[0.12em] text-[#6E7488] sm:inline">CRM</span>
-              <span className="ml-1 hidden rounded-full border border-[#E9EAF2] bg-white px-2 py-0.5 text-[10px] font-medium tracking-widest text-[#6E7488] lg:inline">PHASE 1 — LIVE</span>
             </Link>
             <nav className="hidden items-center gap-6 text-[13px] font-medium tracking-tight md:flex">
               <a href="#product" className="text-[#5A6075] hover:text-[#0E1220] transition-colors">Product</a>
