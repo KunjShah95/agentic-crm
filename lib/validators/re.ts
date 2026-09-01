@@ -46,3 +46,5 @@ export const updateUnitStatusSchema = z.object({
   status: z.enum(["AVAILABLE", "HOLD", "BOOKED", "SOLD"]),
   holdUntil: z.coerce.date().optional().nullable(),
 })
+export const webhookPayloadSchema = z.object({ source: z.string().min(1), externalId: z.string().min(1), payload: z.record(z.string(), z.any()) })
+export const whatsappInboundSchema = z.object({ from: z.string().min(1), text: z.string().optional(), timestamp: z.coerce.date().optional() })
