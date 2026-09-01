@@ -307,10 +307,10 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         <div className="relative mx-auto max-w-[1280px] px-6 lg:px-8">
           <div className="grid gap-10 pb-10 pt-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-8 lg:pb-16 lg:pt-14">
             <div className="relative">
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#E9EAF2] bg-white px-3 py-1.5 shadow-sm">
+              {/* <div className="inline-flex items-center gap-2 rounded-full border border-[#E9EAF2] bg-white px-3 py-1.5 shadow-sm">
                 <span className="size-1.5 rounded-full bg-[#FF2E1F] animate-pulse" />
                 <span className="font-mono text-[11px] font-medium tracking-[0.14em] text-[#5A6075]">FOR SOLO FOUNDERS · FREELANCERS · SMALL TEAMS</span>
-              </div>
+              </div> */}
               <h1 className="mt-6 font-[Instrument_Serif] text-[42px] font-normal leading-[0.95] tracking-[-0.03em] text-[#0A0E1E] sm:text-[56px] lg:text-[64px]">
                 <span className="block">Your pipeline,</span>
                 <span className="block italic font-normal text-[#2D4BFF]">finally in a loop.</span>
