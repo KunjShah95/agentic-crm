@@ -41,6 +41,13 @@ import {
   Gauge,
   CreditCard,
   ReceiptText,
+  MapPin,
+  Hammer,
+  FileCheck,
+  Navigation,
+  Phone,
+  Handshake,
+  MessageSquare,
 } from "lucide-react"
 
 // ——— MOCK DATA (kept, workspace-scoped loop) ———
@@ -50,68 +57,68 @@ type ActivityItem = { id: string; kind: "stage" | "call" | "task" | "note"; titl
 
 const WORKSPACES = {
   acme: {
-    name: "Acme",
+    name: "Shilp Infra",
     slug: "acme",
-    letter: "A",
-    color: "#0A0E1E",
-    pipelineBase: 412000,
+    letter: "S",
+    color: "#0B1C3D",
+    pipelineBase: 482000000,
     deals: [
-      { id: "1", title: "Northstar — Seed", value: 42000, owner: "AE", stage: "lead" as Stage, org: "Northstar Labs" },
-      { id: "2", title: "Atlas Design →", value: 86000, owner: "MJ", stage: "qualified" as Stage, org: "Atlas Design" },
-      { id: "3", title: "Vela Systems", value: 128000, owner: "MJ", stage: "closing" as Stage, org: "Vela Systems" },
-      { id: "4", title: "Bloom & Co", value: 31000, owner: "PR", stage: "lead" as Stage, org: "Bloom & Co" },
-      { id: "5", title: "Orbit Finance", value: 74000, owner: "AE", stage: "qualified" as Stage, org: "Orbit" },
+      { id: "1", title: "Shaligram Lakeview 3BHK — A-301", value: 8200000, owner: "AE", stage: "lead" as Stage, org: "Shaligram Lakeview" },
+      { id: "2", title: "Safal Solis A-102 →", value: 6100000, owner: "MJ", stage: "qualified" as Stage, org: "Safal Solis" },
+      { id: "3", title: "Gala Marigold 2BHK — Hold", value: 4850000, owner: "MJ", stage: "closing" as Stage, org: "Gala Marigold" },
+      { id: "4", title: "Orchid Heights 4BHK Penthouse", value: 11200000, owner: "PR", stage: "lead" as Stage, org: "Orchid Heights" },
+      { id: "5", title: "Sangani Platinum 3BHK", value: 7400000, owner: "AE", stage: "qualified" as Stage, org: "Sangani" },
     ] as Deal[],
     activities: [
-      { id: "a1", kind: "stage", title: "Stage → Qualified", detail: "Atlas moved by Maya · 2h ago", time: "2h" },
-      { id: "a2", kind: "call", title: "Call logged", detail: "Intro call — 24 min · notes attached", time: "4h" },
-      { id: "a3", kind: "task", title: "Task · Follow up deck", detail: "Due tomorrow · assigned to you", time: "6h" },
+      { id: "a1", kind: "stage", title: "Stage → Qualified", detail: "A-102 moved by Maya · 2h ago - SG Highway visit done", time: "2h" },
+      { id: "a2", kind: "call", title: "Call logged", detail: "Site follow-up — 14 min · RERA + carpet area shared", time: "4h" },
+      { id: "a3", kind: "task", title: "Task · Demand #3", detail: "Due tomorrow · Accounts - CLP Milestone 4", time: "6h" },
     ] as ActivityItem[],
     contacts: [
-      { name: "Amelia Chen", org: "Northstar Labs", tag: "enterprise" },
-      { name: "Jonas Park", org: "Atlas Design", tag: "warm" },
-      { name: "Maya R.", org: "Vela Systems", tag: "q4" },
+      { name: "Hemal Shah", org: "Shaligram", tag: "3BHK" },
+      { name: "Parth Mehta", org: "Safal Solis", tag: "SG-Highway" },
+      { name: "Jinal Patel", org: "Gala Marigold", tag: "site-visit" },
     ],
   },
   vela: {
-    name: "Vela Systems",
+    name: "Safal Corp",
     slug: "vela",
-    letter: "V",
-    color: "#2D4BFF",
+    letter: "S",
+    color: "#1A4D2E",
     pipelineBase: 298000,
     deals: [
-      { id: "6", title: "Helios — Series A", value: 210000, owner: "AE", stage: "closing" as Stage, org: "Helios" },
-      { id: "7", title: "Draft Labs", value: 18000, owner: "PR", stage: "lead" as Stage, org: "Draft Labs" },
-      { id: "8", title: "Northwind", value: 54000, owner: "MJ", stage: "qualified" as Stage, org: "Northwind" },
-      { id: "9", title: "Cedar Health", value: 67000, owner: "AE", stage: "lead" as Stage, org: "Cedar" },
+      { id: "6", title: "Shilp Revanta 4BHK Penthouse", value: 9800000, owner: "AE", stage: "closing" as Stage, org: "Shilp Revanta" },
+      { id: "7", title: "Aavkar Heights — 2BHK", value: 4200000, owner: "PR", stage: "lead" as Stage, org: "Aavkar Heights" },
+      { id: "8", title: "Goyal Intercity — HOLD", value: 5400000, owner: "MJ", stage: "qualified" as Stage, org: "Goyal" },
+      { id: "9", title: "Adani Shantigram 3BHK", value: 6700000, owner: "AE", stage: "lead" as Stage, org: "Shantigram" },
     ] as Deal[],
     activities: [
-      { id: "b1", kind: "stage", title: "Stage → Closing", detail: "Helios moved by Alex · 30m ago", time: "30m" },
-      { id: "b2", kind: "note", title: "Note added", detail: "“Loves the loop metaphor” — Priya", time: "1h" },
-      { id: "b3", kind: "task", title: "Task · Send MSA", detail: "Due today · assigned to Priya", time: "3h" },
+      { id: "b1", kind: "stage", title: "Stage → Closing", detail: "Revanta moved by Director · 30m ago - CLP Milestone 6", time: "30m" },
+      { id: "b2", kind: "note", title: "Note added", detail: "“Possession Q2 2027” — buyer confirmation", time: "1h" },
+      { id: "b3", kind: "task", title: "Task · Send Allotment + eSign", detail: "Due today · Owner", time: "3h" },
     ] as ActivityItem[],
     contacts: [
-      { name: "Priya Desai", org: "Helios", tag: "enterprise" },
-      { name: "Leo Grant", org: "Draft Labs", tag: "warm" },
-      { name: "Samir K.", org: "Cedar Health", tag: "q4" },
+      { name: "Kaushal Vyas", org: "Shilp Revanta", tag: "4BHK" },
+      { name: "Nirav Doshi", org: "Aavkar", tag: "SG-Highway" },
+      { name: "Pooja Shah", org: "Shantigram", tag: "3BHK" },
     ],
   },
   solana: {
-    name: "Solana Studio",
+    name: "Gala Builders",
     slug: "solana",
-    letter: "S",
-    color: "#FF2E1F",
+    letter: "G",
+    color: "#8B4513",
     pipelineBase: 156000,
     deals: [
-      { id: "10", title: "Lumen — Brand", value: 26000, owner: "PR", stage: "lead" as Stage, org: "Lumen" },
-      { id: "11", title: "Folk Coffee", value: 12000, owner: "MJ", stage: "lead" as Stage, org: "Folk" },
-      { id: "12", title: "Harbor & Sons", value: 94000, owner: "AE", stage: "qualified" as Stage, org: "Harbor" },
+      { id: "10", title: "Gala Luxuria Penthouse — 4BHK", value: 14500000, owner: "PR", stage: "lead" as Stage, org: "Gala Luxuria" },
+      { id: "11", title: "Sankalp Grace — 2BHK", value: 3800000, owner: "MJ", stage: "lead" as Stage, org: "Sankalp Grace" },
+      { id: "12", title: "Harita Enclave — Booking", value: 5200000, owner: "AE", stage: "qualified" as Stage, org: "Harita" },
     ] as Deal[],
     activities: [
-      { id: "c1", kind: "call", title: "Call logged", detail: "Discovery — 18 min · Lumen", time: "1h" },
-      { id: "c2", kind: "stage", title: "Stage → Qualified", detail: "Harbor moved by You · just now", time: "now" },
+      { id: "c1", kind: "call", title: "Call logged", detail: "Discovery — 14 min · Bopal site visit inbound", time: "1h" },
+      { id: "c2", kind: "stage", title: "Stage → Qualified", detail: "Harita moved by You · just now - broker via NAAR pool", time: "now" },
     ] as ActivityItem[],
-    contacts: [{ name: "Rae Hollis", org: "Lumen", tag: "warm" }],
+    contacts: [{ name: "Riya Desai", org: "Gala Luxuria", tag: "4BHK-penthouse" }],
   },
 } as const
 
@@ -419,25 +426,42 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
 
           <div className="relative mx-auto max-w-[1280px] px-6 lg:px-8">
             <div className="grid gap-10 pb-10 pt-10 lg:grid-cols-[1.04fr_0.96fr] lg:gap-8 lg:pb-16 lg:pt-[56px]">
-              {/* LEFT — kinetic hero copy */}
+              {/* LEFT — kinetic hero copy — Ahmedabad construction story */}
               <div className="relative">
-                {/* Hero title — massive, tight tracking, gradient second line */}
-                <h1 className="mt-6 text-[44px] font-[750] leading-[0.86] tracking-[-0.04em] sm:text-[58px] lg:text-[68px]">
-                  <span className="block animate-in fade-in slide-in-from-bottom-3 duration-700 delay-100 [animation-fill-mode:both]">
-                    Your pipeline,
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-700 inline-flex items-center gap-2 rounded-full border bg-card/90 backdrop-blur px-3 py-1.5 shadow-[0_8px_24px_rgba(0,0,0,0.06)]">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="size-1.5 rounded-full bg-amber-500 animate-pulse [animation-delay:300ms]" />
+                    <span className="size-1.5 rounded-full bg-violet-500 animate-pulse [animation-delay:600ms]" />
                   </span>
-                  <span className="block animate-in fade-in slide-in-from-bottom-3 duration-700 delay-200 [animation-fill-mode:both] bg-gradient-to-r from-violet-600 via-[#3b5bff] to-cyan-500 bg-clip-text text-transparent dark:from-violet-400 dark:via-blue-400 dark:to-cyan-300">
-                    finally in a loop.
+                  <span className="font-mono text-[11px] font-medium tracking-[0.12em] text-muted-foreground">
+                    FOR AHMEDABAD BUILDERS · NAAR MEMBERS · 2–10 PROJECTS
+                  </span>
+                  <Badge variant="secondary" className="ml-1 hidden sm:inline-flex gap-1 rounded-full font-mono text-[10px] bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20">
+                    <MapPin className="size-3" /> SG HIGHWAY · BOPAL · SOUTH BOPAL
+                  </Badge>
+                </div>
+                <h1 className="mt-6 text-[42px] font-[780] leading-[0.86] tracking-[-0.04em] sm:text-[54px] lg:text-[62px]">
+                  <span className="block animate-in fade-in slide-in-from-bottom-3 duration-700 delay-100 [animation-fill-mode:both]">
+                    Ahmedabad&apos;s sites.
+                  </span>
+                  <span className="block animate-in fade-in slide-in-from-bottom-3 duration-700 delay-150 [animation-fill-mode:both] text-foreground">
+                    From foundation
+                  </span>
+                  <span className="block animate-in fade-in slide-in-from-bottom-3 duration-700 delay-200 [animation-fill-mode:both] bg-gradient-to-r from-[#0B1C3D] via-[#1A4D2E] to-[#C27803] bg-clip-text text-transparent dark:from-violet-400 dark:via-amber-300 dark:to-emerald-300">
+                    to possession — on loop.
                   </span>
                 </h1>
 
-                {/* sub + inline hint */}
-                <p className="mt-5 max-w-[520px] text-[16px] leading-7 text-muted-foreground sm:text-[17px] animate-in fade-in slide-in-from-bottom-3 duration-700 delay-300 [animation-fill-mode:both]">
-                  Loop is the CRM that behaves like your process: contacts loop into deals, deals loop into activity, activity loops back into revenue —{" "}
-                  <span className="font-medium text-foreground underline decoration-violet-500/30 decoration-2 underline-offset-4">no black hole.</span>
+                <p className="mt-5 max-w-[560px] text-[16px] leading-7 text-muted-foreground sm:text-[17px] animate-in fade-in slide-in-from-bottom-3 duration-700 delay-300 [animation-fill-mode:both]">
+                  Loop is the <span className="font-semibold text-foreground">Real Estate NA CRM</span> for NAAR: Project→Tower→Unit, cost sheet in 30s, HOLD→Booking→8 CLP milestones, RERA demand letters, GPS site visits, broker-scoped inventory —{" "}
+                  <span className="font-medium text-foreground underline decoration-amber-500/30 decoration-2 underline-offset-4">no Excel, no leakage.</span> Every query by workspaceId, every move logged as Activity.
                 </p>
+                <div className="mt-3 hidden sm:inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1.5 text-xs font-medium text-amber-800 dark:text-amber-300 border border-amber-500/15 animate-in fade-in duration-700 delay-400">
+                  <Hammer className="size-3.5" /> Built for Owners, Sales, Brokers, Site Engineers & Accounts — all on one loop
+                </div>
                 <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-violet-500/10 px-3 py-1.5 text-xs font-medium text-violet-700 dark:text-violet-300 border border-violet-500/15 animate-in fade-in duration-700 delay-500">
-                  <MousePointer2 className="size-3.5" /> Try dragging a deal in the live demo →
+                  <MousePointer2 className="size-3.5" /> Try dragging a deal — SG Highway → Bopal → loop closed
                   <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[11px] text-violet-600/70"><Play className="size-3" /> interactive</span>
                 </div>
 
@@ -477,24 +501,24 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   </span>
                 </div>
 
-                {/* social proof — avatars + trust */}
+                {/* social proof — Ahmedabad builders trust */}
                 <div className="mt-8 flex flex-wrap items-center gap-5 border-t border-border/60 pt-6 animate-in fade-in duration-700 delay-700 [animation-fill-mode:both]">
                   <div className="flex -space-x-2">
-                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=11" /><AvatarFallback>A</AvatarFallback></Avatar>
-                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=32" /><AvatarFallback>J</AvatarFallback></Avatar>
-                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=15" /><AvatarFallback>M</AvatarFallback></Avatar>
-                    <span className="flex size-8 items-center justify-center rounded-full border-2 border-background bg-foreground font-mono text-[10px] font-medium text-background shadow-sm">+2k</span>
+                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=33" /><AvatarFallback>S</AvatarFallback></Avatar>
+                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=15" /><AvatarFallback>G</AvatarFallback></Avatar>
+                    <Avatar className="size-8 border-2 border-background shadow-sm"><AvatarImage src="https://i.pravatar.cc/100?img=8" /><AvatarFallback>H</AvatarFallback></Avatar>
+                    <span className="flex size-8 items-center justify-center rounded-full border-2 border-background bg-[#0B1C3D] font-mono text-[10px] font-medium text-white shadow-sm">+40</span>
                   </div>
                   <div className="text-sm leading-tight">
-                    <div className="font-medium tracking-tight flex items-center gap-1.5">Trusted by 2,400+ pipelines <Badge variant="secondary" className="rounded-full h-5 px-1.5 font-mono text-[10px] gap-1"><Star className="size-3 fill-amber-500 text-amber-500" /> 4.9</Badge></div>
-                    <div className="flex items-center gap-1 text-muted-foreground text-xs"><span className="text-amber-500">★★★★★</span> 2.1k reviews · avg 12s to first drag</div>
+                    <div className="font-medium tracking-tight flex items-center gap-1.5">Trusted by NAAR Ahmedabad — 40+ sites <Badge variant="secondary" className="rounded-full h-5 px-1.5 font-mono text-[10px] gap-1"><MapPin className="size-3 text-emerald-600" /> SG-BOPAL</Badge></div>
+                    <div className="flex items-center gap-1 text-muted-foreground text-xs"><span className="text-amber-500">★★★★★</span> Avg cost sheet 18s · Excel-free since 2025 · gu/hi</div>
                   </div>
                   <Separator orientation="vertical" className="hidden h-9 sm:block" />
                   <div className="hidden sm:flex items-center gap-2.5 font-mono text-[11px] leading-none text-muted-foreground">
-                    <span className="flex size-8 items-center justify-center rounded-lg bg-muted border"><ShieldCheck className="size-4" /></span>
+                    <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-700 border border-emerald-500/15"><FileCheck className="size-4" /></span>
                     <div>
-                      <div className="font-medium text-foreground">SOC 2 · Postgres RLS</div>
-                      <div>Full-text search · slug-routing</div>
+                      <div className="font-medium text-foreground">RERA · DPDP · Postgres RLS</div>
+                      <div>Audit every move · CLP 8 milestones</div>
                     </div>
                   </div>
                 </div>
@@ -668,13 +692,13 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </div>
             </div>
 
-            {/* STATS BAR — 4-up bento with hover spotlight */}
+            {/* STATS BAR — construction bento, hover spotlight */}
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border bg-border shadow-sm lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-4 duration-700 delay-700">
               {[
-                { k: "AVG. SETUP", v: "4 min 12 sec", sub: "from signup to first deal", icon: Clock3, accent: "text-emerald-600" },
-                { k: "SEARCH LATENCY", v: "< 40 ms", sub: "Postgres full-text, workspace-scoped", icon: Zap, accent: "text-violet-600" },
-                { k: "ACTIVE WORKSPACES", v: "2,412", sub: "solo → 12-seat teams", icon: Users, accent: "text-blue-600" },
-                { k: "DEALS MOVED / WEEK", v: "18.4k", sub: "drag, log, close — on loop", icon: Activity, accent: "text-amber-600" },
+                { k: "COST SHEET", v: "18 sec", sub: "base+GST+stamp+others → total", icon: ReceiptText, accent: "text-emerald-600" },
+                { k: "HOLD → BOOKING", v: "48 sec", sub: "KYC + 8 CLP milestones auto", icon: Hammer, accent: "text-amber-600" },
+                { k: "SITE GPS", v: "200m", sub: "geofence verified check-in", icon: Navigation, accent: "text-blue-600" },
+                { k: "RERA DEMAND #1", v: "9 sec", sub: "shortcodes → PDF + e-sign stub", icon: FileCheck, accent: "text-violet-600" },
               ].map((s) => (
                 <div key={s.k} className="group relative overflow-hidden bg-card px-6 py-5 hover:bg-muted/40 transition-colors">
                   <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(320px_circle_at_50%_0%,rgba(139,92,246,0.08),transparent_70%)]" />
@@ -691,16 +715,16 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         <section id="product" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
-              <Badge variant="outline" className="rounded-full gap-1.5 font-mono tracking-[0.14em] text-violet-600 dark:text-violet-400 border-violet-200 dark:border-violet-800">
-                <Radar className="size-3" /> PRODUCT · THE LOOP SYSTEM
+              <Badge variant="outline" className="rounded-full gap-1.5 font-mono tracking-[0.14em] text-[#0B1C3D] dark:text-violet-300 border-[#0B1C3D]/15 dark:border-violet-800">
+                <Hammer className="size-3" /> PRODUCT · BUILT FOR CONSTRUCTION
               </Badge>
               <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[40px]">
-                Everything you track,<br /><span className="font-light italic text-muted-foreground">nothing you babysit.</span>
+                Excel ends.<br /><span className="font-light italic text-muted-foreground">The loop begins.</span>
               </h2>
             </div>
             <p className="max-w-[440px] text-[14px] leading-6 text-muted-foreground">
-              Contacts, orgs, deals, and activities aren&apos;t four tools — they&apos;re one loop. Edit anywhere, it reflects everywhere.{" "}
-              <button onClick={() => setSearchOpen(true)} className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:text-foreground underline underline-offset-4 font-medium">Try search now <ChevronRight className="size-3" /></button>
+              Project→Tower→Floor→Unit, cost sheets, CLP demand letters, broker scope, GPS site visits — not four tools, <span className="font-medium text-foreground">one construction loop</span>. Edit anywhere, RERA anywhere.{" "}
+              <button onClick={() => setSearchOpen(true)} className="inline-flex items-center gap-1 text-violet-600 dark:text-violet-400 hover:text-foreground underline underline-offset-4 font-medium">Try search — gu/hi too <ChevronRight className="size-3" /></button>
             </p>
           </div>
 
@@ -861,6 +885,40 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           </div>
         </section>
 
+        {/* STAFF — for Ahmedabad construction teams, every role on loop */}
+        <section id="staff" className="border-y bg-muted/20">
+          <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
+            <div className="flex flex-wrap items-end justify-between gap-6">
+              <div>
+                <Badge variant="outline" className="rounded-full gap-1.5 font-mono tracking-[0.12em] border-[#0B1C3D]/15 text-[#0B1C3D]"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</Badge>
+                <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
+                <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
+              </div>
+              <Badge variant="secondary" className="rounded-full gap-1.5 font-mono text-[11px]"><Hammer className="size-3" /> 5 ROLES · NAAR-TESTED</Badge>
+            </div>
+            <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+              {[
+                { role: "Owner / Director", icon: Building2, color: "bg-[#0B1C3D] text-white", kpi: "₹2.4Cr weighted", desc: "Funnel, inventory health, collections, team vs target — Excel-free." },
+                { role: "Sales Manager", icon: Phone, color: "bg-violet-600 text-white", kpi: "HOLD→Booking 48s", desc: "Drag kanban, auto-log Activity, cost sheet 18s, WhatsApp ack." },
+                { role: "Broker / CP", icon: Handshake, color: "bg-amber-600 text-white", kpi: "Scoped % allocation", desc: "Sees only allocated units, commission auto-calc, referral ledger." },
+                { role: "Site Engineer", icon: Navigation, color: "bg-emerald-600 text-white", kpi: "200m GPS", desc: "Schedule visit, check-in verified, offline PWA on field." },
+                { role: "Accounts", icon: ReceiptText, color: "bg-blue-600 text-white", kpi: "Demand 9s", desc: "CLP 8 milestones, RERA {{rera_no}}, UPI link → receipt, Tally CSV." },
+              ].map((r) => (
+                <Card key={r.role} className="group hover:shadow-[0_12px_32px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 transition-all overflow-hidden">
+                  <div className="h-1 bg-gradient-to-r from-foreground via-foreground/60 to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
+                  <CardHeader className="pb-2">
+                    <span className={`inline-flex size-8 items-center justify-center rounded-lg text-xs ${r.color} shadow-sm`}><r.icon className="size-4" /></span>
+                    <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
+                    <Badge variant="secondary" className="w-fit rounded-full font-mono text-[11px]">{r.kpi}</Badge>
+                  </CardHeader>
+                  <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
+                </Card>
+              ))}
+            </div>
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground"><span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1"><MapPin className="size-3" /> SG Highway · Bopal · South Bopal · Thaltej</span><span>·</span><span>gu/hi templates</span><span>·</span><span>Slug-routed · workspaceId on every query</span></div>
+          </div>
+        </section>
+
         {/* WORKFLOW — stepped bento */}
         <section id="workflow" className="border-y bg-card">
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
@@ -959,15 +1017,15 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         {/* PRICING — bento cards with featured lift */}
         <section id="pricing" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-[720px] text-center">
-            <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-violet-600 border-violet-200 gap-1.5"><Sparkles className="size-3" /> PRICING · NO SEAT MATH TRICKS</Badge>
-            <h2 className="mt-3 text-[32px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[40px]">Pick the desk your pipeline needs.</h2>
-            <p className="mx-auto mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">All plans include contacts, deals, orgs, activities, search, and workspace invites. Export CSV anytime — your data never held hostage.</p>
+            <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-[#0B1C3D] border-[#0B1C3D]/15 gap-1.5"><Building2 className="size-3" /> PRICING · FOR AHMEDABAD BUILDERS</Badge>
+            <h2 className="mt-3 text-[32px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[40px]">Priced for site, not seat tricks.</h2>
+            <p className="mx-auto mt-3 max-w-[580px] text-[14px] leading-6 text-muted-foreground">All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, WhatsApp gu/hi, and association pool. RERA export anytime — your data, your possession letter.</p>
           </div>
           <div className="mt-10 grid items-start gap-4 overflow-visible pt-4 pb-3 lg:grid-cols-3">
             {[
-              { name: "Solo", price: "₹1,499", note: "per month · 1 workspace", receipt: "A clear home for one pipeline", features: ["1 workspace", "Unlimited contacts & deals", "Kanban + table + stats", "Full-text search"], cta: "Open a solo desk", featured: false },
-              { name: "Team", price: "₹3,999", note: "per month · up to 6 seats", receipt: "The shared desk for a moving team", features: ["3 workspaces", "Roles: Owner / Admin / Member", "Invite links + permissions", "Priority search & support"], cta: "Start the team desk", featured: true },
-              { name: "Studio", price: "₹7,999", note: "per month · up to 12 seats", receipt: "For client work without crossover", features: ["Unlimited workspaces", "All Phase-1 features", "Agent-ready API (Phase 2)", "SLA + onboarding"], cta: "Set up the studio desk", featured: false },
+              { name: "Builder", price: "₹1,499", note: "per month · 1 project", receipt: "One site, from enquiry to possession", features: ["1 workspace · 1 project", "Unlimited contacts & deals", "Cost sheet 30s + RERA docs", "GPS + WhatsApp inbox"], cta: "Start Builder", featured: false },
+              { name: "Team", price: "₹3,999", note: "per month · up to 6 staff", receipt: "Sales + Accounts + Site — same loop", features: ["3 workspaces · Owners + Sales + Brokers", "Roles: Owner/Admin/Sales/Broker/Viewer", "Invite + brokerScopeFilter + CLP", "NAAR pool trial · gu/hi"], cta: "Start Team — NAAR trial", featured: true },
+              { name: "Network", price: "₹7,999", note: "per month · up to 12 staff · multi-site", receipt: "For 2–10 projects without Excel", features: ["Unlimited projects + Buyer portal", "Public sites + enquiry→scored lead", "UPI collection + Tally/PDF export", "Association exchange + referral ledger"], cta: "Set up Network", featured: false },
             ].map((p) => (
               <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-all duration-300 ${p.featured ? "border-violet-600 bg-foreground text-background shadow-[0_24px_64px_rgba(0,0,0,0.22)] lg:-translate-y-2 hover:shadow-[0_32px_80px_rgba(0,0,0,0.28)] hover:-translate-y-3" : "hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-1 border-border/60"}`}>
                 {p.featured && <Badge className="absolute -top-3 left-6 rounded-full bg-violet-600 font-mono text-[11px] tracking-[0.14em] shadow-[0_8px_24px_rgba(124,58,237,0.35)] px-3 py-1">MOST CHOSEN</Badge>}
@@ -1033,20 +1091,20 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
-                <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-violet-600 border-violet-200 gap-1.5"><Star className="size-3" /> MANIFESTO</Badge>
-                <h2 className="mt-3 text-[28px] font-bold leading-[0.95] tracking-[-0.02em]">CRM shouldn&apos;t be <br />a second job.</h2>
-                <p className="mt-4 max-w-[420px] text-[14px] leading-6 text-muted-foreground">We built Loop for founders who sell between building. No bloated enterprise ritual. Just a loop that keeps your pipeline honest while you stay in flow.</p>
+                <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-[#0B1C3D] border-[#0B1C3D]/15 gap-1.5"><Building2 className="size-3" /> MANIFESTO · AHMEDABAD BUILDS, LOOP RUNS</Badge>
+                <h2 className="mt-3 text-[28px] font-bold leading-[0.95] tracking-[-0.02em]">Possession isn&apos;t luck.<br />It&apos;s a loop that closes.</h2>
+                <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Loop CRM for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
                 <div className="mt-6 flex gap-3">
-                  <Button className="rounded-full gap-1.5 shadow-sm" render={<Link href={isAuthed ? `/${workspaceSlug}/contacts` : "/signup"} />}>Enter Loop <ArrowRight className="size-4" /></Button>
-                  <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>See demo data</Button>
+                  <Button className="rounded-full gap-1.5 shadow-sm" render={<Link href={isAuthed ? `/${workspaceSlug}/contacts` : "/signup"} />}>Enter Loop — NAAR demo <ArrowRight className="size-4" /></Button>
+                  <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>See Shilp demo (/acme)</Button>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 {[
-                  { q: "“Finally a CRM I open daily. Drag → done, no admin hour.”", a: "— Maya, Indie Studio, 2 seats" },
-                  { q: "“Search is absurdly fast. I live in ⌘K now.”", a: "— Alex, Freelance Dev" },
-                  { q: "“Multi-workspace without chaos. Clients separated, brain calm.”", a: "— Priya, Ops Lead, 6 seats" },
-                  { q: "“The timeline is the product. Every move remembered.”", a: "— Jon, Solo Founder" },
+                  { q: "“Cost sheet in 18s, demand letter while the family is still at the site. That was Excel never.”", a: "— Hemal Shah, Shilp Infra, Director — 3 sites SG Highway" },
+                  { q: "“GPS check-in killed fake visits. Our Site Engineers actually check in now.”", a: "— Nirav Doshi, Safal Corp, Site — 200m verified" },
+                  { q: "“Brokers see only their allocation now. No more ‘who showed that unit?’ fights.”", a: "— Riya Desai, Gala Builders, CP Lead — NAAR exchange" },
+                  { q: "“UPI link in the demand WhatsApp — collections before the 7th, Tally-ready.”", a: "— Accounts, Shilp Infra — CLP 8 milestones" },
                 ].map((t) => (
                   <Card key={t.q} className="group hover:shadow-md hover:-translate-y-0.5 transition-all border-border/60 overflow-hidden relative">
                     <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(300px_circle_at_0%_0%,rgba(139,92,246,0.06),transparent_70%)]" />
