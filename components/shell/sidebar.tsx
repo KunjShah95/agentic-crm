@@ -4,8 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
   Building2,
+  CalendarCheck,
   CheckSquare,
+  FileText,
+  Handshake,
   KanbanSquare,
+  KeyRound,
   MessageSquare,
   Search,
   Settings,
@@ -22,6 +26,10 @@ const NAV = [
   { href: "deals", label: "Deals", icon: KanbanSquare },
   { href: "organizations", label: "Organizations", icon: Building2 },
   { href: "projects", label: "Projects", icon: Building2 },
+  { href: "bookings", label: "Bookings", icon: KeyRound },
+  { href: "site-visits", label: "Site Visits", icon: CalendarCheck },
+  { href: "channel-partners", label: "Channel Partners", icon: Handshake },
+  { href: "documents", label: "Documents", icon: FileText },
   { href: "inbox", label: "Inbox", icon: MessageSquare },
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "search", label: "Search", icon: Search },
