@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { Kbd } from "@/components/ui/kbd"
 import { Progress } from "@/components/ui/progress"
+import { ModeToggle } from "@/components/shell/mode-toggle"
 import {
   ArrowUpRight,
   Search,
@@ -219,7 +220,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
     { key: "closing", label: "Closing", icon: <TrendingUp className="size-3" /> },
   ]
 
-  const base = typeof window !== "undefined" ? window.location.origin : "https://loopcrm.example.com"
+  const base = "https://loopcrm.example.com"
   const landingJsonLd = [
     {
       "@context": "https://schema.org",
@@ -282,7 +283,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 >
                   <Building2 className="size-4 text-muted-foreground" />
                   <span>{d.title}</span>
-                  <span className="ml-auto font-mono text-xs text-muted-foreground">${(d.value / 1000).toFixed(0)}k · {d.stage}</span>
+                  <span className="ml-auto font-mono text-xs text-muted-foreground">₹{(d.value / 100000).toFixed(1)}L · {d.stage}</span>
                 </CommandItem>
               ))}
             </CommandGroup>
@@ -338,6 +339,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <Button variant="outline" size="sm" className="hidden lg:inline-flex rounded-full gap-2 bg-card hover:bg-card border-border/60" onClick={() => setSearchOpen(true)}>
                 <Search className="size-3.5" /> Search <Kbd className="ml-1 bg-muted">⌘K</Kbd>
               </Button>
+              <ModeToggle />
               {!isAuthed ? (
                 <>
                   <Button variant="ghost" size="sm" className="rounded-full" render={<Link href="/login" />}>Sign in</Button>
@@ -623,7 +625,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                                   </div>
                                   <div className="mt-1 font-mono text-[11px] text-muted-foreground">{d.org}</div>
                                   <div className="mt-2 flex items-center justify-between">
-                                    <span className="font-mono text-[11px] font-semibold tracking-tight text-violet-600 dark:text-violet-400">${(d.value / 1000).toFixed(0)}k</span>
+                                    <span className="font-mono text-[11px] font-semibold tracking-tight text-violet-600 dark:text-violet-400">₹{(d.value / 100000).toFixed(1)}L</span>
                                     <span className="flex items-center gap-1.5">
                                       <span className="size-6 rounded-full bg-foreground text-center font-mono text-[10px] leading-6 text-background shadow-sm">{d.owner}</span>
                                       <Button
@@ -660,7 +662,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           <div key={d.id} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.5fr] gap-px bg-border text-sm">
                             <div className="bg-card px-3 py-2.5 font-medium tracking-tight">{d.title}</div>
                             <div className="bg-card px-3 py-2.5 text-muted-foreground text-xs">{d.org}</div>
-                            <div className="bg-card px-3 py-2.5 font-mono text-violet-600 dark:text-violet-400 text-xs">${d.value.toLocaleString()}</div>
+                            <div className="bg-card px-3 py-2.5 font-mono text-violet-600 dark:text-violet-400 text-xs">₹{d.value.toLocaleString("en-IN")}</div>
                             <div className="bg-card px-3 py-2.5">
                               <select value={d.stage} onChange={(e) => moveDeal(d.id, e.target.value as Stage)} className="rounded-full border bg-muted px-2 py-1 font-mono text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500/20">
                                 <option value="lead">Lead</option><option value="qualified">Qualified</option><option value="closing">Closing</option>
@@ -681,8 +683,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   {/* floating metrics — bento poppers */}
                   <div className="absolute -bottom-5 -left-3 hidden rounded-2xl border bg-card px-4 py-3 shadow-[0_16px_40px_rgba(0,0,0,0.12)] sm:flex items-center gap-3 animate-[float_5s_ease-in-out_infinite] backdrop-blur">
                     <span className="flex size-9 items-center justify-center rounded-xl bg-violet-500/10 text-violet-600 border border-violet-500/15"><TrendingUp className="size-4" /></span>
-                    <div><div className="font-mono text-[11px] tracking-widest text-muted-foreground">PIPELINE VALUE · {ws.name.toUpperCase()}</div><div className="text-[15px] font-semibold tracking-tight">${(pipelineValue / 1000).toFixed(0)}k · {deals.length} deals</div></div>
-                    <Progress value={Math.min(100, (pipelineValue / 500000) * 100)} className="hidden lg:block w-16 h-1.5 ml-2" />
+                    <div><div className="font-mono text-[11px] tracking-widest text-muted-foreground">PIPELINE VALUE · {ws.name.toUpperCase()}</div><div className="text-[15px] font-semibold tracking-tight">₹{(pipelineValue / 100000).toFixed(1)}L · {deals.length} deals</div></div>
+                    <Progress value={Math.min(100, (pipelineValue / 50000000) * 100)} className="hidden lg:block w-16 h-1.5 ml-2" />
                   </div>
                   <div className="absolute -right-2 -top-3 hidden rounded-full border bg-card px-3 py-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.12)] sm:flex items-center gap-2 animate-[float2_6s_ease-in-out_infinite] backdrop-blur">
                     <span className="size-2 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.6)]" /><span className="font-mono text-[11px] font-medium tracking-widest">SYNCED · 12ms</span>
@@ -1057,33 +1059,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>Cancel anytime</span><span>·</span><span>CSV export included</span><span>·</span><span>Secure billing</span></div>
             </CardContent>
           </Card>
-        </section>
-
-        {/* FAQ — AEO/GEO + LLM ranking */}
-        <section id="faq" className="border-y bg-card">
-          <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
-            <div className="mx-auto max-w-[840px]">
-              <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-violet-600 border-violet-200 gap-1.5"><Sparkles className="size-3" /> FAQ · AEO / GEO</Badge>
-              <h2 className="mt-3 text-[28px] font-bold tracking-[-0.02em]">Answers bots and buyers can cite.</h2>
-              <p className="mt-2 text-sm text-muted-foreground">Structured for answer engines, generative search, and LLM crawlers — every answer is workspace-scoped and sourced.</p>
-              <div className="mt-8 grid gap-3">
-                {[
-                  { q: "What is Loop CRM?", a: "Multi-tenant CRM for solo founders and small teams. Contacts, deals, organizations, projects/units, HOLD→BOOKING→CLP, GPS site visits, broker scope, RERA documents, WhatsApp inbox, reports, AI, and NAAR association shared pool — every query workspaceId-scoped." },
-                  { q: "How does HOLD → BOOKING work without Excel?", a: "Hold → KYC → confirm booking auto-creates 8 Payment milestones and demand letter #1 (RERA shortcodes {{rera_no}} {{carpet_area}} {{total}}). Payment receipts + e-sign stub included. All logged as Activity." },
-                  { q: "Is it secure and workspace-isolated?", a: "Yes. requireWorkspaceMember on every server action, brokerScopeFilter for Brokers, association-scoped pool. Cross-workspace leak tests in CI. DPDP: consentAt/optedOut + audit export via /api/compliance/dpdp." },
-                  { q: "Does it support Gujarati/Hindi?", a: "Yes. lib/i18n dictionaries en/gu/hi and whatsappTemplates gu/hi for lead_ack/cost_sheet/visit_reminder. Public sites have ?lang=gu|hi toggle." },
-                  { q: "What is the association moat?", a: "NAAR association: member directory, pooled leads (builder can't service → pool → other members claim, audit both sides), inventory exchange, referral ledger with CommissionRule split. Biggest moat — no competitor is association-native." },
-                  { q: "How are public sites and buyer portal public yet secure?", a: "Public sites at (public)/sites/[workspace]/[project] sync AVAILABLE units; enquiry → processLead WEBSITE → scored lead. Buyer portal at /buyer/[token] is magic-link, expiring, logs lastSeenAt." },
-                ].map((f) => (
-                  <Card key={f.q} className="hover:shadow-sm transition-shadow">
-                    <CardHeader className="pb-2"><CardTitle className="text-[15px] leading-snug">{f.q}</CardTitle></CardHeader>
-                    <CardContent><p className="text-sm leading-6 text-muted-foreground">{f.a}</p></CardContent>
-                  </Card>
-                ))}
-              </div>
-              <p className="mt-4 text-xs text-muted-foreground">Canonical at / • hreflang en/gu/hi • sitemap at /sitemap.xml • crawled by GPTBot/ClaudeBot/PerplexityBot/Google-Extended — see /llms.txt and /robots.txt.</p>
-            </div>
-          </div>
         </section>
 
         {/* MANIFESTO — testimonial bento */}
