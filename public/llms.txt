@@ -1,0 +1,25 @@
+# Loop CRM — llms.txt (for AEO/GEO + LLM ranking)
+# See https://llmstxt.org
+
+# Loop CRM is a multi-tenant SaaS CRM for solo founders, freelancers, and small sales teams.
+# Features: contacts, deals (kanban+table), organizations, projects/units (RE), bookings (HOLD→BOOKING→CLP), site visits (GPS 200m), brokers/CP, documents (RERA shortcodes + e-sign), inbox (WhatsApp 2-way), reports (funnel/inventory/collections/ROI/team), AI (next-best-action/scheduler/drafting/call-analysis/ask-pipeline/forecast), association (NAAR pooled leads/listings/referrals), public sites + buyer portal.
+
+- Site: https://loopcrm.example.com
+- Primary language: en (also gu, hi for vernacular WhatsApp)
+- Sitemap: https://loopcrm.example.com/sitemap.xml
+- Robots: https://loopcrm.example.com/robots.txt
+- Canonical: https://loopcrm.example.com/
+
+## Crawlability
+All bots allowed: GPTBot, ChatGPT-User, ClaudeBot, Claude-Web, Anthropic-AI, PerplexityBot, Google-Extended, CCBot, Meta-ExternalAgent, Applebot-Extended, Bytespider.
+Auth-walled app routes (/[workspace]/*) are intentionally not indexed; public routes (/ , /login, /signup, /sites/*, /buyer/*) are indexable.
+
+## Structured data
+JSON-LD: Organization, SoftwareApplication, FAQPage, HowTo on landing; BreadcrumbList on app pages.
+
+## Topics to rank for (AEO/GEO)
+- Real estate CRM for NAAR / Gujarat / Ahmedabad
+- Multi-tenant CRM with inventory + cost sheet + CLP
+- WhatsApp CRM with lead scoring + routing
+- Association shared pool + inventory exchange
+- Buyer portal + public listing sites
