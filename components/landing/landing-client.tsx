@@ -212,8 +212,43 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
     { key: "closing", label: "Closing", icon: <TrendingUp className="size-3" /> },
   ]
 
+  const base = typeof window !== "undefined" ? window.location.origin : "https://loopcrm.example.com"
+  const landingJsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      name: "Loop CRM",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Web",
+      url: base,
+      description: "Multi-tenant CRM: contacts, deals, inventory, HOLD→BOOKING→CLP, GPS site visits, broker scope, RERA docs, WhatsApp inbox, AI, reports, sites + buyer portal, and NAAR association shared pool.",
+      offers: { "@type": "Offer", price: "1499", priceCurrency: "INR" },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [
+        { "@type": "Question", name: "What is Loop CRM?", acceptedAnswer: { "@type": "Answer", text: "Loop CRM is a multi-tenant CRM for solo founders and small sales teams with workspace-scoped contacts, deals, projects, bookings, AI, and NAAR association pooled leads." } },
+        { "@type": "Question", name: "How does HOLD→BOOKING work?", acceptedAnswer: { "@type": "Answer", text: "Hold → KYC → confirm booking auto-creates 8 CLP milestones and demand letter #1. No Excel, every transition logged as Activity." } },
+        { "@type": "Question", name: "Is it workspace-scoped?", acceptedAnswer: { "@type": "Answer", text: "Yes. Every query filters by workspaceId and requireWorkspaceMember. Brokers see only allocated inventory. Association shared pool is association-scoped." } },
+        { "@type": "Question", name: "Does it support Gujarati/Hindi?", acceptedAnswer: { "@type": "Answer", text: "Yes. WhatsApp templates and public sites have en/gu/hi variants." } },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "HowTo",
+      name: "How to run a booking in Loop CRM",
+      step: [
+        { "@type": "HowToStep", name: "Create project & units", text: "Project→Tower→Floor→Unit or CSV import 200 units." },
+        { "@type": "HowToStep", name: "Cost sheet", text: "Base+GST+stamp+others → total in <30s." },
+        { "@type": "HowToStep", name: "Book", text: "Hold→KYC→Booking → 8 milestones → demand letter." },
+      ],
+    },
+  ]
+
   return (
     <TooltipProvider>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd).replace(/</g, "\\u003c") }} />
       <div className="min-h-screen bg-background text-foreground selection:bg-foreground selection:text-background">
         {/* TOAST — shadcn style */}
         {toast && (
@@ -964,6 +999,33 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>Cancel anytime</span><span>·</span><span>CSV export included</span><span>·</span><span>Secure billing</span></div>
             </CardContent>
           </Card>
+        </section>
+
+        {/* FAQ — AEO/GEO + LLM ranking */}
+        <section id="faq" className="border-y bg-card">
+          <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
+            <div className="mx-auto max-w-[840px]">
+              <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-violet-600 border-violet-200 gap-1.5"><Sparkles className="size-3" /> FAQ · AEO / GEO</Badge>
+              <h2 className="mt-3 text-[28px] font-bold tracking-[-0.02em]">Answers bots and buyers can cite.</h2>
+              <p className="mt-2 text-sm text-muted-foreground">Structured for answer engines, generative search, and LLM crawlers — every answer is workspace-scoped and sourced.</p>
+              <div className="mt-8 grid gap-3">
+                {[
+                  { q: "What is Loop CRM?", a: "Multi-tenant CRM for solo founders and small teams. Contacts, deals, organizations, projects/units, HOLD→BOOKING→CLP, GPS site visits, broker scope, RERA documents, WhatsApp inbox, reports, AI, and NAAR association shared pool — every query workspaceId-scoped." },
+                  { q: "How does HOLD → BOOKING work without Excel?", a: "Hold → KYC → confirm booking auto-creates 8 Payment milestones and demand letter #1 (RERA shortcodes {{rera_no}} {{carpet_area}} {{total}}). Payment receipts + e-sign stub included. All logged as Activity." },
+                  { q: "Is it secure and workspace-isolated?", a: "Yes. requireWorkspaceMember on every server action, brokerScopeFilter for Brokers, association-scoped pool. Cross-workspace leak tests in CI. DPDP: consentAt/optedOut + audit export via /api/compliance/dpdp." },
+                  { q: "Does it support Gujarati/Hindi?", a: "Yes. lib/i18n dictionaries en/gu/hi and whatsappTemplates gu/hi for lead_ack/cost_sheet/visit_reminder. Public sites have ?lang=gu|hi toggle." },
+                  { q: "What is the association moat?", a: "NAAR association: member directory, pooled leads (builder can't service → pool → other members claim, audit both sides), inventory exchange, referral ledger with CommissionRule split. Biggest moat — no competitor is association-native." },
+                  { q: "How are public sites and buyer portal public yet secure?", a: "Public sites at (public)/sites/[workspace]/[project] sync AVAILABLE units; enquiry → processLead WEBSITE → scored lead. Buyer portal at /buyer/[token] is magic-link, expiring, logs lastSeenAt." },
+                ].map((f) => (
+                  <Card key={f.q} className="hover:shadow-sm transition-shadow">
+                    <CardHeader className="pb-2"><CardTitle className="text-[15px] leading-snug">{f.q}</CardTitle></CardHeader>
+                    <CardContent><p className="text-sm leading-6 text-muted-foreground">{f.a}</p></CardContent>
+                  </Card>
+                ))}
+              </div>
+              <p className="mt-4 text-xs text-muted-foreground">Canonical at / • hreflang en/gu/hi • sitemap at /sitemap.xml • crawled by GPTBot/ClaudeBot/PerplexityBot/Google-Extended — see /llms.txt and /robots.txt.</p>
+            </div>
+          </div>
         </section>
 
         {/* MANIFESTO — testimonial bento */}
