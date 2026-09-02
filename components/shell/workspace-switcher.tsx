@@ -58,12 +58,14 @@ export function WorkspaceSwitcher({
         }
       />
       <DropdownMenuContent align="start" side="right" className="w-64">
-        <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Workspaces</DropdownMenuLabel>
+        </DropdownMenuGroup>
         <DropdownMenuGroup>
           {workspaces.map((ws) => (
             <DropdownMenuItem
               key={ws.id}
-              onSelect={() => switchTo(ws)}
+              onClick={() => switchTo(ws)}
               className="gap-2"
             >
               <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-muted text-[10px] font-semibold">
@@ -81,7 +83,7 @@ export function WorkspaceSwitcher({
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem
-          onSelect={() => router.push("/signup")}
+          onClick={() => router.push("/signup")}
           className="gap-2"
         >
           <Plus className="size-4" />
