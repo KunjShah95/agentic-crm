@@ -43,3 +43,6 @@ next-env.d.ts
 /lib/generated/prisma
 playwright-report/
 test-results/
+.claude/
+.md
+.agents/

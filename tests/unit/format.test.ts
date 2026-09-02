@@ -23,6 +23,9 @@ describe("format utils", () => {
     it("formats USD with symbol", () => {
       expect(formatMoney(1200, "USD")).toMatch(/\$1,200/)
     })
+    it("formats INR by default with symbol", () => {
+      expect(formatMoney(1200)).toMatch(/₹1,200/)
+    })
     it("returns em dash for null", () => {
       expect(formatMoney(null)).toBe("—")
       expect(formatMoney(undefined)).toBe("—")

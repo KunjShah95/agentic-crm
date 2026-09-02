@@ -22,17 +22,17 @@ const CURRENCY_SYMBOLS: Record<string, string> = {
   BRL: "R$",
 }
 
-export function formatMoney(value: number | null | undefined, currency = "USD") {
+export function formatMoney(value: number | null | undefined, currency = "INR") {
   if (value == null) return "—"
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat("en-IN", {
       style: "currency",
       currency,
       maximumFractionDigits: 0,
     }).format(value)
   } catch {
-    return `${symbol}${value.toLocaleString("en-US")}`
+    return `${symbol}${value.toLocaleString("en-IN")}`
   }
 }
 

@@ -3,7 +3,7 @@
 import { db } from "@/lib/db"
 import { requireWorkspaceMember } from "@/lib/permissions"
 import { auth } from "@/lib/auth"
-import { channelPartnerSchema, commissionSchema } from "@/lib/validators/re"
+import { brokerSchema, commissionSchema } from "@/lib/validators/re"
 import { computeCommission } from "./commission"
 
 async function authed(workspaceId: string, minRole?: "ADMIN") {
@@ -13,11 +13,11 @@ async function authed(workspaceId: string, minRole?: "ADMIN") {
   return s.user.id
 }
 
-/** Onboard a channel partner (ADMIN+). */
-export async function onboardCp(input: { workspaceId: string; data: unknown }) {
+/** Onboard a broker (ADMIN+). */
+export async function onboardBroker(input: { workspaceId: string; data: unknown }) {
   await authed(input.workspaceId, "ADMIN")
-  const p = channelPartnerSchema.parse(input.data)
-  return db.channelPartner.create({
+  const p = brokerSchema.parse(input.data)
+  return db.broker.create({
     data: {
       workspaceId: input.workspaceId,
       name: p.name,
@@ -43,14 +43,14 @@ export async function assignCommission(input: { workspaceId: string; data: unkno
   const dealValue = deal.costSheet?.total ?? deal.unit?.price ?? deal.value ?? 0
   const amount = computeCommission(dealValue, { pct: p.pct ?? undefined, amount: p.amount ?? undefined })
 
-  // Link the CP onto the deal so CP-scoped queries can see it.
-  await db.deal.update({ where: { id: deal.id }, data: { cpId: p.cpId } })
+  // Link the broker onto the deal so broker-scoped queries can see it.
+  await db.deal.update({ where: { id: deal.id }, data: { brokerId: p.brokerId } })
 
   return db.commissionRule.create({
     data: {
       workspaceId: input.workspaceId,
       dealId: p.dealId,
-      cpId: p.cpId,
+      brokerId: p.brokerId,
       pct: p.pct ?? null,
       amount,
       status: "PENDING",

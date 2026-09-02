@@ -18,7 +18,7 @@ vi.mock("@/lib/permissions", () => ({ requireWorkspaceMember: vi.fn().mockResolv
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }))
 
 import { confirmBooking } from "@/modules/booking/actions"
-import { assignCommission } from "@/modules/channelPartners/actions"
+import { assignCommission } from "@/modules/brokers/actions"
 
 const dealRow = {
   id: "d1",
@@ -74,8 +74,8 @@ describe("booking acceptance chain", () => {
     db.deal.findFirst.mockResolvedValue(dealRow)
     db.deal.update.mockResolvedValue({})
     db.commissionRule.create.mockResolvedValue({ id: "cr1", amount: 111_000 })
-    await assignCommission({ workspaceId: "w1", data: { dealId: "d1", cpId: "cp1", pct: 2 } })
-    expect(db.deal.update).toHaveBeenCalledWith(expect.objectContaining({ data: { cpId: "cp1" } }))
+    await assignCommission({ workspaceId: "w1", data: { dealId: "d1", brokerId: "cp1", pct: 2 } })
+    expect(db.deal.update).toHaveBeenCalledWith(expect.objectContaining({ data: { brokerId: "cp1" } }))
     expect(db.commissionRule.create.mock.calls[0][0].data.amount).toBe(111_000) // 2% of 5,550,000
   })
 })

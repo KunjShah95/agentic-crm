@@ -2,9 +2,9 @@ import { db } from "@/lib/db"
 import { PermissionError } from "@/lib/errors"
 import type { Role } from "@/lib/generated/prisma/client"
 
-// SALES/CP/VIEWER sit at the MEMBER baseline for min-role gates; CP visibility
-// is narrowed separately via cpScopeFilter, not by rank.
-const ROLE_RANK: Record<Role, number> = { VIEWER: 0, CP: 0, MEMBER: 0, SALES: 0, ADMIN: 1, OWNER: 2 }
+// SALES/BROKER/VIEWER sit at the MEMBER baseline for min-role gates; broker
+// visibility is narrowed separately via brokerScopeFilter, not by rank.
+const ROLE_RANK: Record<Role, number> = { VIEWER: 0, BROKER: 0, MEMBER: 0, SALES: 0, ADMIN: 1, OWNER: 2 }
 
 export function hasMinRole(role: Role, minRole?: Role) {
   if (!minRole) return true
@@ -71,14 +71,14 @@ export async function requireWorkspaceMember(
 }
 
 /**
- * Row-level visibility filter for Channel Partners. CP-role users see only the
- * inventory/deals allocated to their own CP record; every other role sees all
- * workspace rows. Spread into a Prisma `where` alongside the workspaceId filter.
+ * Row-level visibility filter for Brokers. BROKER-role users see only the
+ * inventory/deals allocated to their own broker record; every other role sees
+ * all workspace rows. Spread into a Prisma `where` alongside the workspaceId filter.
  */
-export function cpScopeFilter(role: Role, cpId?: string | null): { cpId?: string } {
-  if (role === "CP") {
-    // A CP with no linked cpId can see nothing — force an unmatchable filter.
-    return { cpId: cpId ?? "__no_cp__" }
+export function brokerScopeFilter(role: Role, brokerId?: string | null): { brokerId?: string } {
+  if (role === "BROKER") {
+    // A broker with no linked brokerId can see nothing — force an unmatchable filter.
+    return { brokerId: brokerId ?? "__no_broker__" }
   }
   return {}
 }
