@@ -21,9 +21,11 @@ export default async function InboxPage({
   const timeline = active ? await getContactTimeline(ws.id, active) : []
 
   return (
-    <div className="flex h-[calc(100vh-4rem)]">
-      <aside className="w-72 border-r overflow-y-auto">
-        <h2 className="px-4 py-3 text-sm font-semibold border-b">Inbox</h2>
+    <div className="flex h-[calc(100vh-4rem)] rounded-[16px] border bg-card overflow-hidden">
+      <aside className="w-72 border-r bg-muted/20 overflow-y-auto">
+        <div className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur px-4 py-3 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Inbox</h2><span className="rounded-full bg-foreground px-2 py-0.5 font-mono text-[11px] text-background">{contacts.length}</span>
+        </div>
         {contacts.length === 0 ? (
           <p className="p-4 text-sm text-muted-foreground">No leads yet.</p>
         ) : (
@@ -31,14 +33,14 @@ export default async function InboxPage({
             <Link
               key={c.id}
               href={`/${slug}/inbox?c=${c.id}`}
-              className={`block px-4 py-3 border-b hover:bg-muted ${c.id === active ? "bg-muted" : ""}`}
+              className={`block px-4 py-3 border-b hover:bg-muted/50 transition-colors ${c.id === active ? "bg-muted border-l-2 border-l-violet-600" : "border-l-2 border-l-transparent"}`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">
                   {c.firstName} {c.lastName}
                 </span>
                 {typeof c.leadScore === "number" ? (
-                  <span className="text-xs rounded-full bg-emerald-100 text-emerald-800 px-2 py-0.5">
+                  <span className={`text-xs rounded-full px-2 py-0.5 font-mono ${c.leadScore != null && c.leadScore >= 70 ? "bg-emerald-500 text-white" : c.leadScore != null && c.leadScore >= 40 ? "bg-amber-500 text-white" : "bg-muted text-muted-foreground"}`}>
                     {c.leadScore}
                   </span>
                 ) : null}

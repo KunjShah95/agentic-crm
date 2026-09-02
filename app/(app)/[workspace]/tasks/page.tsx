@@ -55,20 +55,25 @@ export default async function TasksPage({
   const completed = tasks.filter((t) => t.completedAt)
 
   return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">My Tasks</h1>
-        <p className="text-sm text-muted-foreground">
-          {open.length} open · {completed.length} completed
-        </p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
+        </div>
+        <div className="relative">
+          <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · Activities with assigneeId = you</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Card>
+        <Card className="overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-violet-500 via-blue-500 to-cyan-500" />
           <CardHeader className="flex-row items-center gap-2">
-            <Circle className="size-4 text-muted-foreground" />
+            <span className="flex size-8 items-center justify-center rounded-lg bg-violet-500/10 text-violet-600"><Circle className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Open</CardTitle>
+              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-violet-500 px-1.5 py-0.5 font-mono text-[11px] text-white">{open.length}</span></CardTitle>
               <CardDescription>To-dos assigned to you</CardDescription>
             </div>
           </CardHeader>
@@ -82,11 +87,12 @@ export default async function TasksPage({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="overflow-hidden">
+          <div className="h-1 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
           <CardHeader className="flex-row items-center gap-2">
-            <CheckCircle2 className="size-4 text-muted-foreground" />
+            <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Completed</CardTitle>
+              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 font-mono text-[11px] text-white">{completed.length}</span></CardTitle>
               <CardDescription>Recently finished tasks</CardDescription>
             </div>
           </CardHeader>

@@ -77,63 +77,66 @@ export default async function DealsPage({
   ]
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Deals</h1>
-          <p className="text-sm text-muted-foreground">
-            {pipeline.stages.length} pipeline stages · {pipeline.deals.length} deals
-          </p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-64 w-72 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
         </div>
-        <div className="flex items-center gap-2">
-          <div className="flex items-center rounded-lg border bg-muted/40 p-0.5">
-            <Link
-              href={`/${slug}/deals`}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
-                view === "kanban"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <KanbanSquare className="size-4" />
-              Board
-            </Link>
-            <Link
-              href={`/${slug}/deals?view=table`}
-              className={cn(
-                "inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-sm font-medium transition-colors",
-                view === "table"
-                  ? "bg-background shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              <TableIcon className="size-4" />
-              Table
-            </Link>
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight">Deals</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{pipeline.stages.length} stages · {pipeline.deals.length} deals · drag to log, no admin hour</p>
           </div>
-          <StageManager workspaceId={workspace.id} stages={pipeline.stages} />
-          <DealFormDialog
-            workspaceId={workspace.id}
-            stages={pipeline.stages}
-            contacts={contacts}
-            organizations={orgs}
-            members={members}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex items-center rounded-full border bg-muted/40 p-0.5">
+              <Link
+                href={`/${slug}/deals`}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "kanban"
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <KanbanSquare className="size-4" />
+                Board
+              </Link>
+              <Link
+                href={`/${slug}/deals?view=table`}
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  view === "table"
+                    ? "bg-background shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                <TableIcon className="size-4" />
+                Table
+              </Link>
+            </div>
+            <StageManager workspaceId={workspace.id} stages={pipeline.stages} />
+            <DealFormDialog
+              workspaceId={workspace.id}
+              stages={pipeline.stages}
+              contacts={contacts}
+              organizations={orgs}
+              members={members}
+            />
+          </div>
         </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.label}>
-            <CardContent className="flex flex-col gap-0.5 py-3">
-              <span className="text-xs text-muted-foreground">{stat.label}</span>
-              <span className="text-lg font-semibold tracking-tight">
-                {stat.value}
-              </span>
-            </CardContent>
-          </Card>
-        ))}
+        <div className="relative mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+          {statCards.map((stat) => (
+            <Card key={stat.label} className="bg-muted/30 border-dashed">
+              <CardContent className="flex flex-col gap-0.5 py-3">
+                <span className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">{stat.label}</span>
+                <span className="text-lg font-semibold tracking-tight">
+                  {stat.value}
+                </span>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       </div>
 
       {view === "kanban" ? (

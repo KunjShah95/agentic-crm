@@ -40,18 +40,24 @@ export default async function ChannelPartnersPage({ params }: { params: Promise<
   ])
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Brokers</h1>
-          <p className="text-sm text-muted-foreground">{cps.length} partners · {commissions.length} commissions</p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-violet-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-500/20 to-transparent" />
         </div>
-        {isAdmin ? <BrokerToolbar workspaceId={workspace.id} cps={cps} deals={deals.map((d: { id: string; title: string }) => ({ id: d.id, title: d.title }))} /> : null}
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight">Brokers</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{cps.length} partners · {commissions.length} commissions · CP scope via brokerScopeFilter</p>
+          </div>
+          {isAdmin ? <BrokerToolbar workspaceId={workspace.id} cps={cps} deals={deals.map((d: { id: string; title: string }) => ({ id: d.id, title: d.title }))} /> : null}
+        </div>
       </div>
 
       {isAdmin ? (
-        <section className="space-y-2">
-          <h2 className="text-sm font-semibold">Partners</h2>
+        <section className="rounded-xl border bg-card p-4 space-y-3">
+          <h2 className="text-sm font-semibold">Partners <span className="text-muted-foreground font-normal">· {cps.length}</span></h2>
           <Table>
             <TableHeader>
               <TableRow>
@@ -83,8 +89,8 @@ export default async function ChannelPartnersPage({ params }: { params: Promise<
         </section>
       ) : null}
 
-      <section className="space-y-2">
-        <h2 className="text-sm font-semibold">Commissions</h2>
+      <section className="rounded-xl border bg-card p-4 space-y-3">
+        <h2 className="text-sm font-semibold">Commissions <span className="text-muted-foreground font-normal">· {commissions.length}</span></h2>
         <Table>
           <TableHeader>
             <TableRow>
