@@ -32,5 +32,28 @@ export async function listCommissions(ctx: { workspaceId: string; role: Role; cp
   return db.commissionRule.findMany({
     where: { workspaceId: ctx.workspaceId, ...scope },
     orderBy: { createdAt: "desc" },
+    include: { cp: { select: { name: true } }, deal: { select: { title: true } } },
   })
+}
+
+/** All channel partners in a workspace (admin directory). */
+export async function listChannelPartners(workspaceId: string) {
+  return db.channelPartner.findMany({
+    where: { workspaceId },
+    orderBy: { createdAt: "desc" },
+    select: {
+      id: true,
+      name: true,
+      reraNo: true,
+      brokerage: true,
+      userId: true,
+      _count: { select: { deals: true, commissionRules: true } },
+    },
+  })
+}
+
+/** Resolve the ChannelPartner id linked to a user (for CP-scoped views). */
+export async function resolveCpId(workspaceId: string, userId: string): Promise<string | null> {
+  const cp = await db.channelPartner.findFirst({ where: { workspaceId, userId }, select: { id: true } })
+  return cp?.id ?? null
 }
