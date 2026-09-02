@@ -1,0 +1,11 @@
+{
+  "name": "Loop CRM",
+  "short_name": "Loop",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0E1E",
+  "theme_color": "#7c3aed",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}
