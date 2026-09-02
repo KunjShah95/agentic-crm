@@ -20,7 +20,8 @@ export function Topbar({
     })) ?? []
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur md:px-6">
+    <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background/70 px-4 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 md:px-6 relative overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
       <div className="flex min-w-0 items-center gap-2 md:hidden">
         <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
           {workspace.name.slice(0, 2).toUpperCase()}

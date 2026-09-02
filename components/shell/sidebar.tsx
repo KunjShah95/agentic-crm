@@ -65,12 +65,22 @@ export function Sidebar({
   }
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex">
-      <div className="p-3">
+    <aside className="hidden w-60 shrink-0 flex-col border-r bg-sidebar md:flex relative overflow-hidden">
+      <div aria-hidden className="pointer-events-none absolute inset-0">
+        <div className="absolute -top-10 -left-10 h-40 w-40 rounded-full bg-violet-500/5 blur-2xl" />
+      </div>
+      <div className="relative p-3">
         <WorkspaceSwitcher active={active} workspaces={memberships} />
+        <div className="mt-3 hidden items-center gap-2 rounded-lg border bg-card px-2.5 py-2 md:flex">
+          <span className="flex size-6 items-center justify-center rounded-md bg-foreground text-[10px] font-bold text-background">
+            {workspace.name.slice(0, 2).toUpperCase()}
+          </span>
+          <span className="min-w-0 flex-1 truncate text-xs font-medium">{workspace.name}</span>
+          <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] text-emerald-700 dark:text-emerald-300">LIVE</span>
+        </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-0.5 px-3">
+      <nav className="relative flex flex-1 flex-col gap-0.5 px-3">
         {NAV.map((item) => (
           <Link
             key={item.href}

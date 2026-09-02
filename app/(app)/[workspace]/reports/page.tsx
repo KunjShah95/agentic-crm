@@ -61,23 +61,27 @@ export default async function ReportsPage({
   const funnelMax = Math.max(1, ...snapshot.funnel.map((r) => r.count))
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            Reports <Badge variant="secondary" className="rounded-full">Phase 4.3</Badge>
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Funnel · Inventory health · Collections · Source ROI · Team vs target — workspace-scoped, parity with Excel per project.
-          </p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/reports?format=csv${projectId ? `&projectId=${projectId}` : ""}`} />}>
-            <Download className="size-3.5" /> Excel (CSV)
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/reports?format=pdf${projectId ? `&projectId=${projectId}` : ""}`} />}>
-            <Printer className="size-3.5" /> PDF
-          </Button>
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight flex items-center gap-2">
+              Reports <Badge variant="secondary" className="rounded-full">Phase 4.3</Badge>
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">Funnel · Inventory health · Collections · Source ROI · Team vs target — workspace-scoped, parity with Excel per project.</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" size="sm" className="rounded-full gap-1.5 shadow-sm" render={<Link href={`/${slug}/reports?format=csv${projectId ? `&projectId=${projectId}` : ""}`} />}>
+              <Download className="size-3.5" /> Excel (CSV)
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-full gap-1.5 shadow-sm" render={<Link href={`/${slug}/reports?format=pdf${projectId ? `&projectId=${projectId}` : ""}`} />}>
+              <Printer className="size-3.5" /> PDF
+            </Button>
+          </div>
         </div>
       </div>
 

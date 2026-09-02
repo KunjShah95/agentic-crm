@@ -67,13 +67,21 @@ export default async function ContactsPage({
   ])
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Contacts</h1>
-          <p className="text-sm text-muted-foreground">
-            {data.total} contact{data.total !== 1 ? "s" : ""} in this workspace
-          </p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
+        </div>
+        <div className="relative flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight">Contacts</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{data.total} contact{data.total !== 1 ? "s" : ""} · searchable, taggable, workspace-scoped</p>
+          </div>
+          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1"><span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> {orgs.length} orgs</span>
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1">{members.length} members</span>
+          </div>
         </div>
       </div>
 

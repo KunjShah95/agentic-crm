@@ -55,23 +55,25 @@ export default async function SearchPage({
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Search</h1>
-        <p className="text-sm text-muted-foreground">
-          Workspace-wide full-text search
-        </p>
+    <div className="space-y-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-blue-500/10 via-violet-500/10 to-fuchsia-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
+        </div>
+        <div className="relative">
+          <h1 className="text-[22px] font-semibold tracking-tight">Search</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Workspace-wide Postgres full-text · tsvector + ts_rank · scoped by workspaceId</p>
+        </div>
       </div>
 
       <SearchInput initialQuery={q} />
 
       {q && results.length === 0 && (
-        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-12 text-center">
-          <SearchIcon className="size-8 text-muted-foreground/50" />
-          <p className="text-sm font-medium">No results for &ldquo;{q}&rdquo;</p>
-          <p className="text-sm text-muted-foreground">
-            Try a different name, email, or company.
-          </p>
+        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed bg-card px-4 py-12 text-center">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-muted"><SearchIcon className="size-6 text-muted-foreground/50" /></span>
+          <p className="mt-2 text-sm font-medium">No results for &ldquo;{q}&rdquo;</p>
+          <p className="text-sm text-muted-foreground">Try a different name, email, or company. Use ⌘K anywhere.</p>
         </div>
       )}
 
@@ -95,12 +97,12 @@ export default async function SearchPage({
                     {hits.length}
                   </Badge>
                 </h2>
-                <div className="overflow-hidden rounded-lg border">
+                <div className="overflow-hidden rounded-xl border bg-card">
                   {hits.map((hit, i) => (
                     <Link
                       key={`${type}-${hit.id}`}
                       href={`/${slug}/${meta.href}/${hit.id}`}
-                      className={`flex items-center gap-3 bg-card px-4 py-3 transition-colors hover:bg-accent ${
+                      className={`group flex items-center gap-3 bg-card px-4 py-3 transition-colors hover:bg-muted/50 ${
                         i > 0 ? "border-t" : ""
                       }`}
                     >
@@ -133,9 +135,9 @@ export default async function SearchPage({
       )}
 
       {!q && (
-        <p className="text-sm text-muted-foreground">
-          Type to search across contacts, companies, and deals.
-        </p>
+        <div className="rounded-xl border border-dashed bg-muted/20 px-4 py-10 text-center">
+          <p className="text-sm font-medium">Start typing</p><p className="mt-1 text-sm text-muted-foreground">Search across contacts, companies, and deals. Try <span className="rounded bg-foreground px-1.5 py-0.5 font-mono text-[11px] text-background">⌘K</span> for the palette.</p>
+        </div>
       )}
     </div>
   )

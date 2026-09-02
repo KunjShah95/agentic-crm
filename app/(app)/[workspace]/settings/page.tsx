@@ -49,12 +49,16 @@ export default async function WorkspaceSettingsPage({
   const isOwner = membership.role === "OWNER"
 
   return (
-    <div className="flex max-w-2xl flex-col gap-5">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Workspace settings</h1>
-        <p className="text-sm text-muted-foreground">
-          Manage {workspace.name} and its members.
-        </p>
+    <div className="flex max-w-2xl flex-col gap-6">
+      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-slate-500/10 via-violet-500/10 to-blue-500/10 blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-slate-500/20 to-transparent" />
+        </div>
+        <div className="relative">
+          <h1 className="text-[22px] font-semibold tracking-tight">Workspace settings</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Manage {workspace.name} · {workspace.slug} · {workspace._count.members} members</p>
+        </div>
       </div>
 
       <Card>
