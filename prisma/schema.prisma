@@ -14,6 +14,9 @@ enum Role {
   OWNER
   ADMIN
   MEMBER
+  SALES
+  CP
+  VIEWER
 }
 
 enum ActivityType {
@@ -78,6 +81,9 @@ model Workspace {
   documentTemplates DocumentTemplate[]
   generatedDocuments GeneratedDocument[]
   webhookEvents WebhookEvent[]
+  siteVisits        SiteVisit[]
+  channelPartners   ChannelPartner[]
+  commissionRules   CommissionRule[]
 
   @@index([slug])
 }
@@ -205,12 +211,14 @@ model PaymentPlan {
   @@index([projectId])
 }
 model PaymentMilestone {
-  id       String @id @default(cuid())
-  planId   String
-  label    String
-  pct      Float
-  order    Int
-  plan     PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  id         String @id @default(cuid())
+  planId     String
+  label      String
+  pct        Float
+  order      Int
+  dueTrigger String?
+  daysAfter  Int?
+  plan       PaymentPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
   @@index([planId])
 }
 model Payment {
@@ -340,6 +348,7 @@ model User {
   memberships   WorkspaceMember[]
   ownedContacts Contact[]
   ownedDeals    Deal[]
+  channelPartners ChannelPartner[]
 }
 
 model WorkspaceMember {
@@ -399,6 +408,7 @@ model Contact {
   deals        Deal[]
   activities   Activity[]
   tags         ContactTag[]
+  siteVisits   SiteVisit[]
 
   @@index([workspaceId])
   @@index([organizationId])
@@ -459,6 +469,7 @@ model Deal {
   paymentPlanId     String?
   bookingStage      String?
   costSheetId       String?
+  cpId              String?
 
   contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -470,13 +481,17 @@ model Deal {
   unit         Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
   paymentPlan  PaymentPlan?  @relation(fields: [paymentPlanId], references: [id], onDelete: SetNull)
   costSheet    CostSheet?    @relation("DealCostSheet", fields: [costSheetId], references: [id], onDelete: SetNull)
+  cp           ChannelPartner? @relation(fields: [cpId], references: [id], onDelete: SetNull)
   payments     Payment[]
   costSheetsAsDeal CostSheet[] @relation("CostSheetDeal")
+  siteVisits   SiteVisit[]
+  commissionRules CommissionRule[]
 
   @@index([workspaceId])
   @@index([stageId])
   @@index([contactId])
   @@index([ownerId])
+  @@index([cpId])
   @@index([createdAt])
 }
 
@@ -546,4 +561,64 @@ model DealTag {
   tag  Tag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([dealId, tagId])
+}
+
+model SiteVisit {
+  id          String    @id @default(cuid())
+  workspaceId String
+  leadId      String
+  unitId      String?
+  dealId      String?
+  scheduledAt DateTime
+  checkedInAt DateTime?
+  gps         Json?
+  notes       String?
+  outcome     String?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  lead      Contact   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId])
+  @@index([leadId])
+  @@index([dealId])
+  @@index([scheduledAt])
+}
+
+model ChannelPartner {
+  id          String   @id @default(cuid())
+  workspaceId String
+  name        String
+  reraNo      String?
+  brokerage   Float?
+  userId      String?
+  createdAt   DateTime @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  deals     Deal[]
+  commissionRules CommissionRule[]
+
+  @@index([workspaceId])
+  @@index([userId])
+}
+
+model CommissionRule {
+  id          String   @id @default(cuid())
+  workspaceId String
+  dealId      String
+  cpId        String
+  pct         Float?
+  amount      Float?
+  status      String   @default("PENDING")
+  createdAt   DateTime @default(now())
+
+  workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  deal      Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  cp        ChannelPartner @relation(fields: [cpId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([dealId])
+  @@index([cpId])
 }
