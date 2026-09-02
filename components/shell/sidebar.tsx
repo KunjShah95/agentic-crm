@@ -36,6 +36,7 @@ const NAV = [
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "reports", label: "Reports", icon: BarChart3 },
   { href: "ai", label: "AI", icon: Sparkles },
+  { href: "association", label: "Association", icon: Share2 },
   { href: "search", label: "Search", icon: Search },
 ]
 
