@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { listBookings, listBookableUnits, listPaymentPlans } from "@/modules/booking/queries"
-import { resolveCpId } from "@/modules/channelPartners/queries"
+import { resolveBrokerId } from "@/modules/brokers/queries"
 import { BookingBoard } from "@/components/booking/booking-board"
 
 export const metadata: Metadata = { title: "Bookings" }
@@ -19,9 +19,9 @@ export default async function BookingsPage({ params }: { params: Promise<{ works
     : null
   if (!membership) notFound()
 
-  const cpId = membership.role === "CP" ? await resolveCpId(workspace.id, session!.user!.id) : null
+  const brokerId = membership.role === "BROKER" ? await resolveBrokerId(workspace.id, session!.user!.id) : null
   const [deals, units, plans] = await Promise.all([
-    listBookings({ workspaceId: workspace.id, role: membership.role, cpId }),
+    listBookings({ workspaceId: workspace.id, role: membership.role, brokerId }),
     listBookableUnits(workspace.id),
     listPaymentPlans(workspace.id),
   ])

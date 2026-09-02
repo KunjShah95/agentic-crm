@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { onboardCp, assignCommission } from "@/modules/channelPartners/actions"
+import { onboardBroker, assignCommission } from "@/modules/brokers/actions"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -23,19 +23,19 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-type Cp = { id: string; name: string }
+type Broker = { id: string; name: string }
 type Deal = { id: string; title: string }
 
-export function CpToolbar({ workspaceId, cps, deals }: { workspaceId: string; cps: Cp[]; deals: Deal[] }) {
+export function BrokerToolbar({ workspaceId, cps, deals }: { workspaceId: string; cps: Broker[]; deals: Deal[] }) {
   return (
     <div className="flex gap-2">
-      <OnboardCpDialog workspaceId={workspaceId} />
+      <OnboardBrokerDialog workspaceId={workspaceId} />
       <AssignCommissionDialog workspaceId={workspaceId} cps={cps} deals={deals} />
     </div>
   )
 }
 
-function OnboardCpDialog({ workspaceId }: { workspaceId: string }) {
+function OnboardBrokerDialog({ workspaceId }: { workspaceId: string }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [pending, start] = useTransition()
@@ -43,7 +43,7 @@ function OnboardCpDialog({ workspaceId }: { workspaceId: string }) {
   function submit(form: FormData) {
     start(async () => {
       try {
-        await onboardCp({
+        await onboardBroker({
           workspaceId,
           data: {
             name: String(form.get("name") ?? ""),
@@ -51,7 +51,7 @@ function OnboardCpDialog({ workspaceId }: { workspaceId: string }) {
             brokerage: form.get("brokerage") ? Number(form.get("brokerage")) : undefined,
           },
         })
-        toast.success("Channel partner onboarded")
+        toast.success("Broker onboarded")
         setOpen(false)
         router.refresh()
       } catch (e) {
@@ -62,10 +62,10 @@ function OnboardCpDialog({ workspaceId }: { workspaceId: string }) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger render={<Button size="sm">Onboard CP</Button>} />
+      <DialogTrigger render={<Button size="sm">Onboard Broker</Button>} />
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Onboard channel partner</DialogTitle>
+          <DialogTitle>Onboard broker</DialogTitle>
         </DialogHeader>
         <form action={submit} className="space-y-3">
           <div className="space-y-1">
@@ -91,23 +91,23 @@ function OnboardCpDialog({ workspaceId }: { workspaceId: string }) {
   )
 }
 
-function AssignCommissionDialog({ workspaceId, cps, deals }: { workspaceId: string; cps: Cp[]; deals: Deal[] }) {
+function AssignCommissionDialog({ workspaceId, cps, deals }: { workspaceId: string; cps: Broker[]; deals: Deal[] }) {
   const router = useRouter()
   const [open, setOpen] = useState(false)
-  const [cpId, setCpId] = useState("")
+  const [brokerId, setBrokerId] = useState("")
   const [dealId, setDealId] = useState("")
   const [pending, start] = useTransition()
 
   function submit(form: FormData) {
-    if (!cpId || !dealId) {
-      toast.error("Pick a CP and a deal")
+    if (!brokerId || !dealId) {
+      toast.error("Pick a broker and a deal")
       return
     }
     const pct = form.get("pct") ? Number(form.get("pct")) : undefined
     const amount = form.get("amount") ? Number(form.get("amount")) : undefined
     start(async () => {
       try {
-        const cr = await assignCommission({ workspaceId, data: { dealId, cpId, pct, amount } })
+        const cr = await assignCommission({ workspaceId, data: { dealId, brokerId, pct, amount } })
         toast.success(`Commission ₹${(cr.amount ?? 0).toLocaleString("en-IN")} assigned`)
         setOpen(false)
         router.refresh()
@@ -132,10 +132,10 @@ function AssignCommissionDialog({ workspaceId, cps, deals }: { workspaceId: stri
         </DialogHeader>
         <form action={submit} className="space-y-3">
           <div className="space-y-1">
-            <Label>Channel partner</Label>
-            <Select value={cpId} onValueChange={(v) => setCpId(v ?? "")}>
+            <Label>Broker</Label>
+            <Select value={brokerId} onValueChange={(v) => setBrokerId(v ?? "")}>
               <SelectTrigger>
-                <SelectValue placeholder="Select CP" />
+                <SelectValue placeholder="Select broker" />
               </SelectTrigger>
               <SelectContent>
                 {cps.map((c) => (

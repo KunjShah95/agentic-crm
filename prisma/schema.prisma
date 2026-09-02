@@ -15,7 +15,7 @@ enum Role {
   ADMIN
   MEMBER
   SALES
-  CP
+  BROKER @map("CP")
   VIEWER
 }
 
@@ -82,7 +82,7 @@ model Workspace {
   generatedDocuments GeneratedDocument[]
   webhookEvents WebhookEvent[]
   siteVisits        SiteVisit[]
-  channelPartners   ChannelPartner[]
+  brokers   Broker[]
   commissionRules   CommissionRule[]
 
   @@index([slug])
@@ -348,7 +348,7 @@ model User {
   memberships   WorkspaceMember[]
   ownedContacts Contact[]
   ownedDeals    Deal[]
-  channelPartners ChannelPartner[]
+  brokers Broker[]
 }
 
 model WorkspaceMember {
@@ -459,7 +459,7 @@ model Deal {
   organizationId    String?
   stageId           String
   value             Float?
-  currency          String    @default("USD")
+  currency          String    @default("INR")
   probability       Int?
   expectedCloseDate DateTime?
   ownerId           String
@@ -469,7 +469,7 @@ model Deal {
   paymentPlanId     String?
   bookingStage      String?
   costSheetId       String?
-  cpId              String?
+  brokerId              String?  @map("cpId")
 
   contact      Contact?      @relation(fields: [contactId], references: [id], onDelete: SetNull)
   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
@@ -481,7 +481,7 @@ model Deal {
   unit         Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
   paymentPlan  PaymentPlan?  @relation(fields: [paymentPlanId], references: [id], onDelete: SetNull)
   costSheet    CostSheet?    @relation("DealCostSheet", fields: [costSheetId], references: [id], onDelete: SetNull)
-  cp           ChannelPartner? @relation(fields: [cpId], references: [id], onDelete: SetNull)
+  broker       Broker? @relation(fields: [brokerId], references: [id], onDelete: SetNull)
   payments     Payment[]
   costSheetsAsDeal CostSheet[] @relation("CostSheetDeal")
   siteVisits   SiteVisit[]
@@ -491,7 +491,7 @@ model Deal {
   @@index([stageId])
   @@index([contactId])
   @@index([ownerId])
-  @@index([cpId])
+  @@index([brokerId])
   @@index([createdAt])
 }
 
@@ -586,7 +586,7 @@ model SiteVisit {
   @@index([scheduledAt])
 }
 
-model ChannelPartner {
+model Broker {
   id          String   @id @default(cuid())
   workspaceId String
   name        String
@@ -602,13 +602,14 @@ model ChannelPartner {
 
   @@index([workspaceId])
   @@index([userId])
+  @@map("ChannelPartner")
 }
 
 model CommissionRule {
   id          String   @id @default(cuid())
   workspaceId String
   dealId      String
-  cpId        String
+  brokerId        String   @map("cpId")
   pct         Float?
   amount      Float?
   status      String   @default("PENDING")
@@ -616,9 +617,9 @@ model CommissionRule {
 
   workspace Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   deal      Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
-  cp        ChannelPartner @relation(fields: [cpId], references: [id], onDelete: Cascade)
+  broker       Broker @relation(fields: [brokerId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId])
   @@index([dealId])
-  @@index([cpId])
+  @@index([brokerId])
 }

@@ -1,13 +1,13 @@
 import { db } from "@/lib/db"
-import { cpScopeFilter } from "@/lib/permissions"
+import { brokerScopeFilter } from "@/lib/permissions"
 import type { Role } from "@/lib/generated/prisma/client"
 
 /**
- * Deals for the booking board — CP-scoped. Includes unit + contact so cards can
+ * Deals for the booking board — broker-scoped. Includes unit + contact so cards can
  * show what is being booked and the payment progress.
  */
-export async function listBookings(ctx: { workspaceId: string; role: Role; cpId?: string | null }) {
-  const scope = cpScopeFilter(ctx.role, ctx.cpId)
+export async function listBookings(ctx: { workspaceId: string; role: Role; brokerId?: string | null }) {
+  const scope = brokerScopeFilter(ctx.role, ctx.brokerId)
   return db.deal.findMany({
     where: { workspaceId: ctx.workspaceId, ...scope },
     orderBy: { updatedAt: "desc" },
@@ -17,7 +17,7 @@ export async function listBookings(ctx: { workspaceId: string; role: Role; cpId?
       title: true,
       bookingStage: true,
       value: true,
-      cpId: true,
+      brokerId: true,
       contact: { select: { firstName: true, lastName: true } },
       unit: { select: { id: true, unitNo: true, status: true, price: true } },
       _count: { select: { payments: true } },

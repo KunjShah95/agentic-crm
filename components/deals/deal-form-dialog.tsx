@@ -30,7 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 
-const CURRENCIES = ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "INR", "BRL"]
+const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD", "AUD", "JPY", "BRL"]
 
 export function DealFormDialog({
   workspaceId,
@@ -158,7 +158,7 @@ export function DealFormDialog({
             <div className="grid grid-cols-2 gap-3">
               <Field>
                 <FieldLabel>Currency</FieldLabel>
-                <Select name="currency" defaultValue={deal?.currency ?? "USD"}>
+                <Select name="currency" defaultValue={deal?.currency ?? "INR"}>
                   <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>

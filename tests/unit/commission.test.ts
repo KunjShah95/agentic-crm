@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { computeCommission } from "@/modules/channelPartners/commission"
+import { computeCommission } from "@/modules/brokers/commission"
 
 describe("computeCommission", () => {
   it("uses explicit amount when provided", () => {

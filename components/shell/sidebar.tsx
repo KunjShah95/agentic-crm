@@ -28,7 +28,7 @@ const NAV = [
   { href: "projects", label: "Projects", icon: Building2 },
   { href: "bookings", label: "Bookings", icon: KeyRound },
   { href: "site-visits", label: "Site Visits", icon: CalendarCheck },
-  { href: "channel-partners", label: "Channel Partners", icon: Handshake },
+  { href: "channel-partners", label: "Brokers", icon: Handshake },
   { href: "documents", label: "Documents", icon: FileText },
   { href: "inbox", label: "Inbox", icon: MessageSquare },
   { href: "tasks", label: "Tasks", icon: CheckSquare },

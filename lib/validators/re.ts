@@ -76,7 +76,7 @@ export const checkInSchema = z.object({
   lng: z.coerce.number().min(-180).max(180),
   outcome: z.string().trim().max(80).optional().or(z.literal("")),
 })
-export const channelPartnerSchema = z.object({
+export const brokerSchema = z.object({
   name: z.string().trim().min(1).max(160),
   reraNo: z.string().trim().max(80).optional().or(z.literal("")),
   brokerage: z.coerce.number().min(0).max(100).optional().nullable(),
@@ -85,7 +85,7 @@ export const channelPartnerSchema = z.object({
 export const commissionSchema = z
   .object({
     dealId: z.string().min(1),
-    cpId: z.string().min(1),
+    brokerId: z.string().min(1),
     pct: z.coerce.number().min(0).max(100).optional().nullable(),
     amount: z.coerce.number().min(0).optional().nullable(),
   })
