@@ -3,6 +3,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import {
+  BarChart3,
   Building2,
   CalendarCheck,
   CheckSquare,
@@ -32,6 +33,7 @@ const NAV = [
   { href: "documents", label: "Documents", icon: FileText },
   { href: "inbox", label: "Inbox", icon: MessageSquare },
   { href: "tasks", label: "Tasks", icon: CheckSquare },
+  { href: "reports", label: "Reports", icon: BarChart3 },
   { href: "search", label: "Search", icon: Search },
 ]
 
