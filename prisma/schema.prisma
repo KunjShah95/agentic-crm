@@ -84,6 +84,13 @@ model Workspace {
   siteVisits        SiteVisit[]
   brokers   Broker[]
   commissionRules   CommissionRule[]
+  associationMembers AssociationMember[]
+  pooledLeads       AssociationLead[] @relation("PooledBy")
+  claimedLeads      AssociationLead[] @relation("ClaimedBy")
+  listingsListed    AssociationListing[]
+  referralsFrom     Referral[] @relation("ReferralFrom")
+  referralsTo       Referral[] @relation("ReferralTo")
+  buyerAccesses     BuyerPortalAccess[]
 
   @@index([slug])
 }
@@ -173,6 +180,7 @@ model Unit {
   floor      Floor?    @relation(fields: [floorId], references: [id], onDelete: SetNull)
   costSheets CostSheet[]
   deals      Deal[]
+  associationListings AssociationListing[]
   @@index([workspaceId])
   @@index([projectId])
   @@index([status])
@@ -402,13 +410,16 @@ model Contact {
   consentAt      DateTime?
   optedOut      Boolean  @default(false)
 
-  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+   organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
   owner        User?        @relation(fields: [ownerId], references: [id], onDelete: SetNull)
   workspace    Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   deals        Deal[]
   activities   Activity[]
   tags         ContactTag[]
   siteVisits   SiteVisit[]
+  associationLeads AssociationLead[]
+  referrals    Referral[]
+  buyerAccesses BuyerPortalAccess[]
 
   @@index([workspaceId])
   @@index([organizationId])
@@ -486,6 +497,7 @@ model Deal {
   costSheetsAsDeal CostSheet[] @relation("CostSheetDeal")
   siteVisits   SiteVisit[]
   commissionRules CommissionRule[]
+  referrals Referral[]
 
   @@index([workspaceId])
   @@index([stageId])
@@ -622,4 +634,108 @@ model CommissionRule {
   @@index([workspaceId])
   @@index([dealId])
   @@index([brokerId])
+}
+
+model Association {
+  id        String   @id @default(cuid())
+  slug      String   @unique
+  name      String
+  city      String   @default("Ahmedabad")
+  createdAt DateTime @default(now())
+
+  members   AssociationMember[]
+  pooledLeads AssociationLead[]
+  listings  AssociationListing[]
+  referrals Referral[]
+
+  @@index([slug])
+}
+
+model AssociationMember {
+  id            String   @id @default(cuid())
+  associationId String
+  workspaceId   String
+  role          String   @default("MEMBER")
+  joinedAt      DateTime @default(now())
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([associationId, workspaceId])
+  @@index([workspaceId])
+}
+
+model AssociationLead {
+  id              String   @id @default(cuid())
+  associationId   String
+  contactId       String   @unique
+  pooledByWorkspaceId String
+  status          String   @default("POOLED")
+  claimedByWorkspaceId String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  contact     Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  pooledBy    Workspace   @relation("PooledBy", fields: [pooledByWorkspaceId], references: [id], onDelete: Cascade)
+  claimedBy   Workspace?  @relation("ClaimedBy", fields: [claimedByWorkspaceId], references: [id], onDelete: SetNull)
+
+  @@index([associationId, status])
+  @@index([contactId])
+}
+
+model AssociationListing {
+  id              String   @id @default(cuid())
+  associationId   String
+  unitId          String   @unique
+  listedByWorkspaceId String
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now())
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  unit        Unit        @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  listedBy    Workspace   @relation(fields: [listedByWorkspaceId], references: [id], onDelete: Cascade)
+
+  @@index([associationId, status])
+  @@index([unitId])
+}
+
+model Referral {
+  id              String   @id @default(cuid())
+  associationId   String
+  fromWorkspaceId String
+  toWorkspaceId   String
+  contactId       String
+  dealId          String?
+  pct             Float?
+  amount          Float?
+  status          String   @default("PENDING")
+  createdAt       DateTime @default(now())
+
+  association Association @relation(fields: [associationId], references: [id], onDelete: Cascade)
+  fromWorkspace Workspace @relation("ReferralFrom", fields: [fromWorkspaceId], references: [id], onDelete: Cascade)
+  toWorkspace   Workspace @relation("ReferralTo", fields: [toWorkspaceId], references: [id], onDelete: Cascade)
+  contact     Contact     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  deal        Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
+
+  @@index([associationId])
+  @@index([fromWorkspaceId])
+  @@index([toWorkspaceId])
+}
+
+model BuyerPortalAccess {
+  id          String    @id @default(cuid())
+  workspaceId String
+  contactId   String
+  token       String    @unique
+  expiresAt   DateTime
+  lastSeenAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  contact   Contact   @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
+  @@index([contactId])
+  @@index([token])
 }
