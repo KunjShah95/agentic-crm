@@ -15,6 +15,7 @@ import {
   Search,
   Settings,
   Share2,
+  Sparkles,
   Users,
 } from "lucide-react"
 
@@ -34,6 +35,7 @@ const NAV = [
   { href: "inbox", label: "Inbox", icon: MessageSquare },
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "reports", label: "Reports", icon: BarChart3 },
+  { href: "ai", label: "AI", icon: Sparkles },
   { href: "search", label: "Search", icon: Search },
 ]
 
