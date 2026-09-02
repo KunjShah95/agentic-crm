@@ -48,3 +48,45 @@ export const updateUnitStatusSchema = z.object({
 })
 export const webhookPayloadSchema = z.object({ source: z.string().min(1), externalId: z.string().min(1), payload: z.record(z.string(), z.any()) })
 export const whatsappInboundSchema = z.object({ from: z.string().min(1), text: z.string().optional(), timestamp: z.coerce.date().optional() })
+
+export const paymentPlanSchema = z.object({
+  projectId: z.string().min(1),
+  name: z.string().trim().min(1).max(80),
+  milestones: z
+    .array(z.object({ label: z.string().trim().min(1).max(80), pct: z.coerce.number().min(0).max(100), dueTrigger: z.string().trim().max(40).optional(), daysAfter: z.coerce.number().int().min(0).optional() }))
+    .min(1)
+    .optional(),
+})
+export const bookingSchema = z.object({
+  dealId: z.string().min(1),
+  unitId: z.string().min(1),
+  paymentPlanId: z.string().optional().or(z.literal("")),
+  kyc: z.object({ pan: z.string().trim().max(20).optional(), aadhaarLast4: z.string().trim().max(4).optional(), bankName: z.string().trim().max(120).optional(), bankAccountLast4: z.string().trim().max(4).optional() }).optional(),
+})
+export const siteVisitSchema = z.object({
+  leadId: z.string().min(1),
+  unitId: z.string().optional().or(z.literal("")),
+  dealId: z.string().optional().or(z.literal("")),
+  scheduledAt: z.coerce.date(),
+  notes: z.string().trim().max(1000).optional().or(z.literal("")),
+})
+export const checkInSchema = z.object({
+  siteVisitId: z.string().min(1),
+  lat: z.coerce.number().min(-90).max(90),
+  lng: z.coerce.number().min(-180).max(180),
+  outcome: z.string().trim().max(80).optional().or(z.literal("")),
+})
+export const channelPartnerSchema = z.object({
+  name: z.string().trim().min(1).max(160),
+  reraNo: z.string().trim().max(80).optional().or(z.literal("")),
+  brokerage: z.coerce.number().min(0).max(100).optional().nullable(),
+  userId: z.string().optional().or(z.literal("")),
+})
+export const commissionSchema = z
+  .object({
+    dealId: z.string().min(1),
+    cpId: z.string().min(1),
+    pct: z.coerce.number().min(0).max(100).optional().nullable(),
+    amount: z.coerce.number().min(0).optional().nullable(),
+  })
+  .refine((v) => v.pct != null || v.amount != null, { message: "Provide pct or amount" })
