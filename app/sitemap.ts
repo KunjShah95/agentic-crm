@@ -1,15 +1,25 @@
 import type { MetadataRoute } from "next"
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://loopcrm.example.com"
+  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://estate360.vercel.com"
   const now = new Date()
-  // Static routes — workspace/app routes are behind auth, so only public pages are indexed for SEO
-  const routes: MetadataRoute.Sitemap = [
-    { url: `${base}/`, lastModified: now, changeFrequency: "daily", priority: 1 },
-    { url: `${base}/login`, lastModified: now, changeFrequency: "monthly", priority: 0.6 },
-    { url: `${base}/signup`, lastModified: now, changeFrequency: "monthly", priority: 0.7 },
+  const routes: { path: string; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"]; priority: number }[] = [
+    { path: "/", changeFrequency: "daily", priority: 1 },
+    { path: "/product", changeFrequency: "weekly", priority: 0.9 },
+    { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
+    { path: "/contact", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
+    { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
+    { path: "/signup", changeFrequency: "monthly", priority: 0.7 },
   ]
-  // Public sites are dynamic per workspace/project; they are not enumerated here to avoid leaking tenants,
-  // but each public site page self-indexes with canonical + sitemap entry via ISR if needed.
-  return routes
+  // /login is intentionally excluded (noindex), and tenant /sites/* URLs are
+  // deliberately not enumerated: one global sitemap would expose every
+  // builder's project inventory to competitors. Public site pages are
+  // discovered via their shared links.
+  return routes.map((r) => ({
+    url: `${base}${r.path}`,
+    lastModified: now,
+    changeFrequency: r.changeFrequency,
+    priority: r.priority,
+  }))
 }

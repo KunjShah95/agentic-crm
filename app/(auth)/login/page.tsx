@@ -10,7 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export const metadata: Metadata = { title: "Sign in" }
+export const metadata: Metadata = {
+  title: "Sign in",
+  description: "Sign in to your Estate360 workspace — contacts, deals, inventory, bookings, and AI on loop.",
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/login" },
+}
 
 export default function LoginPage() {
   return (

@@ -1,11 +1,13 @@
 {
-  "name": "Loop CRM",
-  "short_name": "Loop",
+  "name": "Estate360",
+  "short_name": "Estate360",
+  "description": "Real Estate CRM for Ahmedabad builders — inventory, HOLD→CLP, GPS visits, RERA WhatsApp.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0A0E1E",
-  "theme_color": "#7c3aed",
+  "background_color": "#F7F3EC",
+  "theme_color": "#C27803",
   "icons": [
-    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+    { "src": "/icon", "sizes": "32x32", "type": "image/png" },
+    { "src": "/apple-icon", "sizes": "180x180", "type": "image/png" }
   ]
 }

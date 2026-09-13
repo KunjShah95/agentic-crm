@@ -1,9 +1,13 @@
+import type { Metadata } from "next"
 import { notFound, redirect } from "next/navigation"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { Sidebar } from "@/components/shell/sidebar"
 import { Topbar } from "@/components/shell/topbar"
+
+// Auth-walled app routes: never index any /[workspace]/* page.
+export const metadata: Metadata = { robots: { index: false, follow: false } }
 
 export default async function WorkspaceLayout({
   params,
@@ -66,11 +70,11 @@ export default async function WorkspaceLayout({
       />
       <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-muted/20 via-background to-background">
         <Topbar workspace={workspaceLite} />
-        <main className="flex-1 overflow-y-auto">
-          <div className="pointer-events-none fixed inset-y-0 left-[240px] right-0 -z-10 hidden md:block">
+        <main className="relative flex-1 overflow-y-auto">
+          <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-0 hidden md:block">
             <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_85%_0%,rgba(139,92,246,0.06),transparent_60%)]" />
           </div>
-          <div className="mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">{children}</div>
+          <div className="relative z-10 mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">{children}</div>
         </main>
       </div>
     </div>

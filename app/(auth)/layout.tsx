@@ -29,7 +29,7 @@ export default async function AuthLayout({
             ◐
           </div>
           <div className="text-center">
-            <h1 className="text-lg font-semibold tracking-tight">Loop CRM</h1>
+            <h1 className="text-lg font-semibold tracking-tight">Estate360</h1>
             <p className="text-sm text-muted-foreground">
               Your workspace, one loop at a time
             </p>

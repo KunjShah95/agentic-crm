@@ -14,7 +14,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { formatDate } from "@/lib/format"
 
-export const metadata: Metadata = { title: "Invite" }
+export const metadata: Metadata = { title: "Invite", robots: { index: false, follow: false } }
 
 export default async function InvitePage({
   params,

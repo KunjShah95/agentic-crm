@@ -10,7 +10,12 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export const metadata: Metadata = { title: "Create account" }
+export const metadata: Metadata = {
+  title: "Create account",
+  description: "Start your 14-day Estate360 trial — workspace-scoped CRM for founders and small sales teams.",
+  robots: { index: false, follow: true },
+  alternates: { canonical: "/signup" },
+}
 
 export default function SignupPage() {
   return (

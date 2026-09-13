@@ -1,12 +1,46 @@
+import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPublicProject } from "@/modules/sites/queries"
 import { t, type Locale } from "@/lib/i18n"
+import { SITE_URL } from "@/components/landing/site-config"
+import { JsonLd } from "@/components/seo/json-ld"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Building2 } from "lucide-react"
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ workspace: string; project: string }>
+}): Promise<Metadata> {
+  const { workspace, project } = await params
+  const data = await getPublicProject(workspace, project)
+  if (!data) return { title: "Site not found", robots: { index: false, follow: false } }
+
+  const { project: proj, units, workspace: ws } = data
+  const title = `${proj.name} — ${proj.city}`
+  const description = `${proj.name} by ${ws.name} in ${proj.city}${proj.reraNo ? ` (RERA ${proj.reraNo})` : ""}: ${units.length} available unit${units.length === 1 ? "" : "s"}. Enquire for pricing and a GPS-verified site visit.`
+  const url = `${SITE_URL}/sites/${workspace}/${project}`
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      siteName: "Estate360",
+      locale: "en_IN",
+      type: "website",
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: title }],
+    },
+    twitter: { card: "summary_large_image", title, description, images: ["/opengraph-image"] },
+  }
+}
 
 export default async function PublicSitePage({
   params,
@@ -22,8 +56,36 @@ export default async function PublicSitePage({
   if (!data) notFound()
   const { project: proj, units, workspace: ws } = data
 
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: SITE_URL },
+        { "@type": "ListItem", position: 2, name: "Public sites", item: `${SITE_URL}/sites` },
+        { "@type": "ListItem", position: 3, name: proj.name, item: `${SITE_URL}/sites/${workspace}/${project}` },
+      ],
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "Residence",
+      name: proj.name,
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: proj.city,
+        addressRegion: "Gujarat",
+        addressCountry: "IN",
+      },
+      ...(proj.reraNo ? { identifier: proj.reraNo } : {}),
+      ...(units.length > 0 && units[0]?.price
+        ? { offers: { "@type": "Offer", priceCurrency: "INR", price: String(units[0].price), availability: "https://schema.org/InStock" } }
+        : {}),
+    },
+  ]
+
   return (
     <div className="mx-auto max-w-5xl p-6 space-y-6">
+      <JsonLd data={jsonLd} />
       <div className="flex justify-between items-start">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2"><Building2 className="size-6" /> {proj.name}</h1>
