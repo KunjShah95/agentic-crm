@@ -88,7 +88,7 @@ export function SignupForm({
             <Input
               id="workspaceName"
               name="workspaceName"
-              placeholder="Acme Inc."
+              placeholder="e.g., Shilp Infra"
               autoComplete="organization"
               required
             />

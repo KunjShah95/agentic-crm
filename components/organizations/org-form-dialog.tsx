@@ -106,7 +106,7 @@ export function OrgFormDialog({
               <Input
                 id="name"
                 name="name"
-                placeholder="Acme Inc."
+                placeholder="Gujarat Spintex"
                 defaultValue={org?.name}
                 required
               />
@@ -117,7 +117,7 @@ export function OrgFormDialog({
                 <Input
                   id="domain"
                   name="domain"
-                  placeholder="acme.com"
+                  placeholder="gujspintex.in"
                   defaultValue={org?.domain ?? ""}
                 />
               </Field>
@@ -126,7 +126,7 @@ export function OrgFormDialog({
                 <Input
                   id="industry"
                   name="industry"
-                  placeholder="Software"
+                  placeholder="Manufacturing"
                   defaultValue={org?.industry ?? ""}
                 />
               </Field>
@@ -152,7 +152,7 @@ export function OrgFormDialog({
                 <Input
                   id="website"
                   name="website"
-                  placeholder="https://acme.com"
+                  placeholder="https://gujspintex.in"
                   defaultValue={org?.website ?? ""}
                 />
               </Field>

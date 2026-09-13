@@ -11,413 +11,491 @@ if (!connectionString) {
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
+const DAY = 86_400_000
+
+// Pipeline stages — the real-estate sales loop. "Won"/"Lost" names are
+// load-bearing: modules/deals/queries.ts matches the stage literally on "Won".
 const STAGES = [
-  { name: "Lead", color: "#64748b" },
-  { name: "Qualified", color: "#3b82f6" },
-  { name: "Proposal", color: "#8b5cf6" },
-  { name: "Negotiation", color: "#f59e0b" },
+  { name: "Enquiry", color: "#64748b" },
+  { name: "Site Visit", color: "#3b82f6" },
+  { name: "Hold", color: "#8b5cf6" },
+  { name: "Booking", color: "#f59e0b" },
   { name: "Won", color: "#10b981" },
   { name: "Lost", color: "#ef4444" },
 ]
+
+// Mapping from the old generic-SaaS stage names to the real-estate ones.
+const STAGE_RENAMES: Record<string, string> = {
+  Lead: "Enquiry",
+  Qualified: "Site Visit",
+  Proposal: "Hold",
+  Negotiation: "Booking",
+}
 
 async function main() {
   console.log("🌱 Seeding…")
 
   const passwordHash = await bcrypt.hash("password123", 12)
 
-  const demoUser = await prisma.user.upsert({
+  // ── Demo users (personas match the marketing site: Hemal @ Shilp Infra) ──
+  const owner = await prisma.user.upsert({
     where: { email: "demo@estate360.com" },
-    update: { name: "Alex Morgan", passwordHash },
-    create: {
-      email: "demo@estate360.com",
-      name: "Alex Morgan",
-      passwordHash,
-    },
+    update: { name: "Hemal Shah", passwordHash },
+    create: { email: "demo@estate360.com", name: "Hemal Shah", passwordHash },
   })
-
-  const sarah = await prisma.user.upsert({
+  const sales = await prisma.user.upsert({
     where: { email: "sarah@estate360.com" },
-    update: { name: "Sarah Chen" },
-    create: {
-      email: "sarah@estate360.com",
-      name: "Sarah Chen",
-      passwordHash,
-    },
+    update: { name: "Priya Joshi" },
+    create: { email: "sarah@estate360.com", name: "Priya Joshi", passwordHash },
   })
 
-  const workspace = await prisma.workspace.upsert({
-    where: { slug: "acme" },
-    update: { name: "Acme Inc." },
-    create: {
-      name: "Acme Inc.",
-      slug: "acme",
-      stages: { create: STAGES.map((s, i) => ({ ...s, order: i })) },
-    },
-  })
+  // ── Cleanup: duplicate personas from the pre-Estate360 "LoopCRM" seed era ─
+  for (const email of ["demo@loopcrm.com", "sarah@loopcrm.com"]) {
+    const legacy = await prisma.user.findUnique({ where: { email } })
+    if (!legacy) continue
+    await prisma.deal.updateMany({ where: { ownerId: legacy.id }, data: { ownerId: owner.id } })
+    await prisma.workspaceMember.deleteMany({ where: { userId: legacy.id } })
+    await prisma.user.delete({ where: { id: legacy.id } })
+    console.log(`   Removed legacy user ${email}`)
+  }
 
-  await prisma.workspaceMember.upsert({
-    where: {
-      workspaceId_userId: { workspaceId: workspace.id, userId: demoUser.id },
-    },
-    update: {},
-    create: { workspaceId: workspace.id, userId: demoUser.id, role: "OWNER" },
-  })
-  await prisma.workspaceMember.upsert({
-    where: {
-      workspaceId_userId: { workspaceId: workspace.id, userId: sarah.id },
-    },
-    update: {},
-    create: { workspaceId: workspace.id, userId: sarah.id, role: "MEMBER" },
-  })
-
-  // Tags
-  const vipTag = await prisma.tag.upsert({
-    where: { id: "tag-vip" },
-    update: {},
-    create: { id: "tag-vip", workspaceId: workspace.id, name: "VIP", color: "#f59e0b" },
-  })
-  const enterpriseTag = await prisma.tag.upsert({
-    where: { id: "tag-enterprise" },
-    update: {},
-    create: {
-      id: "tag-enterprise",
-      workspaceId: workspace.id,
-      name: "Enterprise",
-      color: "#3b82f6",
-    },
-  })
-
-  // Organizations
-  const acmeCorp = await prisma.organization.upsert({
-    where: { id: "org-acme" },
-    update: {},
-    create: {
-      id: "org-acme",
-      workspaceId: workspace.id,
-      name: "Acme Corp",
-      domain: "acme.com",
-      industry: "Software",
-      size: "201-500",
-      website: "https://acme.com",
-    },
-  })
-  const globex = await prisma.organization.upsert({
-    where: { id: "org-globex" },
-    update: {},
-    create: {
-      id: "org-globex",
-      workspaceId: workspace.id,
-      name: "Globex",
-      domain: "globex.io",
-      industry: "Fintech",
-      size: "51-200",
-    },
-  })
-
-  // Contacts
-  const ada = await prisma.contact.upsert({
-    where: { id: "contact-ada" },
-    update: {},
-    create: {
-      id: "contact-ada",
-      workspaceId: workspace.id,
-      firstName: "Ada",
-      lastName: "Lovelace",
-      email: "ada@acme.com",
-      phone: "+1 555 010 0101",
-      jobTitle: "CTO",
-      organizationId: acmeCorp.id,
-      ownerId: demoUser.id,
-      createdBy: demoUser.id,
-    },
-  })
-  const grace = await prisma.contact.upsert({
-    where: { id: "contact-grace" },
-    update: {},
-    create: {
-      id: "contact-grace",
-      workspaceId: workspace.id,
-      firstName: "Grace",
-      lastName: "Hopper",
-      email: "grace@acme.com",
-      jobTitle: "VP Engineering",
-      organizationId: acmeCorp.id,
-      ownerId: demoUser.id,
-      createdBy: demoUser.id,
-    },
-  })
-  const alan = await prisma.contact.upsert({
-    where: { id: "contact-alan" },
-    update: {},
-    create: {
-      id: "contact-alan",
-      workspaceId: workspace.id,
-      firstName: "Alan",
-      lastName: "Turing",
-      email: "alan@globex.io",
-      jobTitle: "Head of Product",
-      organizationId: globex.id,
-      ownerId: sarah.id,
-      createdBy: demoUser.id,
-    },
-  })
-  const katherine = await prisma.contact.upsert({
-    where: { id: "contact-katherine" },
-    update: {},
-    create: {
-      id: "contact-katherine",
-      workspaceId: workspace.id,
-      firstName: "Katherine",
-      lastName: "Johnson",
-      email: "katherine@nasa.gov",
-      jobTitle: "Director of Research",
-      ownerId: demoUser.id,
-      createdBy: demoUser.id,
-    },
-  })
-
-  await prisma.contactTag.createMany({
-    data: [
-      { contactId: ada.id, tagId: vipTag.id },
-      { contactId: ada.id, tagId: enterpriseTag.id },
-      { contactId: alan.id, tagId: enterpriseTag.id },
-    ],
-    skipDuplicates: true,
-  })
-
-  // Stages for the workspace
-  const stages = await prisma.pipelineStage.findMany({
-    where: { workspaceId: workspace.id },
-    orderBy: { order: "asc" },
-  })
-  const byName = (name: string) => stages.find((s) => s.name === name)!
-
-  // Deals
-  const deal1 = await prisma.deal.upsert({
-    where: { id: "deal-1" },
-    update: {},
-    create: {
-      id: "deal-1",
-      workspaceId: workspace.id,
-      title: "Acme Corp — enterprise platform",
-      contactId: ada.id,
-      organizationId: acmeCorp.id,
-      stageId: byName("Negotiation").id,
-      value: 48000,
-      currency: "USD",
-      probability: 70,
-      expectedCloseDate: new Date(Date.now() + 14 * 86_400_000),
-      ownerId: demoUser.id,
-    },
-  })
-  const deal2 = await prisma.deal.upsert({
-    where: { id: "deal-2" },
-    update: {},
-    create: {
-      id: "deal-2",
-      workspaceId: workspace.id,
-      title: "Globex — annual plan",
-      contactId: alan.id,
-      organizationId: globex.id,
-      stageId: byName("Proposal").id,
-      value: 24000,
-      currency: "USD",
-      probability: 50,
-      expectedCloseDate: new Date(Date.now() + 30 * 86_400_000),
-      ownerId: sarah.id,
-    },
-  })
-  await prisma.deal.upsert({
-    where: { id: "deal-3" },
-    update: {},
-    create: {
-      id: "deal-3",
-      workspaceId: workspace.id,
-      title: "Acme Corp — team seats",
-      contactId: grace.id,
-      organizationId: acmeCorp.id,
-      stageId: byName("Qualified").id,
-      value: 12000,
-      currency: "USD",
-      probability: 30,
-      ownerId: demoUser.id,
-    },
-  })
-  await prisma.deal.upsert({
-    where: { id: "deal-4" },
-    update: {},
-    create: {
-      id: "deal-4",
-      workspaceId: workspace.id,
-      title: "NASA — pilot program",
-      contactId: katherine.id,
-      stageId: byName("Won").id,
-      value: 96000,
-      currency: "USD",
-      probability: 100,
-      expectedCloseDate: new Date(Date.now() - 5 * 86_400_000),
-      ownerId: demoUser.id,
-    },
-  })
-
-  await prisma.dealTag.createMany({
-    data: [
-      { dealId: deal1.id, tagId: enterpriseTag.id },
-      { dealId: deal2.id, tagId: enterpriseTag.id },
-    ],
-    skipDuplicates: true,
-  })
-
-  // PlanLimits seed (idempotent)
-  for (const row of [
-    { plan: "free", maxSeats: 1, maxContacts: 500, maxSocialAccounts: 1, msgPerMonth: 100, webhookPerDay: 500, agentCreditsPerMo: 0 },
-    { plan: "pro", maxSeats: 5, maxContacts: 5000, maxSocialAccounts: 3, msgPerMonth: 5000, webhookPerDay: 10000, agentCreditsPerMo: 1000 },
-    { plan: "scale", maxSeats: 15, maxContacts: 25000, maxSocialAccounts: 10, msgPerMonth: 25000, webhookPerDay: 50000, agentCreditsPerMo: 10000 },
-  ] as const) {
-    await prisma.planLimits.upsert({
-      where: { plan: row.plan },
-      update: row,
-      create: row,
+  // ── Workspace: rename the generic "acme" demo to Shilp Infra ─────────────
+  const legacyAcme = await prisma.workspace.findUnique({ where: { slug: "acme" } })
+  let workspace = legacyAcme
+    ? await prisma.workspace.update({
+        where: { id: legacyAcme.id },
+        data: { slug: "shilp", name: "Shilp Infra" },
+      })
+    : await prisma.workspace.findUnique({ where: { slug: "shilp" } })
+  if (!workspace) {
+    workspace = await prisma.workspace.create({
+      data: {
+        name: "Shilp Infra",
+        slug: "shilp",
+        stages: { create: STAGES.map((s, i) => ({ ...s, order: i })) },
+      },
     })
   }
 
-  // Activities
-  await prisma.activity.createMany({
+  await prisma.workspaceMember.upsert({
+    where: { workspaceId_userId: { workspaceId: workspace.id, userId: owner.id } },
+    update: { role: "OWNER" },
+    create: { workspaceId: workspace.id, userId: owner.id, role: "OWNER" },
+  })
+  await prisma.workspaceMember.upsert({
+    where: { workspaceId_userId: { workspaceId: workspace.id, userId: sales.id } },
+    update: { role: "SALES" },
+    create: { workspaceId: workspace.id, userId: sales.id, role: "SALES" },
+  })
+
+  // ── Stages: rename legacy generic names, then ensure the canonical six ───
+  const before = await prisma.pipelineStage.findMany({ where: { workspaceId: workspace.id } })
+  for (const [oldName, newName] of Object.entries(STAGE_RENAMES)) {
+    const st = before.find((s) => s.name === oldName)
+    const target = before.find((s) => s.name === newName)
+    if (!st) continue
+    if (target) {
+      await prisma.deal.updateMany({ where: { stageId: st.id }, data: { stageId: target.id } })
+      await prisma.pipelineStage.delete({ where: { id: st.id } })
+    } else {
+      await prisma.pipelineStage.update({ where: { id: st.id }, data: { name: newName } })
+    }
+  }
+  const current = await prisma.pipelineStage.findMany({ where: { workspaceId: workspace.id } })
+  for (let i = 0; i < STAGES.length; i++) {
+    const found = current.find((s) => s.name === STAGES[i].name)
+    if (found) {
+      await prisma.pipelineStage.update({ where: { id: found.id }, data: { color: STAGES[i].color, order: i } })
+    } else {
+      await prisma.pipelineStage.create({
+        data: { workspaceId: workspace.id, name: STAGES[i].name, color: STAGES[i].color, order: i },
+      })
+    }
+  }
+  const stages = await prisma.pipelineStage.findMany({ where: { workspaceId: workspace.id }, orderBy: { order: "asc" } })
+  const byName = (name: string) => stages.find((s) => s.name === name)!
+
+  // ── Tags ───────────────────────────────────────────────────────────────────
+  const hotTag = await prisma.tag.upsert({
+    where: { id: "tag-vip" },
+    update: { workspaceId: workspace.id, name: "High Intention", color: "#f59e0b" },
+    create: { id: "tag-vip", workspaceId: workspace.id, name: "High Intention", color: "#f59e0b" },
+  })
+  const nriTag = await prisma.tag.upsert({
+    where: { id: "tag-enterprise" },
+    update: { workspaceId: workspace.id, name: "NRI", color: "#3b82f6" },
+    create: { id: "tag-enterprise", workspaceId: workspace.id, name: "NRI", color: "#3b82f6" },
+  })
+
+  // ── Organizations: a corporate buyer + a channel partner ──────────────────
+  const spintex = await prisma.organization.upsert({
+    where: { id: "org-acme" },
+    update: { workspaceId: workspace.id, name: "Gujarat Spintex", domain: "gujspintex.in", industry: "Textiles", size: "201-500", website: "https://gujspintex.in" },
+    create: {
+      id: "org-acme",
+      workspaceId: workspace.id,
+      name: "Gujarat Spintex",
+      domain: "gujspintex.in",
+      industry: "Textiles",
+      size: "201-500",
+      website: "https://gujspintex.in",
+    },
+  })
+  const jainBrokers = await prisma.organization.upsert({
+    where: { id: "org-globex" },
+    update: { workspaceId: workspace.id, name: "Jain Brokers", domain: "jainbrokers.in", industry: "Channel Partner", size: "11-50" },
+    create: {
+      id: "org-globex",
+      workspaceId: workspace.id,
+      name: "Jain Brokers",
+      domain: "jainbrokers.in",
+      industry: "Channel Partner",
+      size: "11-50",
+    },
+  })
+
+  // ── Contacts: buyers, an NRI, a broker, a corporate enquiry ───────────────
+  const contactDefs = [
+    {
+      id: "contact-ada",
+      firstName: "Anjali", lastName: "Trivedi", email: "anjali.trivedi@example.in",
+      phone: "+91 98254 11223", jobTitle: null, organizationId: null,
+      leadSource: "Google Ads", leadScore: 82, ownerId: owner.id,
+    },
+    {
+      id: "contact-grace",
+      firstName: "Sneha", lastName: "Desai", email: "sneha.desai@example.in",
+      phone: "+91 99098 55443", jobTitle: null, organizationId: null,
+      leadSource: "WhatsApp", leadScore: 74, ownerId: sales.id,
+    },
+    {
+      id: "contact-alan",
+      firstName: "Jaydeep", lastName: "Trivedi", email: "jaydeep@jainbrokers.in",
+      phone: "+91 97233 10020", jobTitle: "Channel Partner", organizationId: jainBrokers.id,
+      leadSource: "Broker", leadScore: 55, ownerId: sales.id,
+    },
+    {
+      id: "contact-katherine",
+      firstName: "Ashish", lastName: "Kothari", email: "ashish.kothari@gujspintex.in",
+      phone: "+91 90999 40050", jobTitle: "HR Head", organizationId: spintex.id,
+      leadSource: "Walk-in", leadScore: 61, ownerId: owner.id,
+    },
+    {
+      id: "contact-rmehta",
+      firstName: "Rohan", lastName: "Mehta", email: "rohan.mehta@example.in",
+      phone: "+91 98250 12345", jobTitle: null, organizationId: null,
+      leadSource: "Website", leadScore: 90, ownerId: owner.id,
+    },
+  ] as const
+  const contacts: Record<string, { id: string; firstName: string; lastName: string }> = {}
+  for (const c of contactDefs) {
+    const { id: contactId, ...data } = c
+    const row = await prisma.contact.upsert({
+      where: { id: contactId },
+      update: { ...data },
+      create: { id: contactId, ...data, workspaceId: workspace.id, createdBy: owner.id },
+    })
+    contacts[contactId] = row
+  }
+
+  await prisma.contactTag.deleteMany({
+    where: { contactId: { in: Object.values(contacts).map((c) => c.id) } },
+  })
+  await prisma.contactTag.createMany({
     data: [
-      {
-        workspaceId: workspace.id,
-        type: "NOTE",
-        contactId: ada.id,
-        dealId: deal1.id,
-        body: "Discovery call went well — Ada wants SSO and audit logs before moving forward.",
-        createdBy: demoUser.id,
-      },
-      {
-        workspaceId: workspace.id,
-        type: "EMAIL",
-        contactId: alan.id,
-        dealId: deal2.id,
-        body: "Sent pricing overview and a comparison to their current tool.",
-        createdBy: sarah.id,
-      },
-      {
-        workspaceId: workspace.id,
-        type: "CALL",
-        contactId: katherine.id,
-        body: "Champion on board. Referencing her for the NASA case study.",
-        createdBy: demoUser.id,
-      },
-      {
-        workspaceId: workspace.id,
-        type: "TASK",
-        contactId: ada.id,
-        dealId: deal1.id,
-        body: "Send revised contract with enterprise terms",
-        scheduledAt: new Date(Date.now() + 2 * 86_400_000),
-        assigneeId: demoUser.id,
-        createdBy: demoUser.id,
-      },
-      {
-        workspaceId: workspace.id,
-        type: "TASK",
-        dealId: deal1.id,
-        body: `Moved deal from "Proposal" to "Negotiation"`,
-        createdBy: demoUser.id,
-      },
+      { contactId: contacts["contact-ada"].id, tagId: hotTag.id },
+      { contactId: contacts["contact-rmehta"].id, tagId: hotTag.id },
+      { contactId: contacts["contact-grace"].id, tagId: nriTag.id },
     ],
     skipDuplicates: true,
   })
 
-  // ── Real-estate inventory + RERA documents ────────────────────────────────
-  // Gives the Documents page real, presentable content (not empty/placeholder).
-  const project = await prisma.project.upsert({
+  // ── Inventory: three Ahmedabad projects, mixed unit statuses ──────────────
+  const sky = await prisma.project.upsert({
     where: { workspaceId_name: { workspaceId: workspace.id, name: "Skyline Residences" } },
-    update: {},
+    update: {
+      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/AUDA/RAA09876/010623",
+      address: "Sardar Patel Ring Road, Bopal, Ahmedabad, Gujarat 380058",
+      city: "Ahmedabad",
+    },
     create: {
       id: "proj-skyline",
       workspaceId: workspace.id,
       name: "Skyline Residences",
-      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/AUDA/RAA12345/010124",
+      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/AUDA/RAA09876/010623",
       address: "Sardar Patel Ring Road, Bopal, Ahmedabad, Gujarat 380058",
       city: "Ahmedabad",
       type: "RESIDENTIAL",
     },
   })
-  const tower = await prisma.tower.upsert({
+  const serenity = await prisma.project.upsert({
+    where: { workspaceId_name: { workspaceId: workspace.id, name: "Shilp Serenity" } },
+    update: {},
+    create: {
+      id: "proj-serenity",
+      workspaceId: workspace.id,
+      name: "Shilp Serenity",
+      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/GIDC/RAA11223/150124",
+      address: "SG Highway, Karbintai, Bopal, Ahmedabad, Gujarat 380058",
+      city: "Ahmedabad",
+      type: "RESIDENTIAL",
+    },
+  })
+  const heights = await prisma.project.upsert({
+    where: { workspaceId_name: { workspaceId: workspace.id, name: "Shilp Heights" } },
+    update: {},
+    create: {
+      id: "proj-heights",
+      workspaceId: workspace.id,
+      name: "Shilp Heights",
+      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/AUDA/RAA13344/220324",
+      address: "150ft Ring Road, South Bopal, Ahmedabad, Gujarat 380058",
+      city: "Ahmedabad",
+      type: "RESIDENTIAL",
+    },
+  })
+
+  const towerA = await prisma.tower.upsert({
     where: { id: "tower-a" },
-    update: {},
-    create: { id: "tower-a", projectId: project.id, name: "Tower A", floors: 14 },
+    update: { projectId: sky.id, name: "Tower A", floors: 14 },
+    create: { id: "tower-a", projectId: sky.id, name: "Tower A", floors: 14 },
   })
-  const floor = await prisma.floor.upsert({
-    where: { towerId_number: { towerId: tower.id, number: 12 } },
+  const floor12 = await prisma.floor.upsert({
+    where: { towerId_number: { towerId: towerA.id, number: 12 } },
     update: {},
-    create: { id: "floor-a-12", towerId: tower.id, number: 12 },
+    create: { id: "floor-a-12", towerId: towerA.id, number: 12 },
   })
-  const unit = await prisma.unit.upsert({
-    where: { projectId_unitNo: { projectId: project.id, unitNo: "A-1204" } },
-    update: {},
-    create: {
-      id: "unit-a-1204",
+  await prisma.tower.upsert({
+    where: { id: "tower-ss" },
+    update: { projectId: serenity.id, name: "Tower SS", floors: 12 },
+    create: { id: "tower-ss", projectId: serenity.id, name: "Tower SS", floors: 12 },
+  })
+  await prisma.tower.upsert({
+    where: { id: "tower-sh" },
+    update: { projectId: heights.id, name: "Tower SH", floors: 10 },
+    create: { id: "tower-sh", projectId: heights.id, name: "Tower SH", floors: 10 },
+  })
+
+  // [id, projectId, floorId, unitNo, config, carpet, builtUp, facing, price, status]
+  const unitDefs = [
+    ["unit-a-1204", sky.id, floor12.id, "A-1204", "BHK3", 1285, 1620, "East", 9_850_000, "BOOKED"],
+    ["unit-a-1201", sky.id, floor12.id, "A-1201", "BHK2", 855, 1105, "West", 6_700_000, "AVAILABLE"],
+    ["unit-a-1203", sky.id, floor12.id, "A-1203", "BHK3", 1290, 1625, "North", 10_100_000, "SOLD"],
+    ["unit-ss-1102", serenity.id, null, "SS-1102", "BHK3", 1320, 1680, "East", 11_500_000, "AVAILABLE"],
+    ["unit-ss-207", serenity.id, null, "SS-207", "BHK1", 620, 810, "West", 4_150_000, "HOLD"],
+    ["unit-ss-704", serenity.id, null, "SS-704", "BHK2", 905, 1160, "North", 7_250_000, "AVAILABLE"],
+    ["unit-sh-405", heights.id, null, "SH-405", "BHK2", 880, 1140, "East", 6_450_000, "AVAILABLE"],
+    ["unit-sh-1201", heights.id, null, "SH-1201", "BHK4", 1760, 2210, "West", 14_500_000, "HOLD"],
+    ["unit-sh-302", heights.id, null, "SH-302", "BHK3", 1240, 1590, "North", 9_300_000, "SOLD"],
+  ] as const
+  const units: Record<string, { id: string; unitNo: string; carpetArea: number | null; builtUp: number | null }> = {}
+  for (const [id, projectId, floorId, unitNo, config, carpetArea, builtUp, facing, price, status] of unitDefs) {
+    const u = await prisma.unit.upsert({
+      where: { projectId_unitNo: { projectId, unitNo } },
+      update: { workspaceId: workspace.id, floorId, config, carpetArea, builtUp, facing, price, status },
+      create: { id, workspaceId: workspace.id, projectId, floorId, unitNo, config, carpetArea, builtUp, facing, price, status },
+    })
+    units[id] = u
+  }
+
+  // ── Deals: the full enquiry→booking loop, all INR ─────────────────────────
+  const dealDefs = [
+    {
+      id: "deal-1",
+      title: "Skyline Residences — A-1204 · 3BHK",
+      contactId: contacts["contact-rmehta"].id, organizationId: null,
+      unitId: units["unit-a-1204"].id, stage: "Won", bookingStage: "BOOKING",
+      value: 9_850_000, probability: 100, closeOffset: -5, ownerId: owner.id,
+    },
+    {
+      id: "deal-2",
+      title: "Shilp Serenity — 3BHK SS-1102",
+      contactId: contacts["contact-ada"].id, organizationId: null,
+      unitId: units["unit-ss-1102"].id, stage: "Booking", bookingStage: "BOOKING",
+      value: 11_500_000, probability: 90, closeOffset: 14, ownerId: owner.id,
+    },
+    {
+      id: "deal-3",
+      title: "Shilp Heights — 2BHK SH-405",
+      contactId: contacts["contact-grace"].id, organizationId: null,
+      unitId: units["unit-sh-405"].id, stage: "Hold", bookingStage: "HOLD",
+      value: 6_450_000, probability: 60, closeOffset: 30, ownerId: sales.id,
+    },
+    {
+      id: "deal-4",
+      title: "Shilp Serenity — 1BHK SS-207",
+      contactId: contacts["contact-alan"].id, organizationId: jainBrokers.id,
+      unitId: units["unit-ss-207"].id, stage: "Site Visit", bookingStage: "VISIT",
+      value: 4_150_000, probability: 30, closeOffset: 45, ownerId: sales.id,
+    },
+    {
+      id: "deal-5",
+      title: "Gujarat Spintex — corporate enquiry (staff housing)",
+      contactId: contacts["contact-katherine"].id, organizationId: spintex.id,
+      unitId: null, stage: "Enquiry", bookingStage: "INQUIRY",
+      value: 26_000_000, probability: 10, closeOffset: 90, ownerId: owner.id,
+    },
+    {
+      id: "deal-6",
+      title: "Shilp Heights — Penthouse SH-1201",
+      contactId: contacts["contact-grace"].id, organizationId: null,
+      unitId: units["unit-sh-1201"].id, stage: "Hold", bookingStage: "HOLD",
+      value: 14_500_000, probability: 55, closeOffset: 21, ownerId: sales.id,
+    },
+    {
+      id: "deal-7",
+      title: "Skyline Residences — A-1201 · 2BHK",
+      contactId: contacts["contact-ada"].id, organizationId: null,
+      unitId: units["unit-a-1201"].id, stage: "Site Visit", bookingStage: "VISIT",
+      value: 6_700_000, probability: 40, closeOffset: 35, ownerId: owner.id,
+    },
+  ] as const
+  const deals: Record<string, { id: string }> = {}
+  for (const d of dealDefs) {
+    const row = await prisma.deal.upsert({
+      where: { id: d.id },
+      update: {
+        workspaceId: workspace.id,
+        title: d.title,
+        contactId: d.contactId,
+        organizationId: d.organizationId,
+        unitId: d.unitId,
+        stageId: byName(d.stage).id,
+        bookingStage: d.bookingStage,
+        value: d.value,
+        currency: "INR",
+        probability: d.probability,
+        expectedCloseDate: new Date(Date.now() + d.closeOffset * DAY),
+        ownerId: d.ownerId,
+      },
+      create: {
+        id: d.id,
+        workspaceId: workspace.id,
+        title: d.title,
+        contactId: d.contactId,
+        organizationId: d.organizationId,
+        unitId: d.unitId,
+        stageId: byName(d.stage).id,
+        bookingStage: d.bookingStage,
+        value: d.value,
+        currency: "INR",
+        probability: d.probability,
+        expectedCloseDate: new Date(Date.now() + d.closeOffset * DAY),
+        ownerId: d.ownerId,
+      },
+    })
+    deals[d.id] = row
+  }
+
+  // Legacy generic-SaaS deals (Acme/Globex/NASA in USD) are superseded.
+  for (const legacyId of ["deal-skyline-1204"]) {
+    const exists = await prisma.deal.findUnique({ where: { id: legacyId } })
+    if (exists) {
+      await prisma.activity.deleteMany({ where: { dealId: legacyId } })
+      await prisma.dealTag.deleteMany({ where: { dealId: legacyId } })
+      await prisma.generatedDocument.deleteMany({ where: { dealId: legacyId } })
+      await prisma.costSheet.deleteMany({ where: { dealId: legacyId } })
+      await prisma.payment.deleteMany({ where: { dealId: legacyId } })
+      await prisma.deal.delete({ where: { id: legacyId } })
+    }
+  }
+  {
+    const usd = await prisma.deal.findMany({ where: { workspaceId: workspace.id, currency: "USD" }, select: { id: true } })
+    for (const d of usd) {
+      await prisma.activity.deleteMany({ where: { dealId: d.id } })
+      await prisma.dealTag.deleteMany({ where: { dealId: d.id } })
+      await prisma.generatedDocument.deleteMany({ where: { dealId: d.id } })
+      await prisma.costSheet.deleteMany({ where: { dealId: d.id } })
+      await prisma.payment.deleteMany({ where: { dealId: d.id } })
+      await prisma.deal.delete({ where: { id: d.id } })
+    }
+  }
+
+  await prisma.dealTag.deleteMany({ where: { dealId: { in: dealDefs.map((d) => d.id) } } })
+  await prisma.dealTag.createMany({
+    data: [
+      { dealId: deals["deal-2"].id, tagId: hotTag.id },
+      { dealId: deals["deal-3"].id, tagId: nriTag.id },
+    ],
+    skipDuplicates: true,
+  })
+
+  // ── Collections: CLP milestones on the A-1204 booking (paid/due/overdue) ──
+  const bookedDeal = deals["deal-1"]
+  await prisma.payment.deleteMany({ where: { dealId: bookedDeal.id, receiptNo: { startsWith: "SEED-" } } })
+  const milestones = [
+    { receipt: "SEED-1", amount: 985_000, status: "PAID", dueDays: -45 },
+    { receipt: "SEED-2", amount: 1_477_500, status: "PAID", dueDays: -20 },
+    { receipt: "SEED-3", amount: 985_000, status: "DUE", dueDays: -6 }, // overdue
+    { receipt: "SEED-4", amount: 985_000, status: "DUE", dueDays: 12 },
+  ]
+  for (const m of milestones) {
+    await prisma.payment.create({
+      data: {
+        workspaceId: workspace.id,
+        dealId: bookedDeal.id,
+        amount: m.amount,
+        status: m.status,
+        dueDate: new Date(Date.now() + m.dueDays * DAY),
+        paidAt: m.status === "PAID" ? new Date(Date.now() + m.dueDays * DAY) : null,
+        receiptNo: m.receipt,
+      },
+    })
+  }
+
+  // ── Plan limits (platform rows, idempotent) ────────────────────────────────
+  for (const row of [
+    { plan: "free", maxSeats: 1, maxContacts: 500, maxSocialAccounts: 1, msgPerMonth: 100, webhookPerDay: 500, agentCreditsPerMo: 0 },
+    { plan: "pro", maxSeats: 5, maxContacts: 5000, maxSocialAccounts: 3, msgPerMonth: 5000, webhookPerDay: 10000, agentCreditsPerMo: 1000 },
+    { plan: "scale", maxSeats: 15, maxContacts: 25000, maxSocialAccounts: 10, msgPerMonth: 25000, webhookPerDay: 50000, agentCreditsPerMo: 10000 },
+  ] as const) {
+    await prisma.planLimits.upsert({ where: { plan: row.plan }, update: row, create: row })
+  }
+
+  // ── Activities: drop the old generic-SaaS seed chatter, keep the loop story
+  await prisma.activity.deleteMany({
+    where: {
       workspaceId: workspace.id,
-      projectId: project.id,
-      floorId: floor.id,
-      unitNo: "A-1204",
-      config: "BHK3",
-      carpetArea: 1285,
-      builtUp: 1620,
-      facing: "East",
-      price: 9_850_000,
-      status: "BOOKED",
+      OR: [
+        { body: { contains: "SSO" } },
+        { body: { contains: "comparison to their current tool" } },
+        { body: { contains: "case study" } },
+        { body: { contains: "enterprise terms" } },
+        { body: { contains: 'Moved deal from "Proposal"' } },
+      ],
     },
   })
 
-  const buyer = await prisma.contact.upsert({
-    where: { id: "contact-rmehta" },
-    update: {},
-    create: {
-      id: "contact-rmehta",
-      workspaceId: workspace.id,
-      firstName: "Rohan",
-      lastName: "Mehta",
-      email: "rohan.mehta@example.in",
-      phone: "+91 98250 12345",
-      ownerId: demoUser.id,
-      createdBy: demoUser.id,
-    },
-  })
-  const reDeal = await prisma.deal.upsert({
-    where: { id: "deal-skyline-1204" },
-    update: {},
-    create: {
-      id: "deal-skyline-1204",
-      workspaceId: workspace.id,
-      title: "Skyline A-1204 — 3BHK booking",
-      contactId: buyer.id,
-      stageId: byName("Won").id,
-      unitId: unit.id,
-      value: 9_850_000,
-      currency: "INR",
-      probability: 100,
-      ownerId: demoUser.id,
-    },
-  })
-  const costSheet = await prisma.costSheet.upsert({
-    where: { id: "cost-skyline-1204" },
-    update: {},
-    create: {
-      id: "cost-skyline-1204",
-      workspaceId: workspace.id,
-      unitId: unit.id,
-      dealId: reDeal.id,
-      basePrice: 9_850_000,
-      gst: 492_500, // 5%
-      stampDuty: 482_650, // ~4.9%
-      total: 10_825_150,
-      currency: "INR",
-    },
-  })
+  // ── Activities (idempotent: fixed ids, source="seed") ──────────────────────
+  await prisma.activity.deleteMany({ where: { workspaceId: workspace.id, source: "seed" } })
+  const activityDefs = [
+    { id: "act-seed-1", type: "CALL", contactId: contacts["contact-ada"].id, dealId: deals["deal-2"].id, body: "Site visit done at Serenity — Anjali confirmed the east-facing 3BHK. Demand letter goes out Monday.", createdBy: owner.id, at: -2 },
+    { id: "act-seed-2", type: "NOTE", contactId: contacts["contact-grace"].id, dealId: deals["deal-3"].id, body: "Cost sheet with GST + stamp shared over WhatsApp. NRI — repatriation query answered.", createdBy: sales.id, at: -3 },
+    { id: "act-seed-3", type: "CALL", contactId: contacts["contact-katherine"].id, dealId: deals["deal-5"].id, body: "Spintex wants 4 units for relocated managers. Budget ≤ ₹65L each, SG Highway preferred.", createdBy: owner.id, at: -1 },
+    { id: "act-seed-4", type: "TASK", contactId: contacts["contact-rmehta"].id, dealId: deals["deal-1"].id, body: "Issue demand letter #3 (SLI-1 overdue by 6 days) for A-1204", createdBy: owner.id, assigneeId: owner.id, at: 1 },
+    { id: "act-seed-5", type: "TASK", contactId: contacts["contact-alan"].id, dealId: deals["deal-4"].id, body: "Release SH-405 hold before expiry or convert to booking", createdBy: sales.id, assigneeId: sales.id, at: 2 },
+    { id: "act-seed-6", type: "TASK", contactId: contacts["contact-katherine"].id, dealId: deals["deal-5"].id, body: "Send corporate housing proposal to Gujarat Spintex HR", createdBy: owner.id, assigneeId: sales.id, at: 4 },
+  ] as const
+  for (const a of activityDefs) {
+    await prisma.activity.create({
+      data: {
+        id: a.id,
+        workspaceId: workspace.id,
+        type: a.type,
+        contactId: a.contactId,
+        dealId: a.dealId,
+        body: a.body,
+        createdBy: a.createdBy,
+        source: "seed",
+        createdAt: new Date(Date.now() + a.at * DAY),
+        ...(a.type === "TASK"
+          ? { scheduledAt: new Date(Date.now() + a.at * DAY), assigneeId: a.assigneeId ?? a.createdBy }
+          : {}),
+      },
+    })
+  }
 
-  // RERA-aligned document templates (shortcodes rendered at generation time).
+  // ── RERA documents: templates + a generated allotment letter ───────────────
   const TEMPLATES: { id: string; kind: "DEMAND_LETTER" | "ALLOTMENT" | "BOOKING_FORM" | "RECEIPT" | "POSSESSION"; name: string; bodyHtml: string }[] = [
     {
       id: "tpl-demand",
@@ -506,12 +584,28 @@ async function main() {
     })
   }
 
-  // One pre-generated allotment letter so the Documents page has real content.
+  const unit = await prisma.unit.findUniqueOrThrow({ where: { id: units["unit-a-1204"].id } })
+  const costSheet = await prisma.costSheet.upsert({
+    where: { id: "cost-skyline-1204" },
+    update: { workspaceId: workspace.id, unitId: unit.id, dealId: bookedDeal.id, basePrice: 9_850_000, gst: 492_500, stampDuty: 482_650, total: 10_825_150, currency: "INR" },
+    create: {
+      id: "cost-skyline-1204",
+      workspaceId: workspace.id,
+      unitId: unit.id,
+      dealId: bookedDeal.id,
+      basePrice: 9_850_000,
+      gst: 492_500, // 5%
+      stampDuty: 482_650, // ~4.9%
+      total: 10_825_150,
+      currency: "INR",
+    },
+  })
+
   const inr = (n: number) => n.toLocaleString("en-IN")
   const allotmentCtx: Record<string, string> = {
     workspace_name: workspace.name,
-    rera_no: project.reraNo ?? "",
-    project_name: project.name,
+    rera_no: sky.reraNo ?? "",
+    project_name: sky.name,
     unit_no: unit.unitNo,
     carpet_area: String(unit.carpetArea ?? ""),
     built_up: String(unit.builtUp ?? ""),
@@ -519,7 +613,7 @@ async function main() {
     gst: inr(costSheet.gst),
     stamp_duty: inr(costSheet.stampDuty),
     total: inr(costSheet.total),
-    buyer_name: `${buyer.firstName} ${buyer.lastName}`,
+    buyer_name: `${contacts["contact-rmehta"].firstName} ${contacts["contact-rmehta"].lastName}`,
     booking_date: new Date().toLocaleDateString("en-IN"),
   }
   const allotmentTpl = TEMPLATES.find((t) => t.id === "tpl-allotment")!
@@ -527,11 +621,11 @@ async function main() {
   for (const [k, v] of Object.entries(allotmentCtx)) allotmentHtml = allotmentHtml.replaceAll(`{{${k}}}`, v)
   await prisma.generatedDocument.upsert({
     where: { id: "gen-allotment-1204" },
-    update: { renderedHtml: allotmentHtml },
+    update: { workspaceId: workspace.id, dealId: bookedDeal.id, unitId: unit.id, renderedHtml: allotmentHtml },
     create: {
       id: "gen-allotment-1204",
       workspaceId: workspace.id,
-      dealId: reDeal.id,
+      dealId: bookedDeal.id,
       unitId: unit.id,
       templateId: allotmentTpl.id,
       renderedHtml: allotmentHtml,
@@ -540,8 +634,7 @@ async function main() {
 
   console.log("✅ Seed complete.")
   console.log("   Login: demo@estate360.com / password123")
-  console.log("   Workspace: /acme")
-  console.log("   Seeded: Skyline Residences · 5 RERA templates · 1 allotment letter")
+  console.log("   Workspace: /shilp — Shilp Infra (3 projects · 9 units · 7 deals · CLP collections)")
 }
 
 main()

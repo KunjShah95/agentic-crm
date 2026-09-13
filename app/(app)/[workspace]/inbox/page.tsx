@@ -37,7 +37,7 @@ export default async function InboxPage({
             <Link
               key={c.id}
               href={`/${slug}/inbox?c=${c.id}`}
-              className={`block px-4 py-3 border-b hover:bg-muted/50 transition-colors ${c.id === active ? "bg-muted border-l-2 border-l-violet-600" : "border-l-2 border-l-transparent"}`}
+              className={`block px-4 py-3 border-b hover:bg-muted/50 transition-colors ${c.id === active ? "bg-muted border-l-2 border-l-brand" : "border-l-2 border-l-transparent"}`}
             >
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">

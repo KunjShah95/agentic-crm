@@ -70,7 +70,7 @@ function OnboardBrokerDialog({ workspaceId }: { workspaceId: string }) {
         <form action={submit} className="space-y-3">
           <div className="space-y-1">
             <Label htmlFor="cp-name">Name</Label>
-            <Input id="cp-name" name="name" required placeholder="Acme Realtors" />
+            <Input id="cp-name" name="name" required placeholder="Jain Brokers" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="cp-rera">RERA no.</Label>

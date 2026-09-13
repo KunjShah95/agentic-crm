@@ -80,13 +80,13 @@ export default async function DealsPage({
     <div className="space-y-6">
       <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-64 w-72 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-500/20 to-transparent" />
+          <div className="absolute -top-16 -right-16 h-64 w-72 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
         </div>
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">Deals</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{pipeline.stages.length} stages · {pipeline.deals.length} deals · drag to log, no admin hour</p>
+            <p className="mt-1 text-sm text-muted-foreground">{pipeline.stages.length} stages · {pipeline.deals.length} deals · every drag is logged as activity</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-full border bg-muted/40 p-0.5">

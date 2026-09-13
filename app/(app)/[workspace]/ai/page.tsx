@@ -39,9 +39,9 @@ export default async function AIPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-2">
-          <Bot className="size-6 text-brand" /> Intelligence <Badge variant="secondary" className="rounded-md font-mono text-xs">P0 · Agentic AI</Badge>
+          <Bot className="size-6 text-brand" /> Intelligence
         </h1>
-        <p className="text-sm text-muted-foreground">Next-best-action, follow-up cadence, drafting, call analysis, Ask pipeline, forecast — Jarvis parity, workspace-scoped.</p>
+        <p className="text-sm text-muted-foreground">Revenue and collections forecasts, next-best-actions, and a read-only assistant for your pipeline.</p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -68,7 +68,7 @@ export default async function AIPage({
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-display flex items-center gap-2"><Sparkles className="size-4 text-brand" /> Funnel snapshot</CardTitle>
-            <CardDescription>{snapshot.funnel[0]?.count ?? 0} INQUIRY · {snapshot.inventory.total} units</CardDescription>
+            <CardDescription>{snapshot.funnel[0]?.count ?? 0} enquiries · {snapshot.inventory.total} units</CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
             <div className="flex flex-wrap gap-1">
@@ -100,20 +100,20 @@ export default async function AIPage({
               ) : null}
             </div>
           ) : (
-            <p className="text-xs text-muted-foreground">Workspace-scoped, read-only. No data leaves the workspace.</p>
+            <p className="text-xs text-muted-foreground">Read-only — the assistant answers from your workspace data, nothing leaves it.</p>
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">How to use</CardTitle>
+          <CardTitle className="text-base">What the assistant can do</CardTitle>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
-          <div>• <span className="font-medium text-foreground">suggestActions</span> — ranked CALL/WHATSAPP/SITE_VISIT per score + idle + stage (pure, tested).</div>
-          <div>• <span className="font-medium text-foreground">scheduleFollowUps</span> — cadence hot/warm/cold → 3 Activity rows; call <span className="font-mono">modules/ai/actions.createFollowUps</span>.</div>
-          <div>• <span className="font-medium text-foreground">draftMessage</span> — intent → WhatsApp/email stub (LLM-swappable).</div>
-          <div>• <span className="font-medium text-foreground">analyzeCall</span> — transcript → budget/config/sentiment (regex, LLM-ready).</div>
+          <div>• <span className="font-medium text-foreground">Suggested next actions</span> — ranked call, WhatsApp, or site-visit follow-ups for the deals that are going quiet.</div>
+          <div>• <span className="font-medium text-foreground">Follow-up cadence</span> — hot, warm, and cold leads get automatic check-in tasks on your team's timeline.</div>
+          <div>• <span className="font-medium text-foreground">Message drafts</span> — ready-to-send WhatsApp and email replies you approve before anything goes out.</div>
+          <div>• <span className="font-medium text-foreground">Call analysis</span> — pull budget, unit preference, and intent out of call notes.</div>
         </CardContent>
       </Card>
     </div>

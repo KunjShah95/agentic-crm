@@ -46,10 +46,8 @@ export default async function ReportsPage({
       <div className="rounded-2xl border bg-card p-5 md:p-6 relative overflow-hidden">
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-2">
-              Reports <Badge variant="secondary" className="rounded-md font-mono text-xs">Phase 4.3</Badge>
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Funnel · Inventory health · Collections · Source ROI · Team vs target — workspace-scoped per project.</p>
+            <h1 className="text-2xl font-display font-semibold tracking-tight">Reports</h1>
+            <p className="mt-1 text-sm text-muted-foreground">Funnel, inventory health, collections, source ROI, and team targets — filter by project.</p>
           </div>
           <ExportButtons slug={slug} projectId={projectId} />
         </div>
@@ -78,7 +76,7 @@ export default async function ReportsPage({
         <Card className="lg:col-span-7">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-display"><TrendingUp className="size-4 text-brand" /> Funnel</CardTitle>
-            <CardDescription>INQUIRY → CLOSED · conversion % vs INQUIRY base</CardDescription>
+            <CardDescription>Every stage from enquiry to close, with conversion against enquiries.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {snapshot.funnel.map((r) => (
@@ -95,7 +93,7 @@ export default async function ReportsPage({
         <Card className="lg:col-span-5">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-display"><Building2 className="size-4 text-emerald-600 dark:text-emerald-400" /> Inventory Health</CardTitle>
-            <CardDescription>AVAILABLE / HOLD / BOOKED / SOLD · sold% = (booked+sold)/total</CardDescription>
+            <CardDescription>Units available, on hold, booked, and sold across projects.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2 text-center">
@@ -115,7 +113,7 @@ export default async function ReportsPage({
         <Card className="lg:col-span-5">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-display"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
-            <CardDescription>DUE / PAID / OVERDUE (past dueDate → OVERDUE) · overdue %</CardDescription>
+            <CardDescription>Milestones due, collected, and past their due date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center">
@@ -133,7 +131,7 @@ export default async function ReportsPage({
         <Card className="lg:col-span-4">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-display"><Users className="size-4 text-blue-600 dark:text-blue-400" /> Source ROI</CardTitle>
-            <CardDescription>Leads / bookings / revenue by leadSource · sorted by revenue</CardDescription>
+            <CardDescription>Leads, bookings, and revenue by where they came from.</CardDescription>
           </CardHeader>
           <CardContent>
             {snapshot.sourceROI.length === 0 ? (
@@ -142,7 +140,7 @@ export default async function ReportsPage({
               <div className="space-y-2">
                 {snapshot.sourceROI.map((r) => (
                   <div key={r.source} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
-                    <div><div className="font-medium">{r.source}</div><div className="text-xs text-muted-foreground font-mono tabular-nums">{r.leads} leads · {r.bookings} bookings</div></div>
+                    <div><div className="font-medium">{r.source === "UNKNOWN" ? "Not recorded" : r.source}</div><div className="text-xs text-muted-foreground font-mono tabular-nums">{r.leads} leads · {r.bookings} bookings</div></div>
                     <div className="text-right"><div className="font-mono text-xs font-semibold tabular-nums">₹{r.revenue.toLocaleString("en-IN")}</div><Badge variant="secondary" className="font-mono text-xs tabular-nums">{r.conversionPct}%</Badge></div>
                   </div>
                 ))}
@@ -154,7 +152,7 @@ export default async function ReportsPage({
         <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
             <CardTitle className="flex items-center gap-2 text-base font-display"><Target className="size-4 text-brand" /> Team vs Target</CardTitle>
-            <CardDescription>Bookings vs target (default 10, override via workspace settingsJson.targets)</CardDescription>
+            <CardDescription>Bookings per owner against their monthly target.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
             {snapshot.teamVsTarget.map((r) => (

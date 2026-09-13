@@ -56,7 +56,7 @@ export async function searchWorkspace(
       LIMIT 8
     `,
     db.$queryRaw<RawHit[]>`
-      SELECT "id", "title" AS name, COALESCE("currency", 'USD') AS subtitle
+      SELECT "id", "title" AS name, COALESCE("currency", 'INR') AS subtitle
       FROM "Deal"
       WHERE "workspaceId" = ${workspaceId}
         AND deal_search_tsv("title") @@ plainto_tsquery('english', ${q})

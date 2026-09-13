@@ -33,15 +33,26 @@ export default async function ContactPage() {
       <section className="mx-auto grid max-w-[1280px] gap-10 px-6 py-14 lg:grid-cols-[0.95fr_1.05fr] lg:px-8 lg:py-16">
         <div className="space-y-6">
           <Card className="overflow-hidden border-border/60">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTh8fGJ1c2luZXNzJTIwb2ZmaWNlfGVufDB8fDB8fHww"
-              alt="Estate360 team office in Ahmedabad, Gujarat"
-              width={600}
-              height={380}
-              className="h-64 w-full object-cover"
-              decoding="async"
-            />
+            {/* Brand panel — skyline "loop" graphic in place of stock photography */}
+            <div aria-hidden className="relative h-40 overflow-hidden bg-foreground">
+              <div className="absolute inset-0 bg-[linear-gradient(to_right,oklch(0.99_0.002_85/0.06)_1px,transparent_1px),linear-gradient(to_bottom,oklch(0.99_0.002_85/0.06)_1px,transparent_1px)] bg-[size:32px_32px]" />
+              <div className="absolute -right-10 -top-10 size-40 rounded-full bg-brand/25 blur-2xl" />
+              {/* skyline */}
+              <svg className="absolute bottom-0 left-0 right-0 h-24 w-full text-brand/70" viewBox="0 0 400 96" preserveAspectRatio="none" fill="currentColor" aria-hidden>
+                <rect x="20" y="38" width="34" height="58" opacity=".35" />
+                <rect x="62" y="20" width="26" height="76" opacity=".55" />
+                <rect x="96" y="46" width="40" height="50" opacity=".3" />
+                <rect x="146" y="8" width="30" height="88" opacity=".7" />
+                <rect x="184" y="34" width="24" height="62" opacity=".4" />
+                <rect x="216" y="52" width="44" height="44" opacity=".28" />
+                <rect x="268" y="16" width="28" height="80" opacity=".6" />
+                <rect x="304" y="42" width="36" height="54" opacity=".35" />
+                <rect x="348" y="28" width="22" height="68" opacity=".5" />
+              </svg>
+              <div className="absolute bottom-4 left-5 font-mono text-[11px] tracking-[0.16em] text-background/70">
+                SG HIGHWAY → SOUTH BOPAL
+              </div>
+            </div>
             <CardContent className="space-y-4 p-5">
               <div className="flex gap-3">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />

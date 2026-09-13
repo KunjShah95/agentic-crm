@@ -29,7 +29,7 @@ export default async function SiteVisitsPage({ params }: { params: Promise<{ wor
     <div className="space-y-6">
       <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-emerald-500/10 via-blue-500/10 to-violet-500/10 blur-2xl" />
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent" />
         </div>
         <div className="relative flex flex-wrap items-start justify-between gap-4">

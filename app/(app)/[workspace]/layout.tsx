@@ -72,7 +72,7 @@ export default async function WorkspaceLayout({
         <Topbar workspace={workspaceLite} />
         <main className="relative flex-1 overflow-y-auto">
           <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-0 hidden md:block">
-            <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_85%_0%,rgba(139,92,246,0.06),transparent_60%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_85%_0%,oklch(0.58_0.16_68/0.05),transparent_60%)]" />
           </div>
           <div className="relative z-10 mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">{children}</div>
         </main>

@@ -24,7 +24,7 @@ export default async function ProjectsPage({
     <div className="space-y-6">
       <PageHeader
         title="Projects"
-        description={`${projects.length} projects · ${totalUnits} units · RERA-aligned, workspace-scoped`}
+        description={`${projects.length} ${projects.length === 1 ? "project" : "projects"} · ${totalUnits} ${totalUnits === 1 ? "unit" : "units"} · RERA numbers on file`}
         badge={<Badge variant="secondary" className="rounded-full gap-1.5"><Building2 className="size-3" /> Inventory core</Badge>}
         stats={
           <>
@@ -41,7 +41,7 @@ export default async function ProjectsPage({
           <CardContent className="py-12 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><Building2 className="size-6 text-muted-foreground" /></div>
             <div className="mt-3 text-sm font-medium">No projects yet</div>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first project → add towers & units → generate cost sheet in &lt;30s.</p>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add your first project, then towers and units — cost sheets and RERA documents follow automatically.</p>
           </CardContent>
         </Card>
       ) : (
@@ -50,9 +50,9 @@ export default async function ProjectsPage({
             <Link
               key={p.id}
               href={`/${slug}/projects/${p.id}`}
-              className="group relative overflow-hidden rounded-[16px] border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-violet-200 dark:hover:border-violet-800 transition-all"
+              className="group relative overflow-hidden rounded-[16px] border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
             >
-              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,rgba(139,92,246,0.08),transparent_70%)]" />
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,oklch(0.58_0.16_68/0.08),transparent_70%)]" />
               <div className="relative flex items-start justify-between gap-3">
                 <span className="flex size-9 items-center justify-center rounded-xl bg-foreground text-background text-xs font-bold">
                   {p.name.slice(0, 2).toUpperCase()}
@@ -63,7 +63,7 @@ export default async function ProjectsPage({
               <div className="relative mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Sparkles className="size-3" /> {p.reraNo ?? "RERA TBD"} · {(p as unknown as { _count: { units: number } })._count.units} units
               </div>
-              <div className="relative mt-4 flex items-center gap-1.5 text-xs font-medium text-violet-600 dark:text-violet-400">
+              <div className="relative mt-4 flex items-center gap-1.5 text-xs font-medium text-brand">
                 Open inventory <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
               </div>
             </Link>

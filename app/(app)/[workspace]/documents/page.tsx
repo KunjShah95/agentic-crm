@@ -18,7 +18,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
     <div className="space-y-6">
       <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
         <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-blue-500/10 via-violet-500/10 to-cyan-500/10 blur-2xl" />
+          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
         </div>
         <div className="relative">
@@ -34,7 +34,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((t) => (
-              <div key={t.id} className="group rounded-xl border bg-muted/20 px-3.5 py-3 hover:bg-card hover:shadow-sm hover:border-violet-200 transition-colors">
+              <div key={t.id} className="group rounded-xl border bg-muted/20 px-3.5 py-3 hover:bg-card hover:shadow-sm hover:border-brand/30 transition-colors">
                 <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{t.name}</span><Badge variant="secondary" className="rounded-full font-mono text-[11px]">{t.kind}</Badge></div>
                 {t.reraAligned ? <Badge className="mt-2 rounded-full">RERA</Badge> : null}
               </div>

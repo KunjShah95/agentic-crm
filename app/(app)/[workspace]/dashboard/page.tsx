@@ -49,7 +49,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           <h1 className="text-2xl font-display font-semibold tracking-tight">
             Dashboard <Badge variant="secondary" className="rounded-md font-mono text-xs">{ws.name}</Badge>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Workspace overview — every number scoped by workspaceId.</p>
+          <p className="mt-1 text-sm text-muted-foreground">A live overview of contacts, deals, projects, and site visits for this workspace.</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>

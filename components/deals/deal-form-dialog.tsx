@@ -77,7 +77,7 @@ export function DealFormDialog({
       contactId: String(form.get("contactId") ?? ""),
       organizationId: String(form.get("organizationId") ?? ""),
       value: String(form.get("value") ?? ""),
-      currency: String(form.get("currency") ?? "USD"),
+      currency: String(form.get("currency") ?? "INR"),
       probability: String(form.get("probability") ?? ""),
       expectedCloseDate: String(form.get("expectedCloseDate") ?? "") || null,
       ownerId: String(form.get("ownerId") ?? ""),
@@ -121,7 +121,7 @@ export function DealFormDialog({
               <Input
                 id="title"
                 name="title"
-                placeholder="Acme — annual plan"
+                placeholder="Skyline Residences — 3BHK A-1204"
                 defaultValue={deal?.title}
                 required
               />
