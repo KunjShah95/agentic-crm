@@ -26,20 +26,20 @@ async function main() {
   const passwordHash = await bcrypt.hash("password123", 12)
 
   const demoUser = await prisma.user.upsert({
-    where: { email: "demo@loopcrm.com" },
+    where: { email: "demo@estate360.com" },
     update: { name: "Alex Morgan", passwordHash },
     create: {
-      email: "demo@loopcrm.com",
+      email: "demo@estate360.com",
       name: "Alex Morgan",
       passwordHash,
     },
   })
 
   const sarah = await prisma.user.upsert({
-    where: { email: "sarah@loopcrm.com" },
+    where: { email: "sarah@estate360.com" },
     update: { name: "Sarah Chen" },
     create: {
-      email: "sarah@loopcrm.com",
+      email: "sarah@estate360.com",
       name: "Sarah Chen",
       passwordHash,
     },
@@ -328,9 +328,220 @@ async function main() {
     skipDuplicates: true,
   })
 
+  // ── Real-estate inventory + RERA documents ────────────────────────────────
+  // Gives the Documents page real, presentable content (not empty/placeholder).
+  const project = await prisma.project.upsert({
+    where: { workspaceId_name: { workspaceId: workspace.id, name: "Skyline Residences" } },
+    update: {},
+    create: {
+      id: "proj-skyline",
+      workspaceId: workspace.id,
+      name: "Skyline Residences",
+      reraNo: "PR/GJ/AHMEDABAD/AHMEDABADCITY/AUDA/RAA12345/010124",
+      address: "Sardar Patel Ring Road, Bopal, Ahmedabad, Gujarat 380058",
+      city: "Ahmedabad",
+      type: "RESIDENTIAL",
+    },
+  })
+  const tower = await prisma.tower.upsert({
+    where: { id: "tower-a" },
+    update: {},
+    create: { id: "tower-a", projectId: project.id, name: "Tower A", floors: 14 },
+  })
+  const floor = await prisma.floor.upsert({
+    where: { towerId_number: { towerId: tower.id, number: 12 } },
+    update: {},
+    create: { id: "floor-a-12", towerId: tower.id, number: 12 },
+  })
+  const unit = await prisma.unit.upsert({
+    where: { projectId_unitNo: { projectId: project.id, unitNo: "A-1204" } },
+    update: {},
+    create: {
+      id: "unit-a-1204",
+      workspaceId: workspace.id,
+      projectId: project.id,
+      floorId: floor.id,
+      unitNo: "A-1204",
+      config: "BHK3",
+      carpetArea: 1285,
+      builtUp: 1620,
+      facing: "East",
+      price: 9_850_000,
+      status: "BOOKED",
+    },
+  })
+
+  const buyer = await prisma.contact.upsert({
+    where: { id: "contact-rmehta" },
+    update: {},
+    create: {
+      id: "contact-rmehta",
+      workspaceId: workspace.id,
+      firstName: "Rohan",
+      lastName: "Mehta",
+      email: "rohan.mehta@example.in",
+      phone: "+91 98250 12345",
+      ownerId: demoUser.id,
+      createdBy: demoUser.id,
+    },
+  })
+  const reDeal = await prisma.deal.upsert({
+    where: { id: "deal-skyline-1204" },
+    update: {},
+    create: {
+      id: "deal-skyline-1204",
+      workspaceId: workspace.id,
+      title: "Skyline A-1204 — 3BHK booking",
+      contactId: buyer.id,
+      stageId: byName("Won").id,
+      unitId: unit.id,
+      value: 9_850_000,
+      currency: "INR",
+      probability: 100,
+      ownerId: demoUser.id,
+    },
+  })
+  const costSheet = await prisma.costSheet.upsert({
+    where: { id: "cost-skyline-1204" },
+    update: {},
+    create: {
+      id: "cost-skyline-1204",
+      workspaceId: workspace.id,
+      unitId: unit.id,
+      dealId: reDeal.id,
+      basePrice: 9_850_000,
+      gst: 492_500, // 5%
+      stampDuty: 482_650, // ~4.9%
+      total: 10_825_150,
+      currency: "INR",
+    },
+  })
+
+  // RERA-aligned document templates (shortcodes rendered at generation time).
+  const TEMPLATES: { id: string; kind: "DEMAND_LETTER" | "ALLOTMENT" | "BOOKING_FORM" | "RECEIPT" | "POSSESSION"; name: string; bodyHtml: string }[] = [
+    {
+      id: "tpl-demand",
+      kind: "DEMAND_LETTER",
+      name: "Demand Letter (CLP Milestone)",
+      bodyHtml: `<h1>{{workspace_name}}</h1><div class="muted">RERA Reg. No. {{rera_no}}</div><hr />
+<h2>Demand Letter</h2>
+<p>Date: {{booking_date}}</p>
+<p>To,<br /><strong>{{buyer_name}}</strong></p>
+<p>Sub: Payment demand towards <strong>Unit {{unit_no}}, {{project_name}}</strong> as per the agreed Construction Linked Payment plan.</p>
+<p>Dear {{buyer_name}},</p>
+<p>As per the payment schedule for your booked unit, the following amount is now due against the milestone <strong>"{{milestone}}"</strong>:</p>
+<table><tr><th>Description</th><th class="right">Amount (₹)</th></tr>
+<tr><td>Unit {{unit_no}} — {{project_name}}</td><td class="right">{{demand_amount}}</td></tr>
+<tr><td>Agreement Value (for reference)</td><td class="right">{{total}}</td></tr></table>
+<p>Kindly remit the above amount within 15 days of this notice. Cheques/NEFT to be drawn in favour of the RERA-designated project account.</p>
+<div class="sign-row"><div class="sign-box">Authorised Signatory<br />{{workspace_name}}</div><div class="sign-box">Received by</div></div>`,
+    },
+    {
+      id: "tpl-allotment",
+      kind: "ALLOTMENT",
+      name: "Allotment Letter",
+      bodyHtml: `<h1>{{workspace_name}}</h1><div class="muted">RERA Reg. No. {{rera_no}}</div><hr />
+<h2>Allotment Letter</h2>
+<p>Date: {{booking_date}}</p>
+<p>Dear <strong>{{buyer_name}}</strong>,</p>
+<p>We are pleased to confirm the provisional allotment of the following residential unit in <strong>{{project_name}}</strong>, subject to the terms of the Agreement for Sale executed under the Real Estate (Regulation and Development) Act, 2016.</p>
+<table><tr><th>Particular</th><th>Detail</th></tr>
+<tr><td>Unit No.</td><td>{{unit_no}}</td></tr>
+<tr><td>Carpet Area (RERA)</td><td>{{carpet_area}} sq. ft.</td></tr>
+<tr><td>Built-up Area</td><td>{{built_up}} sq. ft.</td></tr>
+<tr><td>Base Price</td><td>₹ {{base_price}}</td></tr>
+<tr><td>GST</td><td>₹ {{gst}}</td></tr>
+<tr><td>Stamp Duty</td><td>₹ {{stamp_duty}}</td></tr>
+<tr><td><strong>Total Consideration</strong></td><td><strong>₹ {{total}}</strong></td></tr></table>
+<p>This allotment is subject to timely payment as per the agreed schedule.</p>
+<div class="sign-row"><div class="sign-box">For {{workspace_name}}<br />Authorised Signatory</div><div class="sign-box">Allottee<br />{{buyer_name}}</div></div>`,
+    },
+    {
+      id: "tpl-booking",
+      kind: "BOOKING_FORM",
+      name: "Booking Application Form",
+      bodyHtml: `<h1>{{workspace_name}}</h1><div class="muted">RERA Reg. No. {{rera_no}}</div><hr />
+<h2>Booking Application Form</h2>
+<p>Date: {{booking_date}}</p>
+<table><tr><th>Applicant Name</th><td>{{buyer_name}}</td></tr>
+<tr><th>Project</th><td>{{project_name}}</td></tr>
+<tr><th>Unit</th><td>{{unit_no}} ({{carpet_area}} sq. ft. carpet)</td></tr>
+<tr><th>Total Consideration</th><td>₹ {{total}}</td></tr></table>
+<p>I/We hereby apply for the booking of the above unit and agree to abide by the terms and conditions of the Agreement for Sale under RERA, 2016. I/We confirm that the RERA registration and project details have been disclosed to me/us.</p>
+<div class="sign-row"><div class="sign-box">Applicant Signature<br />{{buyer_name}}</div><div class="sign-box">For {{workspace_name}}</div></div>`,
+    },
+    {
+      id: "tpl-receipt",
+      kind: "RECEIPT",
+      name: "Payment Receipt",
+      bodyHtml: `<h1>{{workspace_name}}</h1><div class="muted">RERA Reg. No. {{rera_no}}</div><hr />
+<h2>Payment Receipt</h2>
+<p>Receipt No.: {{receipt_no}} &nbsp;·&nbsp; Date: {{booking_date}}</p>
+<p>Received with thanks from <strong>{{buyer_name}}</strong> the following sum towards Unit <strong>{{unit_no}}</strong>, {{project_name}}:</p>
+<table><tr><th>Towards</th><th class="right">Amount (₹)</th></tr>
+<tr><td>{{milestone}}</td><td class="right">{{demand_amount}}</td></tr></table>
+<p class="muted">Subject to realisation of instrument. This receipt is computer-generated.</p>
+<div class="sign-row"><div class="sign-box">Authorised Signatory<br />{{workspace_name}}</div><div class="sign-box"></div></div>`,
+    },
+    {
+      id: "tpl-possession",
+      kind: "POSSESSION",
+      name: "Possession Letter",
+      bodyHtml: `<h1>{{workspace_name}}</h1><div class="muted">RERA Reg. No. {{rera_no}}</div><hr />
+<h2>Offer of Possession</h2>
+<p>Date: {{booking_date}}</p>
+<p>Dear <strong>{{buyer_name}}</strong>,</p>
+<p>We are pleased to inform you that <strong>Unit {{unit_no}}</strong> in <strong>{{project_name}}</strong> is ready for possession, the project having received its occupancy certificate. You are requested to complete the balance payment and formalities to take handover.</p>
+<table><tr><th>Unit</th><td>{{unit_no}} ({{built_up}} sq. ft.)</td></tr>
+<tr><th>Total Consideration</th><td>₹ {{total}}</td></tr></table>
+<p>Kindly contact our office to schedule the handover and joint inspection.</p>
+<div class="sign-row"><div class="sign-box">For {{workspace_name}}<br />Authorised Signatory</div><div class="sign-box">Allottee<br />{{buyer_name}}</div></div>`,
+    },
+  ]
+  for (const t of TEMPLATES) {
+    await prisma.documentTemplate.upsert({
+      where: { id: t.id },
+      update: { name: t.name, bodyHtml: t.bodyHtml, kind: t.kind, reraAligned: true },
+      create: { id: t.id, workspaceId: workspace.id, kind: t.kind, name: t.name, bodyHtml: t.bodyHtml, reraAligned: true },
+    })
+  }
+
+  // One pre-generated allotment letter so the Documents page has real content.
+  const inr = (n: number) => n.toLocaleString("en-IN")
+  const allotmentCtx: Record<string, string> = {
+    workspace_name: workspace.name,
+    rera_no: project.reraNo ?? "",
+    project_name: project.name,
+    unit_no: unit.unitNo,
+    carpet_area: String(unit.carpetArea ?? ""),
+    built_up: String(unit.builtUp ?? ""),
+    base_price: inr(costSheet.basePrice),
+    gst: inr(costSheet.gst),
+    stamp_duty: inr(costSheet.stampDuty),
+    total: inr(costSheet.total),
+    buyer_name: `${buyer.firstName} ${buyer.lastName}`,
+    booking_date: new Date().toLocaleDateString("en-IN"),
+  }
+  const allotmentTpl = TEMPLATES.find((t) => t.id === "tpl-allotment")!
+  let allotmentHtml = allotmentTpl.bodyHtml
+  for (const [k, v] of Object.entries(allotmentCtx)) allotmentHtml = allotmentHtml.replaceAll(`{{${k}}}`, v)
+  await prisma.generatedDocument.upsert({
+    where: { id: "gen-allotment-1204" },
+    update: { renderedHtml: allotmentHtml },
+    create: {
+      id: "gen-allotment-1204",
+      workspaceId: workspace.id,
+      dealId: reDeal.id,
+      unitId: unit.id,
+      templateId: allotmentTpl.id,
+      renderedHtml: allotmentHtml,
+    },
+  })
+
   console.log("✅ Seed complete.")
-  console.log("   Login: demo@loopcrm.com / password123")
+  console.log("   Login: demo@estate360.com / password123")
   console.log("   Workspace: /acme")
+  console.log("   Seeded: Skyline Residences · 5 RERA templates · 1 allotment letter")
 }
 
 main()

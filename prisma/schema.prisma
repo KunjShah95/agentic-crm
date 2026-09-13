@@ -739,3 +739,111 @@ model BuyerPortalAccess {
   @@index([contactId])
   @@index([token])
 }
+
+// ============================================================
+// RAG (Retrieval-Augmented Generation) Module
+// ============================================================
+
+enum RagModality {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+}
+
+enum RagDocumentStatus {
+  PROCESSING
+  READY
+  ERROR
+}
+
+model RagDocument {
+  id            String         @id @default(cuid())
+  tenantId      String
+  sourceFile    String
+  title         String?
+  status        RagDocumentStatus @default(PROCESSING)
+  contentHash   String         @unique(map: "rag_document_content_hash_unique") // For deduping
+  externalId    String?
+  modality      RagModality    @default(TEXT)
+  lang          String?        @default("en")
+  version       Int            @default(1)
+  chunkCount    Int            @default(0)
+  error         String?
+  department    String         @default("general")
+  docType       String?
+  tags          String[]       @default([])
+  authority     Float          @default(1.0)
+  confidential  Boolean        @default(false)
+  allowedRoles  String[]       @default([])
+  syncSource    String?
+  syncCursor    String?
+  createdBy     String
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  chunks        RagChunk[]
+  @@index([tenantId])
+  @@index([tenantId, status])
+  @@index([tenantId, externalId])
+  @@index([tenantId, department])
+  @@index([tenantId, contentHash])
+}
+
+model RagChunk {
+  id            String   @id @default(cuid())
+  tenantId      String
+  documentId    String
+  chunkIndex    Int
+  chunkHash     String?  // For incremental re-ingest diffing
+  content       String   @db.Text
+  modality      RagModality @default(TEXT)
+  lang          String   @default("en")
+  embedding     Unsupported("vector(1024)")? // pgvector
+  model         String?  // Embedding model name
+  dim           Int?     // Embedding dimension
+  metadata      Json?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  document      RagDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, documentId, chunkIndex])
+  @@index([tenantId, documentId])
+  @@index([tenantId])
+}
+
+model RagFeedback {
+  id          String   @id @default(cuid())
+  tenantId    String
+  query       String
+  answer      String?
+  rating      Int      // 1 or -1
+  correction  String?
+  documentId  String?
+  createdBy   String
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+}
+
+model RagQueryLog {
+  id           String   @id @default(cuid())
+  tenantId     String
+  query        String
+  departments  String[] @default([])
+  scope        String?
+  topK         Int?
+  confidence   Float?
+  faithfulness Float?
+  refused      Boolean  @default(false)
+  attempts     Int      @default(1)
+  latencyMs    Int
+  provider     String?
+  createdBy    String?
+  createdAt    DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([tenantId, createdAt])
+}

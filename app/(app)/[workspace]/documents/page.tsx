@@ -23,7 +23,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
         </div>
         <div className="relative">
           <h1 className="text-[22px] font-semibold tracking-tight">Documents</h1>
-          <p className="mt-1 text-sm text-muted-foreground">RERA-aligned demand / allotment / receipt / possession letters + e-sign stub.</p>
+          <p className="mt-1 text-sm text-muted-foreground">RERA-aligned demand / allotment / receipt / possession letters with PDF download.</p>
         </div>
       </div>
 
@@ -45,7 +45,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
 
       <section className="rounded-xl border bg-card p-4 space-y-3">
         <h2 className="text-sm font-semibold">Generated documents <span className="text-muted-foreground font-normal">· {docs.length}</span></h2>
-        <GeneratedDocList workspaceId={ws.id} docs={docs} />
+        <GeneratedDocList slug={slug} docs={docs} />
       </section>
     </div>
   )

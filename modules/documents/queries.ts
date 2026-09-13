@@ -17,7 +17,6 @@ export async function listGeneratedDocuments(workspaceId: string) {
       id: true,
       renderedHtml: true,
       pdfUrl: true,
-      eSignStatus: true,
       createdAt: true,
       dealId: true,
       unitId: true,
