@@ -1,0 +1,44 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Building2, Phone, Handshake, Navigation, ReceiptText, Users, MapPin } from "lucide-react"
+
+const ROLES = [
+  { role: "Owner / Director", icon: Building2, kpi: "₹2.4Cr weighted", desc: "Funnel, inventory health, collections, team vs target — Excel-free." },
+  { role: "Sales Manager", icon: Phone, kpi: "HOLD→Booking 48s", desc: "Drag kanban, auto-log Activity, cost sheet 18s, WhatsApp ack." },
+  { role: "Broker / CP", icon: Handshake, kpi: "Scoped % allocation", desc: "Sees only allocated units, commission auto-calc, referral ledger." },
+  { role: "Site Engineer", icon: Navigation, kpi: "200m GPS", desc: "Schedule visit, check-in verified, offline PWA on field." },
+  { role: "Accounts", icon: ReceiptText, kpi: "Demand 9s", desc: "CLP 8 milestones, RERA {{rera_no}}, UPI link → receipt, Tally CSV." },
+]
+
+export function StaffSection() {
+  return (
+    <section id="staff" className="border-y bg-muted/20">
+      <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <Badge variant="outline" className="rounded-full gap-1.5 font-mono tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</Badge>
+            <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
+            <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
+          </div>
+        </div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {ROLES.map((r) => (
+            <Card key={r.role} className="group transition-transform duration-300 hover:-translate-y-0.5 overflow-hidden">
+              <div className="h-px bg-border" />
+              <CardHeader className="pb-2">
+                <span className="inline-flex size-8 items-center justify-center rounded-lg bg-foreground text-background"><r.icon className="size-4" /></span>
+                <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
+                <Badge variant="secondary" className="w-fit rounded-full font-mono text-[11px]">{r.kpi}</Badge>
+              </CardHeader>
+              <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground">
+          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1"><MapPin className="size-3" /> SG Highway · Bopal · South Bopal · Thaltej</span>
+          <span>·</span><span>gu/hi templates</span><span>·</span><span>Slug-routed · workspaceId on every query</span>
+        </div>
+      </div>
+    </section>
+  )
+}
