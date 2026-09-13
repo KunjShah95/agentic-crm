@@ -65,7 +65,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Estate360 — pipeline finally in a loop",
-    description: "Multi-tenant CRM for founders: inventory, bookings, AI, and NAAR association. Try the live demo.",
+    description: "Multi-tenant CRM for founders: inventory, bookings, AI, and NAAR association.",
     images: ["/opengraph-image"],
   },
   icons: {

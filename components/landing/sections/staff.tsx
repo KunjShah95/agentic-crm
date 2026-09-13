@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Phone, Handshake, Navigation, ReceiptText, Users, MapPin } from "lucide-react"
+import { Building2, Phone, Handshake, Navigation, ReceiptText, Users } from "lucide-react"
 
 const ROLES = [
   { role: "Owner / Director", icon: Building2, kpi: "₹2.4Cr weighted", desc: "Funnel, inventory health, collections, team vs target — Excel-free." },
@@ -35,8 +35,7 @@ export function StaffSection() {
           ))}
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground">
-          <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1"><MapPin className="size-3" /> SG Highway · Bopal · South Bopal · Thaltej</span>
-          <span>·</span><span>gu/hi templates</span><span>·</span><span>Slug-routed · workspaceId on every query</span>
+          <span>gu/hi templates</span><span>·</span><span>Slug-routed · workspaceId on every query</span>
         </div>
       </div>
     </section>

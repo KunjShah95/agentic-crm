@@ -120,7 +120,7 @@ npm install
    npm run dev          # http://localhost:3000
    ```
 
-Log in with the seed account: `demo@estate360.com` / `password123` (workspace `/acme`).
+Log in with the seed account created by `npm run setup` (see `prisma/seed.ts`).
 
 ## RAG configuration
 

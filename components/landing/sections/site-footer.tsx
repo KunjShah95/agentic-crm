@@ -125,21 +125,15 @@ export function SiteFooter({ isAuthed, workspaceSlug }: { isAuthed: boolean; wor
 
           {/* start card — the one amber surface */}
           <div>
-            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#E9EDF5]/40">Start</div>
             <div className="mt-4 rounded-xl border border-brand/40 bg-brand/10 p-4 shadow-e2">
-              <div className="text-[14px] font-medium text-white">Try the live demo</div>
-              <div className="mt-1 font-mono text-[12px] text-[#E9EDF5]/60">demo@estate360.com · workspace /acme</div>
               <Button
                 size="sm"
-                className="mt-3 w-full gap-1.5 rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
+                className="w-full gap-1.5 rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
                 render={<Link href={cta} />}
               >
                 Get started <ArrowRight className="size-3.5" aria-hidden />
               </Button>
             </div>
-            <p className="mt-3 font-mono text-[11px] leading-4 text-[#E9EDF5]/40">
-              SG Highway · Bopal · South Bopal · Thaltej
-            </p>
           </div>
         </div>
 

@@ -136,7 +136,7 @@ export default async function ProductPage() {
 
       <section className="mx-auto max-w-[720px] px-6 py-14 text-center lg:px-8">
         <h2 className="text-[28px] font-semibold tracking-[-0.02em]">Ready to close the loop?</h2>
-        <p className="mt-3 text-muted-foreground">14-day trial. No card. Demo workspace /acme with Shilp Infra data.</p>
+        <p className="mt-3 text-muted-foreground">14-day trial. No card. Explore it with real Shilp Infra data.</p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
           <a
             href={cta}

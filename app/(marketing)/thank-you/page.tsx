@@ -40,8 +40,7 @@ export default async function ThankYouPage() {
             — drag a deal across Lead → Closing.
           </li>
           <li className="rounded-xl border bg-card px-4 py-3">
-            <span className="font-medium text-foreground">Prefer self-serve?</span> Start a 14-day trial with demo
-            credentials <span className="font-mono text-foreground">demo@estate360.com</span>.
+            <span className="font-medium text-foreground">Prefer self-serve?</span> Start your 14-day free trial.
           </li>
           <li className="rounded-xl border bg-card px-4 py-3">
             <span className="font-medium text-foreground">Urgent?</span> Call{" "}

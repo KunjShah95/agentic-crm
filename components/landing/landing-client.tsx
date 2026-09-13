@@ -32,7 +32,6 @@ import {
   Workflow,
   CreditCard,
   ReceiptText,
-  MapPin,
   Hammer,
   FileCheck,
   Navigation,
@@ -656,7 +655,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 </Card>
               ))}
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground"><span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-card px-2.5 py-1"><MapPin className="size-3" /> SG Highway · Bopal · South Bopal · Thaltej</span><span>·</span><span>gu/hi templates</span></div>
+            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground"><span>gu/hi templates</span></div>
           </div>
         </section>
 
