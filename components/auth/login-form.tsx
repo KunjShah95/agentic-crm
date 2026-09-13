@@ -21,11 +21,6 @@ export function LoginForm() {
   const [password, setPassword] = useState("")
   const [isPending, startTransition] = useTransition()
 
-  function fillDemo() {
-    setEmail("kkshah2005@gmail.com")
-    setPassword("kunj2005")
-  }
-
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
@@ -46,22 +41,6 @@ export function LoginForm() {
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-5">
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200 flex items-center justify-between gap-2">
-        <div>
-          <p className="font-medium">Demo Credentials Available</p>
-          <p className="text-[11px] opacity-85 font-mono">kkshah2005@gmail.com</p>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="xs"
-          onClick={fillDemo}
-          className="border-amber-500/40 text-amber-950 dark:text-amber-100 hover:bg-amber-500/20"
-        >
-          Auto-fill
-        </Button>
-      </div>
-
       <FieldGroup>
         <Field>
           <FieldLabel htmlFor="email">Email address</FieldLabel>

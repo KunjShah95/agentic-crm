@@ -29,6 +29,25 @@ type TokenExtra = {
   workspaces?: { id: string; slug: string; name: string; role: string }[]
 }
 
+/**
+ * NextAuth v5 uses AUTH_URL (or legacy NEXTAUTH_URL) as the absolute origin for
+ * every auth action, overriding the request host. A loopback value copied from a
+ * local .env — e.g. http://localhost:3000 — makes deployed callback and error
+ * pages redirect to localhost, so sign-in fails on the live domain. In a hosted
+ * environment we trust the incoming request host instead (trustHost is enabled
+ * below), which also keeps preview and custom domains working.
+ */
+function dropLoopbackAuthUrl() {
+  const url = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL
+  const isLoopback = !!url && /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:\d+)?\/?$/i.test(url)
+  if (!isLoopback) return
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    delete process.env.AUTH_URL
+    delete process.env.NEXTAUTH_URL
+  }
+}
+dropLoopbackAuthUrl()
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: {
