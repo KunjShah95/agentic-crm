@@ -9,7 +9,7 @@ export default async function AuthLayout({
 }) {
   const session = await auth()
   if (session?.workspaces?.length) {
-    redirect(`/${session.workspaces[0].slug}/contacts`)
+    redirect(`/${session.workspaces[0].slug}/dashboard`)
   }
 
   return (

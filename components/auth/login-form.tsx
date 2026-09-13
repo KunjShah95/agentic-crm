@@ -34,7 +34,7 @@ export function LoginForm() {
         setError(result.error.message)
         return
       }
-      router.push("/")
+      router.push(result.data?.redirectTo ?? "/")
       router.refresh()
     })
   }

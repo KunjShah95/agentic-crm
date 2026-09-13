@@ -41,7 +41,7 @@ export function SignupForm({
         setError(result.error.message)
         return
       }
-      router.push("/")
+      router.push(result.data?.redirectTo ?? "/")
       router.refresh()
     })
   }

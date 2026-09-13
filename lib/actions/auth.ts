@@ -32,17 +32,30 @@ async function uniqueSlug(base: string) {
 
 export async function loginAction(
   input: unknown
-): Promise<Result<{ ok: true }>> {
+): Promise<Result<{ ok: true; redirectTo: string }>> {
   return handleAction(async () => {
     const parsed = loginSchema.safeParse(input)
     if (!parsed.success) {
       throw new AppError("VALIDATION", "Enter a valid email and password.")
     }
+    // Resolve the user's primary workspace so we can land straight on the dashboard.
+    const user = await db.user.findUnique({
+      where: { email: parsed.data.email },
+      select: { id: true },
+    })
+    const membership = user
+      ? await db.workspaceMember.findFirst({
+          where: { userId: user.id },
+          orderBy: { createdAt: "asc" },
+          include: { workspace: { select: { slug: true } } },
+        })
+      : null
+    const redirectTo = membership ? `/${membership.workspace.slug}/dashboard` : "/"
     try {
       await signIn("credentials", {
         email: parsed.data.email,
         password: parsed.data.password,
-        redirectTo: "/",
+        redirectTo,
       })
     } catch (err) {
       if (err instanceof AuthError) {
@@ -54,13 +67,13 @@ export async function loginAction(
       }
       throw err
     }
-    return { ok: true }
+    return { ok: true, redirectTo }
   })
 }
 
 export async function signupAction(
   input: unknown
-): Promise<Result<{ ok: true }>> {
+): Promise<Result<{ ok: true; redirectTo: string }>> {
   return handleAction(async () => {
     const parsed = signupSchema.safeParse(input)
     if (!parsed.success) {
@@ -151,7 +164,7 @@ export async function signupAction(
       await signIn("credentials", {
         email: parsed.data.email,
         password: parsed.data.password,
-        redirectTo: `/${workspaceSlug}/contacts`,
+        redirectTo: `/${workspaceSlug}/dashboard`,
       })
     } catch (err) {
       if (err instanceof AuthError) {
@@ -164,7 +177,7 @@ export async function signupAction(
       throw err
     }
 
-    return { ok: true }
+    return { ok: true, redirectTo: `/${workspaceSlug}/dashboard` }
   })
 }
 
