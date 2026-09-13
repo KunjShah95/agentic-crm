@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="540" viewBox="0 0 960 540" role="img" aria-labelledby="title desc">
+  <title id="title">Estate360 pipeline</title>
+  <desc id="desc">Three stage cards Lead, Qualified, and Closing with sample Ahmedabad deals</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#F7F3EC"/>
+      <stop offset="100%" stop-color="#E8E1D4"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)"/>
+  <rect x="40" y="36" width="880" height="468" rx="24" fill="#FFFCF8" stroke="#D9D0C0"/>
+  <circle cx="72" cy="72" r="8" fill="#C45C3E"/>
+  <circle cx="100" cy="72" r="8" fill="#C9A227"/>
+  <circle cx="128" cy="72" r="8" fill="#3D8B6E"/>
+  <text x="168" y="78" font-family="system-ui,sans-serif" font-size="16" font-weight="600" fill="#17120A">Shilp Infra · /acme</text>
+  <text x="720" y="78" font-family="ui-monospace,monospace" font-size="13" fill="#5C5346">¹4.82 Cr pipeline</text>
+  <g font-family="system-ui,sans-serif">
+    <rect x="72" y="120" width="250" height="340" rx="16" fill="#F3EEE5" stroke="#D9D0C0"/>
+    <text x="92" y="152" font-size="13" font-weight="600" letter-spacing="2" fill="#5C5346">LEAD</text>
+    <rect x="92" y="172" width="210" height="72" rx="12" fill="#FFFCF8" stroke="#E4DCCE"/>
+    <text x="108" y="200" font-size="14" font-weight="600" fill="#17120A">Shaligram 3BHK</text>
+    <text x="108" y="222" font-size="12" fill="#5C5346">¹82L · SG Highway</text>
+    <rect x="92" y="260" width="210" height="72" rx="12" fill="#FFFCF8" stroke="#E4DCCE"/>
+    <text x="108" y="288" font-size="14" font-weight="600" fill="#17120A">Orchid Heights</text>
+    <text x="108" y="310" font-size="12" fill="#5C5346">¹1.12 Cr · Penthouse</text>
+
+    <rect x="355" y="120" width="250" height="340" rx="16" fill="#F3EEE5" stroke="#D9D0C0"/>
+    <text x="375" y="152" font-size="13" font-weight="600" letter-spacing="2" fill="#5C5346">QUALIFIED</text>
+    <rect x="375" y="172" width="210" height="72" rx="12" fill="#FFFCF8" stroke="#E4DCCE"/>
+    <text x="391" y="200" font-size="14" font-weight="600" fill="#17120A">Safal Solis A-102</text>
+    <text x="391" y="222" font-size="12" fill="#5C5346">¹61L · visit done</text>
+    <rect x="375" y="260" width="210" height="72" rx="12" fill="#FFFCF8" stroke="#E4DCCE"/>
+    <text x="391" y="288" font-size="14" font-weight="600" fill="#17120A">Sangani Platinum</text>
+    <text x="391" y="310" font-size="12" fill="#5C5346">¹74L · 3BHK</text>
+
+    <rect x="638" y="120" width="250" height="340" rx="16" fill="#17120A"/>
+    <text x="658" y="152" font-size="13" font-weight="600" letter-spacing="2" fill="#A89F90">CLOSING</text>
+    <rect x="658" y="172" width="210" height="72" rx="12" fill="#2A241C"/>
+    <text x="674" y="200" font-size="14" font-weight="600" fill="#F7F3EC">Gala Marigold Hold</text>
+    <text x="674" y="222" font-size="12" fill="#A89F90">¹48.5L · KYC next</text>
+  </g>
+</svg>

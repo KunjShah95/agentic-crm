@@ -14,6 +14,7 @@ const CHANNEL_LABEL: Record<string, string> = {
   EMAIL: "Email",
   LEAD: "Lead",
   CALL: "Call",
+  WEB: "Website",
 }
 
 export default function InboxTimeline({ items }: { items: TimelineItem[] }) {

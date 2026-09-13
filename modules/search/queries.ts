@@ -14,6 +14,15 @@ type RawHit = {
   subtitle: string | null
 }
 
+/**
+ * Workspace-scoped full-text search across contacts, organizations, and deals.
+ *
+ * Uses immutable SQL helper functions (contact_search_tsv etc., created by
+ * migration 20260913000000_search_expression_indexes) so the WHERE clauses are
+ * index-backed by GIN expression indexes. Do NOT reference stored "searchVector"
+ * columns — those were dropped in 20260902060046 and a missing column is a hard
+ * 42703 error (COALESCE cannot "fall back" past it).
+ */
 export async function searchWorkspace(
   workspaceId: string,
   rawQuery: string
@@ -21,43 +30,37 @@ export async function searchWorkspace(
   const q = rawQuery.trim()
   if (!q) return []
 
-  // Uses stored tsvector GIN columns when migration 20260809000001 is applied;
-  // falls back to inline to_tsvector when column is absent (pre-migration).
   const [contacts, orgs, deals] = await Promise.all([
     db.$queryRaw<RawHit[]>`
       SELECT "id", "firstName" || ' ' || "lastName" AS name, COALESCE("email", '') AS subtitle
       FROM "Contact"
       WHERE "workspaceId" = ${workspaceId}
-        AND COALESCE("searchVector",
-            to_tsvector('english', COALESCE("firstName",'') || ' ' || COALESCE("lastName",'') || ' ' || COALESCE("email",'') || ' ' || COALESCE("jobTitle",''))
-          ) @@ plainto_tsquery('english', ${q})
-      ORDER BY ts_rank(COALESCE("searchVector",
-            to_tsvector('english', COALESCE("firstName",'') || ' ' || COALESCE("lastName",'') || ' ' || COALESCE("email",'') || ' ' || COALESCE("jobTitle",''))
-          ), plainto_tsquery('english', ${q})) DESC
+        AND contact_search_tsv("firstName", "lastName", "email", "jobTitle")
+            @@ plainto_tsquery('english', ${q})
+      ORDER BY ts_rank(
+          contact_search_tsv("firstName", "lastName", "email", "jobTitle"),
+          plainto_tsquery('english', ${q})
+        ) DESC
       LIMIT 8
     `,
     db.$queryRaw<RawHit[]>`
       SELECT "id", "name", COALESCE("domain", '') AS subtitle
       FROM "Organization"
       WHERE "workspaceId" = ${workspaceId}
-        AND COALESCE("searchVector",
-            to_tsvector('english', COALESCE("name",'') || ' ' || COALESCE("domain",'') || ' ' || COALESCE("industry",''))
-          ) @@ plainto_tsquery('english', ${q})
-      ORDER BY ts_rank(COALESCE("searchVector",
-            to_tsvector('english', COALESCE("name",'') || ' ' || COALESCE("domain",'') || ' ' || COALESCE("industry",''))
-          ), plainto_tsquery('english', ${q})) DESC
+        AND organization_search_tsv("name", "domain", "industry")
+            @@ plainto_tsquery('english', ${q})
+      ORDER BY ts_rank(
+          organization_search_tsv("name", "domain", "industry"),
+          plainto_tsquery('english', ${q})
+        ) DESC
       LIMIT 8
     `,
     db.$queryRaw<RawHit[]>`
       SELECT "id", "title" AS name, COALESCE("currency", 'USD') AS subtitle
       FROM "Deal"
       WHERE "workspaceId" = ${workspaceId}
-        AND COALESCE("searchVector",
-            to_tsvector('english', COALESCE("title",''))
-          ) @@ plainto_tsquery('english', ${q})
-      ORDER BY ts_rank(COALESCE("searchVector",
-            to_tsvector('english', COALESCE("title",''))
-          ), plainto_tsquery('english', ${q})) DESC
+        AND deal_search_tsv("title") @@ plainto_tsquery('english', ${q})
+      ORDER BY ts_rank(deal_search_tsv("title"), plainto_tsquery('english', ${q})) DESC
       LIMIT 8
     `,
   ])

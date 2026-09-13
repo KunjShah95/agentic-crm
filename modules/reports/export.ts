@@ -48,6 +48,40 @@ export function teamCsv(rows: TeamTargetRow[]): string {
   ])
 }
 
+export type ReportId = "funnel" | "inventory" | "collections" | "source-roi" | "team" | "all"
+
+export const REPORT_IDS: ReportId[] = ["funnel", "inventory", "collections", "source-roi", "team", "all"]
+
+export type ReportsSnapshot = {
+  funnel: FunnelRow[]
+  inventory: InventoryHealth
+  collections: CollectionsSummary
+  sourceROI: SourceROIRow[]
+  teamVsTarget: TeamTargetRow[]
+}
+
+export function reportCsv(
+  report: Exclude<ReportId, "all">,
+  snapshot: ReportsSnapshot,
+): string {
+  switch (report) {
+    case "funnel":
+      return funnelCsv(snapshot.funnel)
+    case "inventory":
+      return inventoryCsv(snapshot.inventory)
+    case "collections":
+      return collectionsCsv(snapshot.collections)
+    case "source-roi":
+      return sourceROICsv(snapshot.sourceROI)
+    case "team":
+      return teamCsv(snapshot.teamVsTarget)
+  }
+}
+
+export function reportFilename(report: ReportId, ext: "csv" | "xlsx", slug: string): string {
+  return `reports-${slug}-${report}.${ext}`
+}
+
 export function buildReportsCsv(snapshot: {
   funnel: FunnelRow[]
   inventory: InventoryHealth
@@ -94,4 +128,66 @@ export function buildReportsHtml(snapshot: {
 <h2>Team vs Target</h2><table><tr><th>Owner</th><th>Bookings</th><th>Target</th><th>Attainment %</th></tr>${snapshot.teamVsTarget.map((r) => `<tr><td>${esc(r.ownerName)}</td><td>${r.bookings}</td><td>${r.target}</td><td>${r.attainmentPct}</td></tr>`).join("")}</table>
 <script>window.print()</script>
 </body></html>`
+}
+
+/**
+ * Single Excel workbook — one sheet per report, so the user gets the whole
+ * pack in one download. Server-only (node buffer).
+ */
+export function buildReportsWorkbook(snapshot: ReportsSnapshot): Buffer {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const XLSX = require("xlsx") as typeof import("xlsx")
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ["Stage", "Count", "Conversion %"],
+      ...snapshot.funnel.map((r) => [r.stage, r.count, r.conversionPct]),
+    ]),
+    "Funnel",
+  )
+  const inv = snapshot.inventory
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ["Metric", "Value"],
+      ["Total", inv.total],
+      ["Available", inv.available],
+      ["Hold", inv.hold],
+      ["Booked", inv.booked],
+      ["Sold", inv.sold],
+      ["Sold %", inv.soldPct],
+    ]),
+    "Inventory",
+  )
+  const c = snapshot.collections
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ["Metric", "Amount"],
+      ["Due", c.due],
+      ["Paid", c.paid],
+      ["Overdue", c.overdue],
+      ["Total", c.total],
+      ["Overdue %", c.overduePct],
+    ]),
+    "Collections",
+  )
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ["Source", "Leads", "Bookings", "Revenue", "Conversion %"],
+      ...snapshot.sourceROI.map((r) => [r.source, r.leads, r.bookings, r.revenue, r.conversionPct]),
+    ]),
+    "Source ROI",
+  )
+  XLSX.utils.book_append_sheet(
+    wb,
+    XLSX.utils.aoa_to_sheet([
+      ["Owner", "Bookings", "Target", "Attainment %"],
+      ...snapshot.teamVsTarget.map((r) => [r.ownerName, r.bookings, r.target, r.attainmentPct]),
+    ]),
+    "Team vs Target",
+  )
+  return Buffer.from(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }) as Uint8Array)
 }

@@ -119,7 +119,7 @@ export function KanbanBoard({
                 <span className="text-xs text-muted-foreground">
                   {stageDeals.length}
                 </span>
-                <span className="ml-auto text-xs font-medium text-muted-foreground">
+                <span className="ml-auto text-xs font-mono font-medium tabular-nums text-muted-foreground">
                   {formatMoney(total)}
                 </span>
               </div>
@@ -130,7 +130,7 @@ export function KanbanBoard({
                     {...provided.droppableProps}
                     className={`flex min-h-24 flex-col gap-2 rounded-xl border bg-muted/40 p-2 transition-colors ${
                       snapshot.isDraggingOver
-                        ? "border-primary/40 bg-primary/5"
+                        ? "border-brand/40 bg-brand/5"
                         : ""
                     }`}
                   >
@@ -146,16 +146,16 @@ export function KanbanBoard({
                             ref={dragProvided.innerRef}
                             {...dragProvided.draggableProps}
                             {...dragProvided.dragHandleProps}
-                            className={`rounded-lg border bg-card p-3 shadow-sm transition-shadow ${
+                            className={`rounded-lg border bg-card p-3 shadow-xs transition-all ${
                               dragSnapshot.isDragging
-                                ? "shadow-lg ring-2 ring-primary/30"
-                                : "hover:shadow-md"
+                                ? "shadow-md ring-2 ring-brand/40"
+                                : "hover:border-border/80 hover:shadow-xs"
                             }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <Link
                                 href={`/${workspaceSlug}/deals/${deal.id}`}
-                                className="text-sm font-medium leading-snug hover:underline"
+                                className="text-sm font-medium leading-snug hover:underline hover:text-brand transition-colors"
                               >
                                 {deal.title}
                               </Link>
@@ -170,7 +170,7 @@ export function KanbanBoard({
                             </p>
 
                             <div className="mt-2.5 flex items-center justify-between">
-                              <span className="text-sm font-semibold">
+                              <span className="text-sm font-semibold font-mono tabular-nums">
                                 {formatMoney(deal.value, deal.currency)}
                               </span>
                               {deal.probability != null && (

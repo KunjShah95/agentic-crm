@@ -7,7 +7,7 @@ export async function listInboxContacts(workspaceId: string) {
   return db.contact.findMany({
     where: {
       workspaceId,
-      activities: { some: { channel: { in: ["WHATSAPP", "LEAD", "SMS", "EMAIL", "CALL"] } } },
+      activities: { some: { channel: { in: ["WHATSAPP", "LEAD", "SMS", "EMAIL", "CALL", "WEB"] } } },
     },
     orderBy: { updatedAt: "desc" },
     take: 100,

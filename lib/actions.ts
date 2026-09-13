@@ -1,5 +1,6 @@
 import { Prisma } from "@/lib/generated/prisma/client"
 import { AppError } from "@/lib/errors"
+import { RateLimitedError } from "@/modules/web-contact/rate-limit"
 
 export type ApiError = {
   code: string
@@ -20,6 +21,9 @@ export async function handleAction<T>(fn: () => Promise<T>): Promise<Result<T>> 
   } catch (err) {
     if (err instanceof AppError) {
       return { error: { code: err.code, message: err.message } }
+    }
+    if (err instanceof RateLimitedError) {
+      return { error: { code: "RATE_LIMITED", message: err.message } }
     }
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
       console.error("[db]", err.code, err.message)

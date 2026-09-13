@@ -21,8 +21,12 @@ export default async function InboxPage({
   const timeline = active ? await getContactTimeline(ws.id, active) : []
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] rounded-[16px] border bg-card overflow-hidden">
-      <aside className="w-72 border-r bg-muted/20 overflow-y-auto">
+    <div className="flex h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-[16px] border bg-card md:h-[calc(100vh-4rem)] md:flex-row">
+      <aside
+        className={`w-full shrink-0 overflow-y-auto border-b bg-muted/20 md:block md:w-72 md:border-r md:border-b-0 ${
+          selectedId ? "hidden" : "block"
+        }`}
+      >
         <div className="sticky top-0 z-10 border-b bg-card/80 backdrop-blur px-4 py-3 flex items-center justify-between">
           <h2 className="text-sm font-semibold">Inbox</h2><span className="rounded-full bg-foreground px-2 py-0.5 font-mono text-[11px] text-background">{contacts.length}</span>
         </div>
@@ -52,7 +56,17 @@ export default async function InboxPage({
           ))
         )}
       </aside>
-      <section className="flex-1 overflow-y-auto">
+      <section className={`min-h-0 flex-1 overflow-y-auto ${selectedId ? "block" : "hidden md:block"}`}>
+        {selectedId ? (
+          <div className="sticky top-0 z-10 border-b bg-card/80 px-4 py-2 backdrop-blur md:hidden">
+            <Link
+              href={`/${slug}/inbox`}
+              className="text-xs font-medium text-muted-foreground hover:text-foreground"
+            >
+              ← Back to conversations
+            </Link>
+          </div>
+        ) : null}
         <InboxTimeline items={timeline} />
       </section>
     </div>

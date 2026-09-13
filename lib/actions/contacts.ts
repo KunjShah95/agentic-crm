@@ -12,6 +12,10 @@ import {
 } from "@/lib/validators"
 import { listContacts, type ContactFilters } from "@/modules/contacts/queries"
 import { requireQuota } from "@/modules/billing/quota"
+import { headers } from "next/headers"
+import { sendEmail } from "@/modules/email/adapter"
+import { checkContactFormRateLimit, getClientIp, RateLimitedError } from "@/modules/web-contact/rate-limit"
+import { SITE } from "@/components/landing/site-config"
 
 function clean(input: Record<string, unknown>) {
   const data: Record<string, unknown> = {}
@@ -220,5 +224,152 @@ export async function exportContactsCsvAction(
       filename: `contacts-${new Date().toISOString().slice(0, 10)}.csv`,
       content: [header.join(","), ...rows].join("\n"),
     }
+  })
+}
+
+/**
+ * Public (unauthenticated) contact-form submission from the marketing site.
+ * Stores the sender as a Contact in the default workspace and logs the message
+ * as an inbound Activity (channel WEB, direction IN) so it shows up in the
+ * workspace Inbox where the team can read and reply to it.
+ */
+export async function submitPublicContactAction(input: {
+  name: string
+  email: string
+  company?: string
+  phone?: string
+  message: string
+  /** Honeypot — must be empty; bots fill it. */
+  website?: string
+}): Promise<Result<{ contactId: string }>> {
+  return handleAction(async () => {
+    // Honeypot: pretend success without writing anything.
+    if (typeof input?.website === "string" && input.website.trim() !== "") {
+      return { contactId: "ignored" }
+    }
+
+    // Per-IP spam rate limit (fixed window; Upstash when configured)
+    const h = await headers()
+    await checkContactFormRateLimit(getClientIp(h))
+
+    const name = typeof input?.name === "string" ? input.name.trim() : ""
+    const email = typeof input?.email === "string" ? input.email.trim().toLowerCase() : ""
+    const company = typeof input?.company === "string" ? input.company.trim() : ""
+    const phone = typeof input?.phone === "string" ? input.phone.trim() : ""
+    const message = typeof input?.message === "string" ? input.message.trim() : ""
+
+    if (name.length < 2) throw new AppError("VALIDATION", "Please enter your full name.")
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      throw new AppError("VALIDATION", "Enter a valid email address.")
+    }
+    if (message.length < 10) {
+      throw new AppError("VALIDATION", "Add a short note (at least 10 characters).")
+    }
+    if (name.length > 120 || email.length > 254 || company.length > 160 || phone.length > 32 || message.length > 5000) {
+      throw new AppError("VALIDATION", "One of the fields is too long.")
+    }
+
+    // Find default target workspace for website contact submissions
+    const workspace = await db.workspace.findFirst({
+      orderBy: { createdAt: "asc" },
+      select: { id: true },
+    })
+
+    if (!workspace) {
+      throw new AppError("SERVER_ERROR", "Workspace unavailable.", 500)
+    }
+
+    const nameParts = name.split(" ")
+    const firstName = nameParts[0] || name
+    const lastName = nameParts.slice(1).join(" ")
+
+    // Find or create organization if company name provided
+    let organizationId: string | null = null
+    if (company) {
+      const existingOrg = await db.organization.findFirst({
+        where: { workspaceId: workspace.id, name: { equals: company, mode: "insensitive" } },
+        select: { id: true },
+      })
+      if (existingOrg) {
+        organizationId = existingOrg.id
+      } else {
+        const newOrg = await db.organization.create({
+          data: {
+            workspaceId: workspace.id,
+            name: company,
+          },
+        })
+        organizationId = newOrg.id
+      }
+    }
+
+    // Upsert contact by email or create new
+    const contact = await db.contact.findFirst({
+      where: { workspaceId: workspace.id, email },
+    })
+
+    const contactRow = contact
+      ? await db.contact.update({
+          where: { id: contact.id },
+          data: {
+            firstName,
+            lastName,
+            phone: phone || contact.phone,
+            organizationId: organizationId ?? contact.organizationId,
+            leadSource: contact.leadSource ?? "WEBSITE_CONTACT_FORM",
+            consentAt: new Date(),
+            optedOut: false,
+          },
+        })
+      : await db.contact.create({
+          data: {
+            workspaceId: workspace.id,
+            firstName,
+            lastName,
+            email,
+            phone: phone || null,
+            organizationId,
+            leadSource: "WEBSITE_CONTACT_FORM",
+            consentAt: new Date(),
+            createdBy: "system",
+          },
+        })
+
+    // Log inbound activity so the workspace team can read & reply to it in the CRM Inbox
+    const activityBody = `Inbound Contact Form Submission:\n\nCompany/Project: ${company || "N/A"}\nPhone: ${phone || "N/A"}\nMessage:\n${message}`
+    await db.activity.create({
+      data: {
+        workspaceId: workspace.id,
+        contactId: contactRow.id,
+        type: "NOTE",
+        body: activityBody,
+        source: "WEBSITE_CONTACT_FORM",
+        channel: "WEB",
+        direction: "IN",
+        createdBy: "system",
+      },
+    })
+
+    // Notify the team (best-effort — never fails the submission)
+    try {
+      await sendEmail({
+        to: SITE.contact.email,
+        subject: `New website enquiry — ${name}${company ? ` (${company})` : ""}`,
+        body: `
+          <p><strong>${name}</strong> sent a message via the contact form.</p>
+          <ul>
+            <li><strong>Email:</strong> ${email}</li>
+            <li><strong>Phone:</strong> ${phone || "—"}</li>
+            <li><strong>Company/Project:</strong> ${company || "—"}</li>
+          </ul>
+          <p>${message.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!))}</p>
+          <p><em>Reply from the CRM Inbox: this message is stored on the contact's timeline.</em></p>
+        `,
+      })
+    } catch (err) {
+      console.error("[web-contact] team notification failed", err)
+    }
+
+    return { contactId: contactRow.id }
   })
 }

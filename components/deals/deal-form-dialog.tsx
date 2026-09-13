@@ -131,7 +131,11 @@ export function DealFormDialog({
                 <FieldLabel>Stage</FieldLabel>
                 <Select name="stageId" defaultValue={deal?.stageId}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select stage" />
+                    <SelectValue placeholder="Select stage">
+                      {deal?.stageId
+                        ? stages.find((stage) => stage.id === deal.stageId)?.name
+                        : undefined}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {stages.map((stage) => (

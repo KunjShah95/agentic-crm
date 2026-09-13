@@ -38,8 +38,8 @@ export default async function AIPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-          <Bot className="size-6 text-violet-600" /> Intelligence <Badge variant="secondary" className="rounded-full">P0 · Agentic AI</Badge>
+        <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-2">
+          <Bot className="size-6 text-brand" /> Intelligence <Badge variant="secondary" className="rounded-md font-mono text-xs">P0 · Agentic AI</Badge>
         </h1>
         <p className="text-sm text-muted-foreground">Next-best-action, follow-up cadence, drafting, call analysis, Ask pipeline, forecast — Jarvis parity, workspace-scoped.</p>
       </div>
@@ -47,33 +47,33 @@ export default async function AIPage({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="size-4" /> Revenue forecast</CardTitle>
+            <CardTitle className="text-base font-display flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Revenue forecast</CardTitle>
             <CardDescription>Weighted by stage probability</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">₹{rev.weighted.toLocaleString("en-IN")}</div>
-            <div className="text-xs text-muted-foreground">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
+            <div className="text-2xl font-semibold font-mono tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
+            <div className="text-xs text-muted-foreground font-mono tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Wallet className="size-4" /> Collections</CardTitle>
+            <CardTitle className="text-base font-display flex items-center gap-2"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
             <CardDescription>Due in 30d vs overdue</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
-            <div className="text-xs text-muted-foreground">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
+            <div className="text-2xl font-semibold font-mono tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
+            <div className="text-xs text-muted-foreground font-mono tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base flex items-center gap-2"><Sparkles className="size-4" /> Funnel snapshot</CardTitle>
+            <CardTitle className="text-base font-display flex items-center gap-2"><Sparkles className="size-4 text-brand" /> Funnel snapshot</CardTitle>
             <CardDescription>{snapshot.funnel[0]?.count ?? 0} INQUIRY · {snapshot.inventory.total} units</CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
             <div className="flex flex-wrap gap-1">
               {snapshot.funnel.slice(0, 4).map((r) => (
-                <Badge key={r.stage} variant="secondary" className="font-mono text-xs">{r.stage}: {r.count}</Badge>
+                <Badge key={r.stage} variant="secondary" className="font-mono text-xs tabular-nums">{r.stage}: {r.count}</Badge>
               ))}
             </div>
           </CardContent>
@@ -82,16 +82,13 @@ export default async function AIPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Bot className="size-4" /> Ask your pipeline</CardTitle>
+          <CardTitle className="flex items-center gap-2 font-display"><Bot className="size-4 text-brand" /> Ask your pipeline</CardTitle>
           <CardDescription>Try “show funnel”, “overdue payments”, “recent deals”, “recent contacts”, “inventory by status”.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <form action={`/ai`} className="flex gap-2">
-            {/* client will use searchParams */}
-          </form>
           <form className="flex gap-2">
-            <Input name="q" defaultValue={q ?? ""} placeholder="Ask — e.g. overdue payments" className="flex-1" />
-            <Button type="submit" className="rounded-full">Ask</Button>
+            <Input name="q" defaultValue={q ?? ""} placeholder="Ask — e.g. overdue payments" className="flex-1 focus-visible:ring-brand" />
+            <Button type="submit" className="rounded-lg bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
           </form>
           {askResult ? (
             <div className="rounded-xl border bg-muted/30 p-4 space-y-2">

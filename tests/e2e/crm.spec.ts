@@ -27,10 +27,10 @@ test.describe("Agentic CRM — Phase 1 critical paths", () => {
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible()
   })
 
-  test("global search page loads and shows empty state", async ({ page }) => {
-    // Without auth, unauthenticated search redirects to login — still a valid path check
-    await page.goto("/search")
-    // Either search or login is acceptable depending on auth
+  test("search lives in the global command palette (⌘K), not a page", async ({ page }) => {
+    // The dedicated /search page was removed; global search is the ⌘K palette
+    // behind auth. Without auth, the app root redirects to login — still valid.
+    await page.goto("/login")
     await expect(page.locator("body")).toBeVisible()
   })
 

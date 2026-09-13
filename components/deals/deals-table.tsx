@@ -218,7 +218,7 @@ export function DealsTable({
                   <Select value={deal.stageId} onValueChange={(v) => v && changeStage(deal.id, v)}>
                     <SelectTrigger className="h-7 w-auto gap-1.5 border-0 bg-transparent px-0 shadow-none focus-visible:ring-0" size="sm">
                       <span className="size-2 rounded-full" style={{ backgroundColor: deal.stage.color }} />
-                      <SelectValue />
+                      <SelectValue>{deal.stage.name}</SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {stages.map((stage) => (
