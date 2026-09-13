@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Building2, Phone, Handshake, Navigation, ReceiptText, Users } from "lucide-react"
 
 const ROLES = [
@@ -16,7 +15,7 @@ export function StaffSection() {
       <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <Badge variant="outline" className="rounded-full gap-1.5 font-mono tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</Badge>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</span>
             <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
             <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
           </div>
@@ -28,7 +27,7 @@ export function StaffSection() {
               <CardHeader className="pb-2">
                 <span className="inline-flex size-8 items-center justify-center rounded-lg bg-foreground text-background"><r.icon className="size-4" /></span>
                 <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
-                <Badge variant="secondary" className="w-fit rounded-full font-mono text-[11px]">{r.kpi}</Badge>
+                <span className="w-fit font-mono text-[11px] text-muted-foreground">{r.kpi}</span>
               </CardHeader>
               <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
             </Card>

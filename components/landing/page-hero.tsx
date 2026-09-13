@@ -1,5 +1,4 @@
 import Link from "next/link"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowUpRight } from "lucide-react"
 
@@ -28,9 +27,9 @@ export function PageHero({ eyebrow, title, description, primaryCta, secondaryCta
       </div>
       <div className="mx-auto max-w-[880px] px-6 pb-12 pt-12 text-center lg:px-8 lg:pb-16 lg:pt-16">
         {eyebrow ? (
-          <Badge variant="outline" className="rounded-full font-mono text-[11px] tracking-[0.12em] text-muted-foreground">
+          <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground">
             {eyebrow}
-          </Badge>
+          </span>
         ) : null}
         <h1 className="mt-4 font-display text-[36px] font-[600] leading-[1.05] tracking-[-0.03em] text-balance sm:text-[48px]">
           {title}

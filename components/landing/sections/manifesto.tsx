@@ -1,6 +1,5 @@
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ArrowRight, Building2, Star } from "lucide-react"
 
@@ -18,12 +17,12 @@ export function ManifestoSection({ isAuthed, workspaceSlug }: { isAuthed: boolea
       <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
         <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
           <div>
-            <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-muted-foreground gap-1.5"><Building2 className="size-3" /> MANIFESTO · AHMEDABAD BUILDS, LOOP RUNS</Badge>
+            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.14em] text-muted-foreground"><Building2 className="size-3" /> MANIFESTO · AHMEDABAD BUILDS, LOOP RUNS</span>
             <h2 className="mt-3 text-[28px] font-bold leading-[0.95] tracking-[-0.02em]">Possession isn&apos;t luck.<br />It&apos;s a loop that closes.</h2>
             <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Estate360 for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
             <div className="mt-6 flex gap-3">
               <Button className="rounded-full gap-1.5" render={<Link href={cta} />}>Enter Estate360 — NAAR demo <ArrowRight className="size-4" /></Button>
-              <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>See Shilp demo (/acme)</Button>
+              <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>See Shilp demo (/shilp)</Button>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

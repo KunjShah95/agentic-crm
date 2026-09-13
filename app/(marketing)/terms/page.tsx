@@ -89,7 +89,6 @@ export default async function TermsPage() {
   return (
     <MarketingChrome isAuthed={isAuthed} workspaceSlug={workspaceSlug}>
       <PageHero
-        eyebrow="LEGAL · TERMS"
         title="Terms & Conditions"
         description="The rules of the road for using Estate360 — trials, tenancy, data, and fair use."
       />

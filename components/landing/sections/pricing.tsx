@@ -1,8 +1,7 @@
 import Link from "next/link"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Building2, Check, CreditCard, ReceiptText } from "lucide-react"
+import { ArrowRight, Check, CreditCard, ReceiptText } from "lucide-react"
 
 const PLANS = [
   { name: "Builder", price: "₹1,499", note: "per month · 1 project", receipt: "One site, from enquiry to possession", features: ["1 workspace · 1 project", "Unlimited contacts & deals", "Cost sheet 30s + RERA docs", "GPS + WhatsApp inbox"], cta: "Start Builder", featured: false },
@@ -13,16 +12,11 @@ const PLANS = [
 export function PricingSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; workspaceSlug?: string | null }) {
   const cta = isAuthed ? `/${workspaceSlug}/contacts` : "/signup"
   return (
-    <section id="pricing" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
-      <div className="mx-auto max-w-[720px] text-center">
-        <Badge variant="outline" className="rounded-full font-mono tracking-[0.14em] text-muted-foreground gap-1.5"><Building2 className="size-3" /> PRICING · FOR AHMEDABAD BUILDERS</Badge>
-        <h2 className="mt-3 text-[32px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[40px]">Priced for site, not seat tricks.</h2>
-        <p className="mx-auto mt-3 max-w-[580px] text-[14px] leading-6 text-muted-foreground">All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, WhatsApp gu/hi, and association pool. RERA export anytime — your data, your possession letter.</p>
-      </div>
+    <section id="pricing" className="mx-auto max-w-[1280px] px-6 pt-4 pb-14 lg:px-8 lg:pb-20">
       <div className="mt-10 grid items-start gap-4 overflow-visible pt-4 pb-3 lg:grid-cols-3">
         {PLANS.map((p) => (
           <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-transform duration-300 ${p.featured ? "border-foreground bg-foreground text-background lg:-translate-y-2 hover:-translate-y-3" : "hover:-translate-y-1 border-border/60"}`}>
-            {p.featured && <Badge className="absolute -top-3 left-6 rounded-full bg-background text-foreground font-mono text-[11px] tracking-[0.14em] px-3 py-1 border">MOST CHOSEN</Badge>}
+            {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-background text-foreground font-mono text-[11px] tracking-[0.14em] px-3 py-1 border">MOST CHOSEN</span>}
             <CardHeader className="relative">
               <div className={`font-mono text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
               <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 font-mono text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>

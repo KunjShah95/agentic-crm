@@ -5,7 +5,6 @@ import { PageHero } from "@/components/landing/page-hero"
 import { StaffSection } from "@/components/landing/sections/staff"
 import { pageMetadata } from "@/components/landing/site-config"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import {
   Building2,
   FileCheck,
@@ -91,9 +90,9 @@ export default async function ProductPage() {
       <section className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <Badge variant="outline" className="rounded-full font-mono text-[11px] tracking-[0.12em]">
+            <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground">
               LIVE SPECIMEN
-            </Badge>
+            </span>
             <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.02em] sm:text-[34px]">
               Built where Ahmedabad builds.
             </h2>

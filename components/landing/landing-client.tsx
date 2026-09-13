@@ -3,12 +3,12 @@
 import { useEffect, useRef, useState, useMemo } from "react"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+// Badge removed — landing uses plain typographic labels
 import { Kbd } from "@/components/ui/kbd"
 import { Progress } from "@/components/ui/progress"
 import {
@@ -51,7 +51,7 @@ type ActivityItem = { id: string; kind: "stage" | "call" | "task" | "note"; titl
 const WORKSPACES = {
   acme: {
     name: "Shilp Infra",
-    slug: "acme",
+    slug: "shilp",
     letter: "S",
     color: "#0B1C3D",
     pipelineBase: 482000000,
@@ -339,9 +339,9 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           </PopoverContent>
                         </Popover>
                       </div>
-                      <Badge variant="secondary" className="hidden sm:inline-flex gap-1 font-mono text-[10px] bg-success/10 text-success border-success/20">
+                      <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-success">
                         <span className="size-1.5 rounded-full bg-success" aria-hidden /> LIVE
-                      </Badge>
+                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button
@@ -379,7 +379,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           >
                             <div className="mb-2 flex items-center justify-between">
                               <span className="inline-flex items-center gap-1 font-mono text-[11px] font-medium tracking-[0.08em] text-muted-foreground">{col.icon} {col.label.toUpperCase()}</span>
-                              <Badge variant={isDrop ? "default" : "secondary"} className="h-5 px-1.5 font-mono text-[11px] rounded-full shadow-sm">{colDeals.length}</Badge>
+                              <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{colDeals.length}</span>
                             </div>
                             <div className="space-y-2">
                               {colDeals.map((d) => (
@@ -448,7 +448,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <div className="flex items-center gap-3 border-t bg-card px-4 py-3">
                     <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground inline-flex items-center gap-1.5"><Clock3 className="size-3" /> ACTIVITY</span>
                     <Separator className="flex-1" />
-                    <Badge className="rounded-md font-mono text-[10px] gap-1.5"><span className="size-1.5 rounded-full bg-success" aria-hidden /> Stage changes auto-logged</Badge>
+                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground"><span className="size-1.5 rounded-full bg-success" aria-hidden /> Stage changes auto-logged</span>
                   </div>
 
                   {/* floating metrics — bento poppers */}
@@ -486,9 +486,9 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         {/* FEATURE BENTO — shadcn Card + HoverCard + Popover + Tooltip spotlight */}
         <section id="product" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-[720px] text-center">
-            <Badge variant="outline" className="rounded-full gap-1.5 text-[12px] tracking-[0.1em] text-foreground/70 border-border">
+            <span className="inline-flex items-center gap-1.5 text-[12px] tracking-[0.1em] text-foreground/70">
               <Hammer className="size-3" /> Product · built for construction
-            </Badge>
+            </span>
             <h2 className="mt-3 text-[30px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[36px]">
               Excel ends. <span className="font-[500] italic text-muted-foreground">The loop begins.</span>
             </h2>
@@ -505,8 +505,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     <div className="space-y-2">
                       <div className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-muted-foreground"><span>CONTACT</span><span className="h-px flex-1 bg-border" /><span className="text-brand">LIVE · {ws.name}</span></div>
                       <div className="rounded-xl border bg-card p-3 shadow-sm">
-                        <div className="flex items-center gap-2"><Avatar className="size-7"><AvatarFallback className="bg-brand-soft text-brand text-[10px] font-medium">{ws.contacts[0]?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2) ?? "—"}</AvatarFallback></Avatar><span className="text-sm font-medium">{ws.contacts[0]?.name}</span><Badge variant="secondary" className="ml-auto rounded-md text-[10px] bg-brand-soft text-brand border-brand/20">OWNER</Badge></div>
-                        <div className="mt-3 flex gap-1.5"><Badge className="rounded-full font-mono text-[10px]"># {ws.contacts[0]?.tag}</Badge><Badge variant="outline" className="rounded-full font-mono text-[10px]"># warm</Badge><Badge variant="secondary" className="rounded-full font-mono text-[10px]">verified</Badge></div>
+                        <div className="flex items-center gap-2"><Avatar className="size-7"><AvatarFallback className="bg-brand-soft text-brand text-[10px] font-medium">{ws.contacts[0]?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2) ?? "—"}</AvatarFallback></Avatar><span className="text-sm font-medium">{ws.contacts[0]?.name}</span><span className="ml-auto text-[10px] font-medium text-brand">OWNER</span></div>
+                        <div className="mt-3 flex gap-2.5 font-mono text-[10px] text-muted-foreground"><span># {ws.contacts[0]?.tag}</span><span># warm</span><span>verified</span></div>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground"><Progress value={74} className="h-1 flex-1" /> 74% complete</div>
                     </div>
@@ -522,7 +522,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                       <li className="flex gap-2"><span className="text-brand font-semibold">→</span> Unified activity timeline on every contact</li>
                     </ul>
                     <div className="mt-4 flex gap-2">
-                      <Badge variant="outline" className="rounded-full font-mono text-[11px]">3 bulk actions</Badge>
+                      <span className="font-mono text-[11px] text-muted-foreground">3 bulk actions</span>
                     </div>
                   </CardContent>
                 </Card>
@@ -563,7 +563,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     <TooltipContent>Drag & drop simulation — live above. Also try Table view.</TooltipContent>
                   </Tooltip>
                   <Button variant={view==="table" ? "default" : "outline"} size="sm" className="rounded-full gap-1" onClick={() => setView("table")}><TableIcon className="size-3" /> Table</Button>
-                  <Badge variant="outline" className="rounded-full gap-1 ml-auto hidden sm:inline-flex"><Workflow className="size-3" /> same data</Badge>
+                  <span className="ml-auto hidden sm:inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground"><Workflow className="size-3" /> same data</span>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
                   {stageCols.map(c => {
@@ -590,8 +590,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </CardHeader>
               <CardContent className="relative flex-1">
                 <div className="flex flex-wrap gap-1.5">
-                  <Badge variant="secondary" className="rounded-md gap-1 bg-success/10 text-success border-success/20"><Activity className="size-3" /> {activities.length} today</Badge>
-                  <Badge variant="outline" className="rounded-md font-mono text-[10px]">{ws.contacts.length} contacts</Badge>
+                  <span className="inline-flex items-center gap-1 text-[12px] text-success"><Activity className="size-3" /> {activities.length} today</span>
+                  <span className="font-mono text-[10px] text-muted-foreground">{ws.contacts.length} contacts</span>
                   <Popover>
                     <PopoverTrigger render={<Button variant="outline" size="sm" className="ml-auto h-6 rounded-full text-[11px] gap-1 shadow-sm">Details <ChevronRight className="size-3" /></Button>} />
                     <PopoverContent align="end" className="w-72">
@@ -600,7 +600,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                       <Separator className="my-3" />
                       <div className="flex gap-1.5 flex-wrap">
                         {activities.slice(0,3).map(a => (
-                          <Badge key={a.id} variant="secondary" className="font-mono text-[10px] rounded-full">{a.title}</Badge>
+                          <span key={a.id} className="font-mono text-[10px] text-muted-foreground">{a.title}</span>
                         ))}
                       </div>
                       <Button size="sm" className="mt-3 w-full rounded-full gap-1" onClick={() => { const id=Math.random().toString(36).slice(2,6); setActivities(a=>[{ id, kind:"note", title:"Note added", detail:`“Estate360 demo note ${id}” — You · just now`, time:"now"}, ...a.slice(0,4)]); setToast("Note added → timeline"); setTimeout(()=>setToast(null),1500)}}><Plus className="size-3" /> Add demo note</Button>
@@ -633,7 +633,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         <section id="staff" className="border-y bg-muted/20">
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
             <div className="mx-auto flex max-w-[720px] flex-col items-center gap-3 text-center">
-              <Badge variant="outline" className="rounded-full gap-1.5 text-[12px] tracking-[0.1em] border-border text-foreground/70"><Users className="size-3" /> STAFF · EVERY ROLE, ONE LOOP</Badge>
+              <span className="inline-flex items-center gap-1.5 text-[12px] tracking-[0.1em] text-foreground/70"><Users className="size-3" /> STAFF · EVERY ROLE, ONE LOOP</span>
               <h2 className="text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
               <p className="mx-auto max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
             </div>
@@ -649,7 +649,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <CardHeader className="pb-2">
                     <span className={`inline-flex size-8 items-center justify-center rounded-lg bg-muted border border-border/60 ${r.accent}`}><r.icon className="size-4" /></span>
                     <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
-                    <Badge variant="secondary" className="w-fit rounded-md text-[11px] tabular-nums">{r.kpi}</Badge>
+                    <span className="w-fit text-[11px] tabular-nums text-muted-foreground">{r.kpi}</span>
                   </CardHeader>
                   <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
                 </Card>
@@ -689,17 +689,17 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <CardContent className="p-6 lg:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-3"><span className="size-2 rounded-full bg-success" aria-hidden /><span className="font-mono text-[11px] tracking-[0.14em] text-background/60">LIVE WORKSPACE · {ws.name.toUpperCase()}</span><Separator orientation="vertical" className="hidden h-4 bg-background/15 sm:block" /><span className="hidden font-mono text-[11px] text-background/50 sm:inline">switch below — pipeline, timeline, search all re-scope</span></div>
-                  <Badge variant="secondary" className="rounded-full font-mono text-[11px] tracking-widest gap-1 shadow-sm"><Workflow className="size-3" /> MULTI-TENANT · SLUG ROUTING</Badge>
+                  <span className="inline-flex items-center gap-1 font-mono text-[11px] tracking-widest text-background/60"><Workflow className="size-3" /> MULTI-TENANT · SLUG ROUTING</span>
                 </div>
                 <div className="mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
                   <Card className="bg-background text-foreground shadow-sm">
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between"><span className="font-mono text-[11px] tracking-[0.14em] text-muted-foreground">DEAL TIMELINE · LIVE</span><Badge variant="secondary" className="font-mono text-[11px] rounded-full">{activities.length} activities</Badge></div>
+                      <div className="flex items-center justify-between"><span className="font-mono text-[11px] tracking-[0.14em] text-muted-foreground">DEAL TIMELINE · LIVE</span><span className="font-mono text-[11px] text-muted-foreground">{activities.length} activities</span></div>
                     </CardHeader>
                     <CardContent className="space-y-2.5">
                       {activities.map((r) => (
                         <div key={r.id} className="flex items-center gap-3 rounded-xl border bg-muted/50 px-3 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300">
-                          <Badge variant={r.kind==="stage" ? "default" : r.kind==="call" ? "secondary" : r.kind==="task" ? "destructive" : "outline"} className="rounded-full font-mono text-[10px] tracking-wide shadow-sm">{r.title}</Badge>
+                          <span className="font-mono text-[10px] tracking-wide font-medium text-foreground shrink-0">{r.title}</span>
                           <span className="text-xs text-muted-foreground truncate">{r.detail}</span>
                           <span className="ml-auto font-mono text-[11px] text-muted-foreground shrink-0">{r.time}</span>
                         </div>
@@ -757,7 +757,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         {/* PRICING — bento cards with featured lift */}
         <section id="pricing" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-[720px] text-center">
-            <Badge variant="outline" className="rounded-full tracking-[0.1em] border-border text-foreground/70 gap-1.5"><Building2 className="size-3" /> PRICING · FOR AHMEDABAD BUILDERS</Badge>
+            <span className="inline-flex items-center gap-1.5 tracking-[0.1em] text-foreground/70"><Building2 className="size-3" /> PRICING · FOR AHMEDABAD BUILDERS</span>
             <h2 className="mt-3 text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[36px]">Priced for site, not seat tricks.</h2>
             <p className="mx-auto mt-3 max-w-[580px] text-[14px] leading-6 text-muted-foreground">All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, WhatsApp gu/hi, and association pool. RERA export anytime — your data, your possession letter.</p>
           </div>
@@ -768,7 +768,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               { name: "Network", price: "₹7,999", note: "per month · up to 12 staff · multi-site", receipt: "For 2–10 projects without Excel", features: ["Unlimited projects + Buyer portal", "Public sites + enquiry→scored lead", "UPI collection + Tally/PDF export", "Association exchange + referral ledger"], cta: "Set up Network", featured: false },
             ].map((p) => (
               <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-all ${p.featured ? "border-brand bg-foreground text-background shadow-e3 lg:-translate-y-2 hover:shadow-e3" : "hover:shadow-e2 hover:border-foreground/20 border-border/60"}`}>
-                {p.featured && <Badge className="absolute -top-3 left-6 rounded-full bg-brand text-brand-foreground font-mono text-[11px] tracking-[0.12em] px-3 py-1">MOST CHOSEN</Badge>}
+                {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-brand text-brand-foreground font-mono text-[11px] tracking-[0.12em] px-3 py-1">MOST CHOSEN</span>}
                 <CardHeader className="relative">
                   <div className={`font-mono text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
                   <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 font-mono text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>
@@ -803,7 +803,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
-                <Badge variant="outline" className="rounded-full tracking-[0.1em] border-border text-foreground/70 gap-1.5"><Building2 className="size-3" /> MANIFESTO</Badge>
+                <span className="inline-flex items-center gap-1.5 tracking-[0.1em] text-foreground/70"><Building2 className="size-3" /> MANIFESTO</span>
                 <h2 className="mt-3 text-[28px] font-semibold leading-[1.05] tracking-[-0.02em]">Possession isn&apos;t luck.<br />It&apos;s a loop that closes.</h2>
                 <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Estate360 for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
                 <div className="mt-6 flex flex-wrap gap-3">
@@ -811,7 +811,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   {!isAuthed && (
                     <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>Log in</Button>
                   )}
-                  <Button variant="outline" className="rounded-full bg-card" render={<Link href={isAuthed ? `/${workspaceSlug}/dashboard` : "/login"} />}>See Shilp demo (/acme)</Button>
+                  <Button variant="outline" className="rounded-full bg-card" render={<Link href={isAuthed ? `/${workspaceSlug}/dashboard` : "/login"} />}>See Shilp demo (/shilp)</Button>
                 </div>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
