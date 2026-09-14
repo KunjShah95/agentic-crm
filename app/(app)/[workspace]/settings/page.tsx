@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { ExtendedSettingsTabs } from "@/components/settings/extended-settings-tabs"
 import { Badge } from "@/components/ui/badge"
+import { whatsappEnabled } from "@/modules/whatsapp/config"
 
 export const metadata: Metadata = { title: "Workspace settings" }
 
@@ -48,7 +49,7 @@ export default async function WorkspaceSettingsPage({
         </div>
       </div>
 
-      <ExtendedSettingsTabs workspace={workspace} slug={slug} isOwner={isOwner} />
+      <ExtendedSettingsTabs workspace={workspace} slug={slug} isOwner={isOwner} whatsappEnabled={whatsappEnabled()} />
     </div>
   )
 }

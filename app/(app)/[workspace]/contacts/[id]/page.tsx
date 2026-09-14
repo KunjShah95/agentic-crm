@@ -22,6 +22,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { WhatsAppContactCard } from "@/components/contacts/whatsapp-contact-card"
+import { whatsappEnabled } from "@/modules/whatsapp/config"
 import {
   Card,
   CardContent,
@@ -238,18 +239,20 @@ export default async function ContactDetailPage({
             </CardContent>
           </Card>
 
-          {/* WhatsApp thread for this contact */}
-          <WhatsAppContactCard
-            workspaceId={workspace.id}
-            contact={{
-              id: contact.id,
-              firstName: contact.firstName,
-              lastName: contact.lastName,
-              phone: contact.phone,
-              handles: contact.handles,
-            }}
-            connection={whatsAppConnection}
-          />
+          {/* WhatsApp thread for this contact — hidden while the integration is parked */}
+          {whatsappEnabled() && (
+            <WhatsAppContactCard
+              workspaceId={workspace.id}
+              contact={{
+                id: contact.id,
+                firstName: contact.firstName,
+                lastName: contact.lastName,
+                phone: contact.phone,
+                handles: contact.handles,
+              }}
+              connection={whatsAppConnection}
+            />
+          )}
         </div>
 
         {/* Right column: deals + activity */}

@@ -3,12 +3,24 @@
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { CheckCircle2, Circle, ListTodo } from "lucide-react"
+import { CheckCircle2, Circle, ListTodo, Trash2 } from "lucide-react"
 
-import { completeTaskAction } from "@/lib/actions/activities"
+import { completeTaskAction, deleteTaskAction } from "@/lib/actions/activities"
 import { formatDate, relativeTime } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 type Task = {
   id: string
@@ -40,6 +52,16 @@ export function TaskList({
       return
     }
     toast.success(completed ? "Task completed 🎉" : "Task reopened")
+    router.refresh()
+  }
+
+  async function remove(taskId: string) {
+    const result = await deleteTaskAction(workspaceId, taskId)
+    if (result.error) {
+      toast.error(result.error.message)
+      return
+    }
+    toast.success("Task deleted")
     router.refresh()
   }
 
@@ -106,6 +128,37 @@ export function TaskList({
                   </Badge>
                 </Link>
               )}
+              <AlertDialog>
+                <AlertDialogTrigger
+                  render={
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="size-7 text-muted-foreground hover:text-destructive"
+                      aria-label="Delete task"
+                    >
+                      <Trash2 className="size-3.5" />
+                    </Button>
+                  }
+                />
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this task?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      {task.body ?? "Untitled task"} — this can&apos;t be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => remove(task.id)}
+                      className="bg-destructive text-white hover:bg-destructive/90"
+                    >
+                      Delete
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         )

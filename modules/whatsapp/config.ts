@@ -10,6 +10,20 @@
 
 export const DEFAULT_GRAPH_VERSION = "v23.0"
 
+/**
+ * Master switch for the WhatsApp integration.
+ *
+ * Parked by default: the integration is disabled unless WHATSAPP_ENABLED is
+ * explicitly truthy ("1" / "true"). This gates every entry point — settings UI,
+ * inbound webhook, drain cron, outbound send and connection actions — so the
+ * feature can be turned back on later by flipping one env var, without deleting
+ * any code or DB columns.
+ */
+export function whatsappEnabled(): boolean {
+  const v = (process.env.WHATSAPP_ENABLED ?? "").trim().toLowerCase()
+  return v === "1" || v === "true" || v === "yes" || v === "on"
+}
+
 /** Env vars we read. `WHATSAPP_PHONE_ID` is the legacy name for the same id. */
 export type WhatsAppConfig = {
   appId: string

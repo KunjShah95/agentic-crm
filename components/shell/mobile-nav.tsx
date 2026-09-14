@@ -3,7 +3,9 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Menu, Settings, Share2 } from "lucide-react"
+import { Menu, Settings } from "lucide-react"
+// Share2 is only used by the commented-out WhatsApp nav item below — re-add it
+// alongside that block if the nav item returns.
 
 import { cn } from "@/lib/utils"
 import { SIDEBAR_NAV } from "@/components/shell/sidebar"
@@ -76,14 +78,17 @@ export function MobileNav({
             )
           })}
           <div className="mt-auto flex flex-col gap-1 border-t border-sidebar-border/60 pt-3">
-            <Link
-              href={`/${workspaceSlug}/settings/social`}
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
-            >
-              <Share2 className="size-4 shrink-0 text-muted-foreground" />
-              <span>Social</span>
-            </Link>
+            {/*
+              <Link
+                href={`/${workspaceSlug}/settings/social`}
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
+              >
+                <Share2 className="size-4 shrink-0 text-muted-foreground" />
+                <span>WhatsApp</span>
+              </Link>
+            */}
+            {/* Paired with the commented sidebar item; restore Share2 in the import too. */}
             <Link
               href={`/${workspaceSlug}/settings`}
               onClick={() => setOpen(false)}

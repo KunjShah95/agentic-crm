@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { WhatsAppProvider } from "@/modules/social/providers/whatsapp"
 import { resolveInboundWorkspace, ingestWhatsAppEvents } from "@/modules/social/ingest"
 import type { NormalizedMessage } from "@/modules/social/types"
+import { whatsappEnabled } from "@/modules/whatsapp/config"
 
 export const dynamic = "force-dynamic"
 
@@ -37,6 +38,12 @@ function authorized(req: Request): boolean {
 export async function GET(req: Request) {
   if (!authorized(req)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401 })
+  }
+
+  // Integration parked: leave any parked batches untouched for whenever it is
+  // re-enabled, rather than draining them into a disabled feature.
+  if (!whatsappEnabled()) {
+    return NextResponse.json({ skipped: true, reason: "whatsapp_disabled" })
   }
 
   const pending = await db.webhookEvent.findMany({

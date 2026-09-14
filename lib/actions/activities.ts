@@ -99,6 +99,28 @@ export async function getActivityBySocialEvent(workspaceId: string, socialEventI
   })
 }
 
+export async function deleteTaskAction(
+  workspaceId: string,
+  activityId: string
+): Promise<Result<{ ok: true }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
+    await requireWorkspaceMember(workspaceId, session.user.id)
+
+    if (!activityId?.trim()) throw new AppError("VALIDATION", "Invalid task.")
+
+    const task = await db.activity.findFirst({
+      where: { id: activityId, workspaceId, type: "TASK" },
+      select: { id: true },
+    })
+    if (!task) throw new AppError("NOT_FOUND", "Task not found.", 404)
+
+    await db.activity.delete({ where: { id: task.id } })
+    return { ok: true }
+  })
+}
+
 export async function completeTaskAction(
   workspaceId: string,
   activityId: string,

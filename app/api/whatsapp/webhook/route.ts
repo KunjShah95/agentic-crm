@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { Prisma } from "@/lib/generated/prisma/client"
 import { WhatsAppProvider } from "@/modules/social/providers/whatsapp"
 import { resolveInboundWorkspace, ingestWhatsAppEvents } from "@/modules/social/ingest"
+import { whatsappEnabled } from "@/modules/whatsapp/config"
 
 export const dynamic = "force-dynamic"
 
@@ -55,6 +56,11 @@ function batchDedupeKey(events: Array<{ externalId: string }>, phoneNumberId: st
 }
 
 export async function GET(req: Request) {
+  // Integration parked: refuse Meta's verification handshake so the webhook
+  // reads as unconfigured rather than silently accepting inbound traffic.
+  if (!whatsappEnabled()) {
+    return new Response("Not found", { status: 404, headers: { "Content-Type": "text/plain" } })
+  }
   const provider = new WhatsAppProvider()
   const url = new URL(req.url)
   const query: Record<string, string> = {}
@@ -71,6 +77,9 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!whatsappEnabled()) {
+    return NextResponse.json({ error: "not found" }, { status: 404 })
+  }
   const rawBody = await req.text()
   const provider = new WhatsAppProvider()
 

@@ -14,7 +14,7 @@ import {
   getActiveConnection,
 } from "@/modules/social/connections"
 import { rememberOAuthState } from "@/modules/social/oauth-state"
-import { getWhatsAppConfig, whatsappReadiness, whatsappWebhookUrl } from "@/modules/whatsapp/config"
+import { getWhatsAppConfig, whatsappReadiness, whatsappWebhookUrl, whatsappEnabled } from "@/modules/whatsapp/config"
 import { cloudPhoneNumberInfo } from "@/modules/whatsapp/cloud"
 
 /**
@@ -33,6 +33,13 @@ async function requireAdmin(workspaceId: string) {
   if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
   const membership = await requireWorkspaceMember(workspaceId, session.user.id, "ADMIN")
   return { userId: session.user.id, slug: membership.workspace.slug }
+}
+
+/** The integration is parked; refuse any mutating connection action. */
+function assertWhatsAppEnabled() {
+  if (!whatsappEnabled()) {
+    throw new AppError("WHATSAPP_DISABLED", "The WhatsApp integration is currently disabled.", 403)
+  }
 }
 
 export type WhatsAppConnectionView = {
@@ -86,6 +93,7 @@ export async function linkPlatformNumberAction(
   workspaceId: string,
 ): Promise<Result<{ connection: WhatsAppConnectionView; verifiedName: string | null }>> {
   return handleAction(async () => {
+    assertWhatsAppEnabled()
     const { slug } = await requireAdmin(workspaceId)
     const cfg = getWhatsAppConfig()
     const readiness = whatsappReadiness(cfg)
@@ -136,6 +144,7 @@ export async function linkPlatformNumberAction(
 /** Begin Meta OAuth so a workspace can attach its own WhatsApp Business Account. */
 export async function getWhatsAppConnectUrlAction(workspaceId: string): Promise<Result<{ url: string }>> {
   return handleAction(async () => {
+    assertWhatsAppEnabled()
     const session = await auth()
     if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
     const membership = await requireWorkspaceMember(workspaceId, session.user.id, "ADMIN")
@@ -164,6 +173,7 @@ export async function testWhatsAppConnectionAction(
   workspaceId: string,
 ): Promise<Result<{ ok: true; info: Record<string, unknown> }>> {
   return handleAction(async () => {
+    assertWhatsAppEnabled()
     await requireAdmin(workspaceId)
     const conn = await getActiveConnection(workspaceId, "whatsapp")
     if (!conn) throw new AppError("NO_CONNECTION", "Link WhatsApp first.", 404)
@@ -187,6 +197,7 @@ export async function subscribeWhatsAppWebhookAction(
   workspaceId: string,
 ): Promise<Result<{ ok: boolean; fields: string[]; error?: string }>> {
   return handleAction(async () => {
+    assertWhatsAppEnabled()
     await requireAdmin(workspaceId)
     const conn = await getActiveConnection(workspaceId, "whatsapp")
     const cfg = getWhatsAppConfig()

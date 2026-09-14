@@ -32,10 +32,12 @@ export function ExtendedSettingsTabs({
   workspace,
   slug,
   isOwner,
+  whatsappEnabled = false,
 }: {
   workspace: { id: string; name: string; slug: string; plan: string; createdAt: Date; _count: { members: number } }
   slug: string
   isOwner: boolean
+  whatsappEnabled?: boolean
 }) {
   const [copied, setCopied] = useState(false)
   const [apiKey] = useState(() => "est_live_" + Math.random().toString(36).substring(2, 12))
@@ -203,23 +205,29 @@ export function ExtendedSettingsTabs({
         <Card>
           <CardHeader>
             <CardTitle className="font-display text-lg font-semibold">Connected Channels & Messaging</CardTitle>
-            <CardDescription>Manage WhatsApp Cloud API, Meta lead ads, and email notification sync.</CardDescription>
+            <CardDescription>
+              {whatsappEnabled
+                ? "Manage WhatsApp Cloud API, Meta lead ads, and email notification sync."
+                : "Manage Meta lead ads and email notification sync."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
-                  <Radio className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium">WhatsApp</p>
-                  <p className="text-xs text-muted-foreground">Inbound messages land in the Inbox; replies go out through the Cloud API.</p>
+            {whatsappEnabled && (
+              <div className="flex items-center justify-between rounded-lg border p-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Radio className="size-5" />
+                  </span>
+                  <div>
+                    <p className="text-sm font-medium">WhatsApp</p>
+                    <p className="text-xs text-muted-foreground">Inbound messages land in the Inbox; replies go out through the Cloud API.</p>
+                  </div>
                 </div>
+                <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
+                  Configure
+                </Button>
               </div>
-              <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
-                Configure
-              </Button>
-            </div>
+            )}
 
             <div className="flex items-center justify-between rounded-lg border p-4">
               <div className="flex items-center gap-3">
@@ -231,9 +239,6 @@ export function ExtendedSettingsTabs({
                   <p className="text-xs text-muted-foreground">Lead-form webhooks land in Contacts automatically — see API &amp; Webhooks below.</p>
                 </div>
               </div>
-              <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
-                Configure WhatsApp
-              </Button>
             </div>
           </CardContent>
         </Card>

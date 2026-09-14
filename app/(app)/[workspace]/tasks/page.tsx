@@ -5,6 +5,7 @@ import { CheckCircle2, Circle } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { TaskList } from "@/components/activities/task-list"
+import { NewTaskDialog } from "@/components/activities/new-task-dialog"
 import {
   Card,
   CardContent,
@@ -61,9 +62,12 @@ export default async function TasksPage({
           <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
         </div>
-        <div className="relative">
-          <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · assigned to you</p>
+        <div className="relative flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
+            <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · assigned to you</p>
+          </div>
+          <NewTaskDialog workspaceId={workspace.id} />
         </div>
       </div>
 

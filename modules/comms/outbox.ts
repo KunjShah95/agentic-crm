@@ -18,7 +18,7 @@ import { requireQuota } from "@/modules/billing/quota"
 import { WhatsAppProvider } from "@/modules/social/providers/whatsapp"
 import { getActiveConnection, decryptAccessToken } from "@/modules/social/connections"
 import { replyWindowRemaining } from "@/modules/social/ingest"
-import { getWhatsAppConfig, whatsappReadiness } from "@/modules/whatsapp/config"
+import { getWhatsAppConfig, whatsappReadiness, whatsappEnabled } from "@/modules/whatsapp/config"
 
 export type OutboundFailure =
   | "EMPTY_BODY"
@@ -56,6 +56,10 @@ export async function sendOutboundWhatsAppMessage(params: {
   const { workspaceId, workspaceSlug, userId, contactId } = params
   const body = params.body?.trim() ?? ""
   if (!body) return { ok: false, code: "EMPTY_BODY", message: "Write a message first." }
+
+  if (!whatsappEnabled()) {
+    return { ok: false, code: "NOT_CONFIGURED", message: "WhatsApp messaging is currently disabled." }
+  }
 
   const contact = await db.contact.findFirst({
     where: { id: contactId, workspaceId },
