@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { ArrowRight, Layers, MapPin, Mail, Phone } from "lucide-react"
+import { Layers, MapPin, Mail, Phone } from "lucide-react"
 import {
   FOOTER_LEGAL_LINKS,
   FOOTER_PRODUCT_LINKS,
@@ -10,15 +9,14 @@ import {
 /**
  * Footer — TypeUI Premium adaptation.
  * Texture system: blueprint grid + film grain + outlined watermark, all static
- * (no animation). One accent (brand amber) reserved for the top rule and the
- * start card. Navy #0B1C3D carries the construction identity.
+ * (no animation). One accent (brand amber) reserved for the top rule.
+ * Navy #0B1C3D carries the construction identity.
  */
 
 const GRAIN =
   "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E\")"
 
-export function SiteFooter({ isAuthed, workspaceSlug }: { isAuthed: boolean; workspaceSlug?: string | null }) {
-  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/dashboard` : "/signup"
+export function SiteFooter({}: { isAuthed: boolean; workspaceSlug?: string | null }) {
   const { contact } = SITE
 
   return (
@@ -50,7 +48,7 @@ export function SiteFooter({ isAuthed, workspaceSlug }: { isAuthed: boolean; wor
       <div aria-hidden className="relative h-[3px] w-full bg-gradient-to-r from-[#C27803] via-[#D9A441] to-transparent" />
 
       <div className="relative mx-auto max-w-[1280px] px-6 pb-10 pt-14 lg:px-8">
-        <div className="grid gap-12 lg:grid-cols-[1.2fr_0.7fr_0.7fr_1fr]">
+        <div className="grid gap-12 lg:grid-cols-[1.2fr_0.7fr_0.7fr]">
           {/* brand + contact */}
           <div>
             <div className="flex items-center gap-2.5">
@@ -122,19 +120,6 @@ export function SiteFooter({ isAuthed, workspaceSlug }: { isAuthed: boolean; wor
               </li>
             </ul>
           </nav>
-
-          {/* start card — the one amber surface */}
-          <div>
-            <div className="mt-4 rounded-xl border border-brand/40 bg-brand/10 p-4 shadow-e2">
-              <Button
-                size="sm"
-                className="w-full gap-1.5 rounded-full bg-brand text-brand-foreground hover:bg-brand/90"
-                render={<Link href={cta} />}
-              >
-                Get started <ArrowRight className="size-3.5" aria-hidden />
-              </Button>
-            </div>
-          </div>
         </div>
 
         {/* bottom bar */}

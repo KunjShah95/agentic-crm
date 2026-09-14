@@ -8,8 +8,7 @@ import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-p
 import { GripVertical } from "lucide-react"
 
 import { moveDealStageAction } from "@/lib/actions/deals"
-import { formatDate, formatMoney, initials } from "@/lib/format"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { formatDate, formatMoney } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 
 type BoardStage = {
@@ -195,17 +194,6 @@ export function KanbanBoard({
                                   </span>
                                 )}
                               </div>
-                              {deal.ownerId && users.get(deal.ownerId) ? (
-                                <Avatar className="size-5">
-                                  <AvatarFallback className="text-[8px]">
-                                    {initials(users.get(deal.ownerId)!.name)}
-                                  </AvatarFallback>
-                                </Avatar>
-                              ) : (
-                                <Avatar className="size-5">
-                                  <AvatarFallback className="text-[8px]">?</AvatarFallback>
-                                </Avatar>
-                              )}
                             </div>
                           </div>
                         )}

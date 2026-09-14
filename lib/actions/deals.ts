@@ -53,6 +53,8 @@ export async function createDealAction(
         probability: data.probability as number | null,
         expectedCloseDate: data.expectedCloseDate as Date | null,
         ownerId: (data.ownerId as string | null) ?? userId,
+        dealType: (data.dealType as string | null) ?? null,
+        urgency: (data.urgency as string) ?? "NORMAL",
       },
     })
     return { id: deal.id }
@@ -93,6 +95,8 @@ export async function updateDealAction(
         probability: data.probability as number | null,
         expectedCloseDate: data.expectedCloseDate as Date | null,
         ownerId: (data.ownerId as string | null) ?? userId,
+        dealType: (data.dealType as string | null) ?? null,
+        urgency: (data.urgency as string) ?? "NORMAL",
       },
     })
     return { ok: true }

@@ -32,6 +32,25 @@ import {
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "CAD", "AUD", "JPY", "BRL"]
 
+const DEAL_TYPE_OPTIONS = [
+  { value: "PLOT", label: "Land / Plot" },
+  { value: "VILLA", label: "Villa" },
+  { value: "BUNGALOW", label: "Bungalow" },
+  { value: "FLAT", label: "Flat (1–4 BHK)" },
+  { value: "SHOP", label: "Shop" },
+  { value: "COMMERCIAL", label: "Commercial" },
+  { value: "OFFICE", label: "Office" },
+  { value: "CORPORATE_HOUSE", label: "Corporate house" },
+]
+
+const URGENCY_OPTIONS = [
+  { value: "NONE", label: "None" },
+  { value: "LOW", label: "Low" },
+  { value: "NORMAL", label: "Normal" },
+  { value: "HIGH", label: "High" },
+  { value: "DISTRESS", label: "Distress (must move)" },
+]
+
 export function DealFormDialog({
   workspaceId,
   stages,
@@ -57,6 +76,8 @@ export function DealFormDialog({
     probability: number | null
     expectedCloseDate: Date | null
     ownerId: string | null
+    dealType?: string | null
+    urgency?: string | null
   }
   trigger?: React.ReactElement
 }) {
@@ -81,6 +102,8 @@ export function DealFormDialog({
       probability: String(form.get("probability") ?? ""),
       expectedCloseDate: String(form.get("expectedCloseDate") ?? "") || null,
       ownerId: String(form.get("ownerId") ?? ""),
+      dealType: String(form.get("dealType") ?? ""),
+      urgency: String(form.get("urgency") ?? "NORMAL"),
     }
 
     startTransition(async () => {
@@ -207,6 +230,39 @@ export function DealFormDialog({
                     {members.map((m) => (
                       <SelectItem key={m.user.id} value={m.user.id}>
                         {m.user.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field>
+                <FieldLabel>Deal type</FieldLabel>
+                <Select name="dealType" defaultValue={deal?.dealType ?? ""}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Auto (from unit)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Auto (from unit)</SelectItem>
+                    {DEAL_TYPE_OPTIONS.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+              <Field>
+                <FieldLabel>Selling urgency</FieldLabel>
+                <Select name="urgency" defaultValue={deal?.urgency ?? "NORMAL"}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {URGENCY_OPTIONS.map((u) => (
+                      <SelectItem key={u.value} value={u.value}>
+                        {u.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

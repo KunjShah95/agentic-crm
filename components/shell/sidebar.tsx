@@ -23,7 +23,6 @@ import {
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
-import { UserMenu } from "@/components/shell/user-menu"
 import { WorkspaceSwitcher, type LiteWorkspace } from "@/components/shell/workspace-switcher"
 
 const NAV = [
@@ -51,12 +50,10 @@ export function Sidebar({
   workspace,
   role,
   memberships,
-  user,
 }: {
   workspace: { id: string; slug: string; name: string; plan: string }
   role: string
   memberships: LiteWorkspace[]
-  user: { id: string; name: string; email: string; image?: string | null }
 }) {
   const pathname = usePathname()
   const [collapsed, setCollapsed] = useState(false)
@@ -191,10 +188,6 @@ export function Sidebar({
           </Link>
         </div>
       </nav>
-
-      <div className={cn("flex shrink-0 items-center border-t border-sidebar-border/60 px-3 py-3", collapsed ? "justify-center" : "justify-between")}>
-        <UserMenu user={user} workspaceSlug={workspace.slug} />
-      </div>
     </aside>
   )
 }

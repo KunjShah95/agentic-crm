@@ -42,6 +42,7 @@ import {
 import { SiteHeader } from "@/components/landing/site-header"
 import { SiteFooter } from "@/components/landing/sections/site-footer"
 import { ShaderBackground } from "@/components/landing/shader-background"
+import { SpotlightGrid } from "@/components/landing/spotlight-grid"
 
 // ——— MOCK DATA (kept, workspace-scoped loop) ———
 type Stage = "lead" | "qualified" | "closing"
@@ -117,6 +118,43 @@ const WORKSPACES = {
 
 type WsKey = keyof typeof WORKSPACES
 type Props = { workspaceSlug?: string | null; isAuthed: boolean }
+
+/** Stats-bar counter: rolls 0 → value once, the first time it scrolls into view. */
+function CountUp({ value }: { value: number }) {
+  const ref = useRef<HTMLSpanElement>(null)
+  const [n, setN] = useState(0)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setN(value)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return
+        io.disconnect()
+        const start = performance.now()
+        const step = (t: number) => {
+          const p = Math.min(1, (t - start) / 900)
+          setN(Math.round(value * (1 - Math.pow(1 - p, 3))))
+          if (p < 1) requestAnimationFrame(step)
+        }
+        requestAnimationFrame(step)
+      },
+      { threshold: 0.4 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [value])
+
+  return (
+    <span ref={ref} className="tabular-nums">
+      {n}
+    </span>
+  )
+}
 
 export function LandingClient({ workspaceSlug, isAuthed }: Props) {
   const [activeWs, setActiveWs] = useState<WsKey>("acme")
@@ -226,14 +264,15 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
            HERO — CRAFTED BACKGROUND + KINETIC TITLE + CTAs
            ──────────────────────────────────────────────── */}
         <section ref={heroRef} className="relative overflow-hidden">
-          {/* Signature motion: slow monochrome mesh, one accent, honors reduced-motion.
-              Scrim keeps copy contrast + blends canvas edges into the page wash. */}
-          <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
+          {/* Signature motion: slow monochrome mesh + cursor-revealed blueprint
+              grid. Scrim keeps copy contrast + blends canvas edges into the wash. */}
+          <div aria-hidden className="pointer-events-none absolute inset-0 -z-20">
             <div className="absolute inset-0 opacity-60 [mask-image:linear-gradient(to_bottom,black_0%,black_55%,transparent_100%)]">
               <ShaderBackground className="absolute inset-0" />
             </div>
             <div className="absolute inset-0 bg-gradient-to-b from-[var(--hero-wash-from)]/70 via-[var(--hero-wash-to)]/40 to-background" />
           </div>
+          <SpotlightGrid className="-z-10" />
 
           <div className="relative mx-auto max-w-[1280px] px-6 lg:px-8">
             <div className="grid gap-10 pb-10 pt-10 lg:grid-cols-[1.04fr_0.96fr] lg:gap-8 lg:pb-16 lg:pt-[56px]">
@@ -247,14 +286,15 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 </div>
                 <h1 className="mt-5 font-display text-[42px] font-[600] leading-[1.02] tracking-[-0.03em] text-balance sm:text-[54px] lg:text-[62px]">
                   <span className="block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100 [animation-fill-mode:both]">
-                    Ahmedabad&apos;s sites.
+                    Close bookings faster.
                   </span>
                   <span className="block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-150 [animation-fill-mode:both] text-foreground">
-                    From foundation
+                    RERA-ready.
                   </span>
                   <span className="block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-200 [animation-fill-mode:both]">
-                    to possession &mdash;{" "}
-                    <span className="underline decoration-brand/70 decoration-[3px] underline-offset-8">on loop.</span>
+                    <span className="text-brand">Cost sheets &amp; receipts</span>{" "}
+                    &mdash;{" "}
+                    <span className="underline decoration-brand/70 decoration-[3px] underline-offset-8">in seconds.</span>
                   </span>
                 </h1>
 
@@ -276,7 +316,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     variant="outline"
                     size="lg"
                     className="rounded-full gap-2 h-11 px-6 bg-card hover:bg-accent border-border/60"
-                    render={<Link href="#workflow" />}
+                    render={<Link href={isAuthed ? `/${workspaceSlug}/dashboard` : "/signup"} />}
                   >
                     See how it works
                   </Button>
@@ -284,22 +324,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <span className="inline-flex items-center gap-1.5 text-[13px] text-muted-foreground">
                     <ShieldCheck className="size-3.5 text-success" /> No card required
                   </span>
-                </div>
-
-                {/* proof — capability, not vanity metrics */}
-                <div className="mt-8 flex flex-wrap items-center gap-5 border-t border-border/60 pt-6 animate-in fade-in duration-500 delay-550 [animation-fill-mode:both]">
-                  <div className="text-sm leading-tight">
-                    <div className="font-medium tracking-tight">Foundation to possession, on one loop</div>
-                    <div className="flex items-center gap-1 text-muted-foreground text-xs">Avg cost sheet <span className="tabular-nums">18s</span> · Excel-free · gu/hi</div>
-                  </div>
-                  <Separator orientation="vertical" className="hidden h-9 sm:block" />
-                  <div className="hidden sm:flex items-center gap-2.5 text-[13px] leading-none text-muted-foreground">
-                    <span className="flex size-8 items-center justify-center rounded-lg bg-success/10 text-success border border-success/20"><FileCheck className="size-4" /></span>
-                    <div>
-                      <div className="font-medium text-foreground">RERA · DPDP · Postgres RLS</div>
-                      <div>Audit every move · CLP 8 milestones</div>
-                    </div>
-                  </div>
                 </div>
               </div>
 
@@ -339,9 +363,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           </PopoverContent>
                         </Popover>
                       </div>
-                      <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-success">
-                        <span className="size-1.5 rounded-full bg-success" aria-hidden /> LIVE
-                      </span>
                     </div>
                     <div className="flex items-center gap-1.5">
                       <Button
@@ -448,34 +469,23 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <div className="flex items-center gap-3 border-t bg-card px-4 py-3">
                     <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground inline-flex items-center gap-1.5"><Clock3 className="size-3" /> ACTIVITY</span>
                     <Separator className="flex-1" />
-                    <span className="inline-flex items-center gap-1.5 font-mono text-[10px] text-muted-foreground"><span className="size-1.5 rounded-full bg-success" aria-hidden /> Stage changes auto-logged</span>
-                  </div>
-
-                  {/* floating metrics — bento poppers */}
-                  <div className="absolute -bottom-5 -left-3 hidden rounded-xl border bg-card px-4 py-3 shadow-e3 sm:flex items-center gap-3">
-                    <span className="flex size-9 items-center justify-center rounded-lg bg-brand-soft text-brand"><TrendingUp className="size-4" /></span>
-                    <div><div className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground">PIPELINE · {ws.name.toUpperCase()}</div><div className="text-[15px] font-semibold tracking-tight tabular-nums">₹{(pipelineValue / 100000).toFixed(1)}L · {deals.length} deals</div></div>
-                    <Progress value={Math.min(100, (pipelineValue / 50000000) * 100)} className="hidden lg:block w-16 h-1.5 ml-2" />
-                  </div>
-                  <div className="absolute -right-2 -top-3 hidden rounded-full border bg-card px-3 py-1.5 shadow-e2 sm:flex items-center gap-2">
-                    <span className="size-2 rounded-full bg-success" aria-hidden /><span className="font-mono text-[11px] font-medium tracking-widest">SYNCED</span>
                   </div>
                 </div>
-                <p className="mx-auto mt-7 max-w-[440px] text-center text-[13px] leading-relaxed text-muted-foreground">Drag any card between columns — it logs activity, updates the timeline, and re-indexes everything instantly.</p>
               </div>
             </div>
 
-            {/* STATS BAR — construction bento, hover spotlight */}
+            {/* STATS BAR — construction bento, animated counters on scroll-in */}
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border bg-border shadow-sm lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-600 [animation-fill-mode:both]">
               {[
-                { k: "COST SHEET", v: "18 sec", sub: "base+GST+stamp+others → total", icon: ReceiptText, accent: "text-muted-foreground" },
-                { k: "HOLD → BOOKING", v: "48 sec", sub: "KYC + 8 CLP milestones auto", icon: Hammer, accent: "text-brand" },
-                { k: "SITE GPS", v: "200m", sub: "geofence verified check-in", icon: Navigation, accent: "text-muted-foreground" },
-                { k: "RERA DEMAND #1", v: "9 sec", sub: "shortcodes → PDF download", icon: FileCheck, accent: "text-muted-foreground" },
+                { k: "COST SHEET", v: 18, suffix: " sec", sub: "base+GST+stamp+others → total", icon: ReceiptText, accent: "text-muted-foreground" },
+                { k: "HOLD → BOOKING", v: 48, suffix: " sec", sub: "KYC + 8 CLP milestones auto", icon: Hammer, accent: "text-brand" },
+                { k: "SITE GPS", v: 200, suffix: "m", sub: "geofence verified check-in", icon: Navigation, accent: "text-muted-foreground" },
+                { k: "RERA DEMAND #1", v: 9, suffix: " sec", sub: "shortcodes → PDF download", icon: FileCheck, accent: "text-muted-foreground" },
               ].map((s) => (
                 <div key={s.k} className="group relative overflow-hidden bg-card px-6 py-5 hover:bg-muted/40 transition-colors">
+                  <span aria-hidden className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                   <div className="relative flex items-center gap-2 font-mono text-[11px] tracking-[0.12em] text-muted-foreground"><s.icon className={`size-3 ${s.accent}`} /> {s.k}</div>
-                  <div className="relative mt-1 text-[24px] font-semibold tracking-tight tabular-nums">{s.v}</div>
+                  <div className="relative mt-1 text-[24px] font-semibold tracking-tight tabular-nums"><CountUp value={s.v} />{s.suffix}</div>
                   <div className="relative text-[12px] text-muted-foreground">{s.sub}</div>
                 </div>
               ))}
@@ -655,7 +665,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 </Card>
               ))}
             </div>
-            <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground"><span>gu/hi templates</span></div>
           </div>
         </section>
 

@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { Fragment } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { KanbanSquare, Table as TableIcon } from "lucide-react"
@@ -16,6 +17,7 @@ import { formatMoney } from "@/lib/format"
 import { KanbanBoard } from "@/components/deals/kanban-board"
 import { DealsTable } from "@/components/deals/deals-table"
 import { DealFormDialog } from "@/components/deals/deal-form-dialog"
+import { CompanyTakeCard } from "@/components/deals/company-take-card"
 import { StageManager } from "@/components/deals/stage-manager"
 import { Card, CardContent } from "@/components/ui/card"
 
@@ -71,7 +73,6 @@ export default async function DealsPage({
 
   const statCards = [
     { label: "Total pipeline", value: formatMoney(stats.total) },
-    { label: "Weighted forecast", value: formatMoney(stats.weighted) },
     { label: "Won", value: formatMoney(stats.won) },
     { label: "Open deals", value: String(stats.count) },
   ]
@@ -127,14 +128,17 @@ export default async function DealsPage({
         </div>
         <div className="relative mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-muted/30 border-dashed">
-              <CardContent className="flex flex-col gap-0.5 py-3">
-                <span className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">{stat.label}</span>
-                <span className="text-lg font-semibold tracking-tight">
-                  {stat.value}
-                </span>
-              </CardContent>
-            </Card>
+            <Fragment key={stat.label}>
+              <Card className="bg-muted/30 border-dashed">
+                <CardContent className="flex flex-col gap-0.5 py-3">
+                  <span className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">{stat.label}</span>
+                  <span className="text-lg font-semibold tracking-tight">
+                    {stat.value}
+                  </span>
+                </CardContent>
+              </Card>
+              {stat.label === "Won" && <CompanyTakeCard take={stats.take} />}
+            </Fragment>
           ))}
         </div>
       </div>

@@ -63,6 +63,11 @@ export const dealSchema = z.object({
   probability: z.coerce.number().int().min(0).max(100).optional().nullable(),
   expectedCloseDate: z.coerce.date().optional().nullable(),
   ownerId: z.string().optional(),
+  dealType: z
+    .enum(["PLOT", "VILLA", "BUNGALOW", "FLAT", "SHOP", "COMMERCIAL", "OFFICE", "CORPORATE_HOUSE"])
+    .optional()
+    .nullable(),
+  urgency: z.enum(["NONE", "LOW", "NORMAL", "HIGH", "DISTRESS"]).default("NORMAL"),
 })
 
 export const pipelineStageSchema = z.object({

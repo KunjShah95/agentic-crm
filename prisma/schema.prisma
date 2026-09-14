@@ -479,6 +479,12 @@ model Deal {
   unitId            String?
   paymentPlanId     String?
   bookingStage      String?
+  // Category used for commission weighting: PLOT | VILLA | BUNGALOW | FLAT |
+  // SHOP | COMMERCIAL | OFFICE | CORPORATE_HOUSE. Falls back to unit config.
+  dealType          String?
+  // Selling urgency — drives the commission uplift in company-take math.
+  // NONE | LOW | NORMAL | HIGH | DISTRESS
+  urgency           String   @default("NORMAL")
   costSheetId       String?
   brokerId              String?  @map("cpId")
 
