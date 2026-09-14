@@ -467,29 +467,78 @@ async function main() {
   })
 
   // ── Activities (idempotent: fixed ids, source="seed") ──────────────────────
+  // ActivityType enum = NOTE | EMAIL | CALL | MEETING | TASK. Inbox messages are
+  // stored as NOTE rows with channel + direction ("IN"/"OUT") set — that's what
+  // listInboxContacts() filters on and InboxTimeline renders.
   await prisma.activity.deleteMany({ where: { workspaceId: workspace.id, source: "seed" } })
-  const activityDefs = [
+  type SeedActivity = {
+    id: string
+    type: "NOTE" | "EMAIL" | "CALL" | "MEETING" | "TASK"
+    contactId: string
+    dealId?: string | null
+    body: string
+    createdBy: string
+    assigneeId?: string
+    at: number // days from now
+    channel?: string
+    direction?: "IN" | "OUT"
+    done?: boolean // completed task
+  }
+  const activityDefs: SeedActivity[] = [
+    // ── Timeline notes / calls ──────────────────────────────────────────────
     { id: "act-seed-1", type: "CALL", contactId: contacts["contact-ada"].id, dealId: deals["deal-2"].id, body: "Site visit done at Serenity — Anjali confirmed the east-facing 3BHK. Demand letter goes out Monday.", createdBy: owner.id, at: -2 },
     { id: "act-seed-2", type: "NOTE", contactId: contacts["contact-grace"].id, dealId: deals["deal-3"].id, body: "Cost sheet with GST + stamp shared over WhatsApp. NRI — repatriation query answered.", createdBy: sales.id, at: -3 },
     { id: "act-seed-3", type: "CALL", contactId: contacts["contact-katherine"].id, dealId: deals["deal-5"].id, body: "Spintex wants 4 units for relocated managers. Budget ≤ ₹65L each, SG Highway preferred.", createdBy: owner.id, at: -1 },
+
+    // ── Tasks (several assigned to the demo owner so /tasks isn't empty) ──────
     { id: "act-seed-4", type: "TASK", contactId: contacts["contact-rmehta"].id, dealId: deals["deal-1"].id, body: "Issue demand letter #3 (SLI-1 overdue by 6 days) for A-1204", createdBy: owner.id, assigneeId: owner.id, at: 1 },
     { id: "act-seed-5", type: "TASK", contactId: contacts["contact-alan"].id, dealId: deals["deal-4"].id, body: "Release SH-405 hold before expiry or convert to booking", createdBy: sales.id, assigneeId: sales.id, at: 2 },
     { id: "act-seed-6", type: "TASK", contactId: contacts["contact-katherine"].id, dealId: deals["deal-5"].id, body: "Send corporate housing proposal to Gujarat Spintex HR", createdBy: owner.id, assigneeId: sales.id, at: 4 },
-  ] as const
+    { id: "act-seed-7", type: "TASK", contactId: contacts["contact-ada"].id, dealId: deals["deal-2"].id, body: "Book allotment slot for Anjali — Serenity SS-1102", createdBy: owner.id, assigneeId: owner.id, at: 2 },
+    { id: "act-seed-8", type: "TASK", contactId: contacts["contact-rmehta"].id, dealId: deals["deal-1"].id, body: "Collect PAN + Aadhaar for A-1204 possession paperwork", createdBy: owner.id, assigneeId: owner.id, at: 3 },
+    { id: "act-seed-9", type: "TASK", contactId: contacts["contact-ada"].id, dealId: deals["deal-7"].id, body: "Confirm Sunday site visit for Skyline A-1201", createdBy: owner.id, assigneeId: owner.id, at: 5 },
+    { id: "act-seed-10", type: "TASK", contactId: contacts["contact-grace"].id, dealId: deals["deal-6"].id, body: "Share penthouse SH-1201 floor plan on WhatsApp", createdBy: owner.id, assigneeId: owner.id, at: -1, done: true },
+    { id: "act-seed-11", type: "TASK", contactId: contacts["contact-katherine"].id, dealId: deals["deal-5"].id, body: "Prepare bulk-deal pricing for Spintex (4 units)", createdBy: owner.id, assigneeId: owner.id, at: -3, done: true },
+
+    // ── Inbox conversations (channel set → shows up in /inbox) ───────────────
+    { id: "msg-rmehta-1", type: "NOTE", channel: "LEAD", direction: "IN", contactId: contacts["contact-rmehta"].id, body: "Enquiry from website: interested in 3BHK at Skyline Residences, budget ~₹1Cr.", createdBy: owner.id, at: -6 },
+    { id: "msg-rmehta-2", type: "NOTE", channel: "WHATSAPP", direction: "OUT", contactId: contacts["contact-rmehta"].id, body: "Hi Rohan! Thanks for your interest in Skyline. A-1204 (3BHK, east-facing) is available at ₹98.5L. Shall I block a site visit this weekend?", createdBy: owner.id, at: -5 },
+    { id: "msg-rmehta-3", type: "NOTE", channel: "WHATSAPP", direction: "IN", contactId: contacts["contact-rmehta"].id, body: "Yes please, Saturday morning works. Can you share the cost sheet?", createdBy: owner.id, at: -5 },
+    { id: "msg-rmehta-4", type: "NOTE", channel: "WHATSAPP", direction: "OUT", contactId: contacts["contact-rmehta"].id, body: "Sent the full cost sheet with GST + stamp duty. Total comes to ₹1.08Cr. See you Saturday 11am at the site office.", createdBy: owner.id, at: -4 },
+
+    { id: "msg-ada-1", type: "NOTE", channel: "WHATSAPP", direction: "IN", contactId: contacts["contact-ada"].id, body: "Hi, is the east-facing 3BHK at Shilp Serenity still available?", createdBy: owner.id, at: -3 },
+    { id: "msg-ada-2", type: "NOTE", channel: "WHATSAPP", direction: "OUT", contactId: contacts["contact-ada"].id, body: "Hello Anjali! Yes, SS-1102 is available at ₹1.15Cr. Would you like to visit?", createdBy: owner.id, at: -3 },
+    { id: "msg-ada-3", type: "NOTE", channel: "WHATSAPP", direction: "IN", contactId: contacts["contact-ada"].id, body: "Great, I visited yesterday and loved it. Please send the demand letter.", createdBy: owner.id, at: -2 },
+
+    { id: "msg-grace-1", type: "NOTE", channel: "WHATSAPP", direction: "IN", contactId: contacts["contact-grace"].id, body: "Namaste, I'm an NRI based in Dubai. Can NRIs buy at Shilp Heights?", createdBy: sales.id, at: -4 },
+    { id: "msg-grace-2", type: "NOTE", channel: "WHATSAPP", direction: "OUT", contactId: contacts["contact-grace"].id, body: "Absolutely, Sneha. NRIs can purchase — payment via NRE/NRO account and repatriation is allowed. Sharing the SH-405 cost sheet now.", createdBy: sales.id, at: -4 },
+    { id: "msg-grace-3", type: "NOTE", channel: "EMAIL", direction: "IN", contactId: contacts["contact-grace"].id, body: "Thanks for the details. Also interested in the penthouse SH-1201 — please send the floor plan.", createdBy: sales.id, at: -2 },
+
+    { id: "msg-kat-1", type: "NOTE", channel: "LEAD", direction: "IN", contactId: contacts["contact-katherine"].id, body: "Corporate enquiry: Gujarat Spintex needs 4 units for relocated managers, budget ≤ ₹65L each.", createdBy: owner.id, at: -5 },
+    { id: "msg-kat-2", type: "NOTE", channel: "EMAIL", direction: "OUT", contactId: contacts["contact-katherine"].id, body: "Dear Mr. Kothari, thank you for reaching out. We can offer a bulk-deal on SG Highway inventory. Proposal to follow shortly.", createdBy: owner.id, at: -4 },
+
+    { id: "msg-alan-1", type: "NOTE", channel: "WHATSAPP", direction: "IN", contactId: contacts["contact-alan"].id, body: "Hold on SS-207 for my client expires soon — can we extend or convert to booking?", createdBy: sales.id, at: -1 },
+  ]
   for (const a of activityDefs) {
+    const when = new Date(Date.now() + a.at * DAY)
     await prisma.activity.create({
       data: {
         id: a.id,
         workspaceId: workspace.id,
         type: a.type,
         contactId: a.contactId,
-        dealId: a.dealId,
+        dealId: a.dealId ?? null,
         body: a.body,
         createdBy: a.createdBy,
         source: "seed",
-        createdAt: new Date(Date.now() + a.at * DAY),
+        createdAt: when,
+        ...(a.channel ? { channel: a.channel, direction: a.direction ?? null } : {}),
         ...(a.type === "TASK"
-          ? { scheduledAt: new Date(Date.now() + a.at * DAY), assigneeId: a.assigneeId ?? a.createdBy }
+          ? {
+              scheduledAt: when,
+              assigneeId: a.assigneeId ?? a.createdBy,
+              completedAt: a.done ? when : null,
+            }
           : {}),
       },
     })
