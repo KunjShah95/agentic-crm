@@ -1,5 +1,6 @@
 import crypto from "crypto"
 import { db } from "@/lib/db"
+import { Prisma } from "@/lib/generated/prisma/client"
 
 /**
  * AES-256-GCM encrypt/decrypt for social tokens.
@@ -9,11 +10,27 @@ import { db } from "@/lib/db"
 
 function deriveKey(): Buffer {
   const raw = process.env.SOCIAL_TOKEN_KEY ?? process.env.AUTH_SECRET ?? ""
-  // For tests, env may be "test-secret" -> hash to 32 bytes
-  // If already 32+ chars, still hash to get deterministic 32-byte key
   if (!raw) {
-    // fallback for dev/test when nothing set - deterministic but insecure
-    return crypto.createHash("sha256").update("dev-fallback-social-token-key-please-set-env").digest()
+    // Never derive a key from a known literal: it would "work" in dev and let
+    // anyone with the repository decrypt every stored token. Fail loudly.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "SOCIAL_TOKEN_KEY (or AUTH_SECRET) must be set in production to encrypt social tokens.",
+      )
+    }
+    if (process.env.VITEST) {
+      return crypto.createHash("sha256").update("vitest-only-social-token-key").digest()
+    }
+    throw new Error(
+      "SOCIAL_TOKEN_KEY is not set. Copy a secret into it (see .env.example) before connecting any account.",
+    )
+  }
+  if (!process.env.SOCIAL_TOKEN_KEY && process.env.NODE_ENV === "production") {
+    // Reaching here means AUTH_SECRET is doing double duty; rotating it would
+    // silently make every stored token undecryptable.
+    console.warn(
+      "[social] SOCIAL_TOKEN_KEY unset — falling back to AUTH_SECRET. Set a dedicated key or token rotation will destroy stored connections.",
+    )
   }
   return crypto.createHash("sha256").update(raw).digest()
 }
@@ -53,6 +70,8 @@ export type CreateConnectionInput = {
   accessToken: string
   refreshToken?: string
   expiresAt?: Date
+  /** { phoneNumberId, wabaId } for WhatsApp — the inbound tenant-resolution key. */
+  metadata?: Record<string, unknown>
 }
 
 export async function createConnection(input: CreateConnectionInput) {
@@ -74,6 +93,7 @@ export async function createConnection(input: CreateConnectionInput) {
       accessTokenEnc,
       refreshTokenEnc,
       expiresAt: input.expiresAt,
+      metadata: (input.metadata ?? undefined) as Prisma.InputJsonValue | undefined,
       status: "active",
     },
     update: {
@@ -81,6 +101,7 @@ export async function createConnection(input: CreateConnectionInput) {
       accessTokenEnc,
       refreshTokenEnc,
       expiresAt: input.expiresAt,
+      ...(input.metadata ? { metadata: input.metadata as Prisma.InputJsonValue } : {}),
       status: "active",
       lastSyncAt: new Date(),
     },
@@ -153,4 +174,41 @@ export function decryptAccessToken(enc: string): string {
 export function decryptRefreshToken(enc: string | null | undefined): string | null {
   if (!enc) return null
   return decrypt(enc)
+}
+
+/**
+ * The workspace's live WhatsApp connection, if any. With a platform-shared
+ * number there is at most one per workspace; newest wins if history left more.
+ */
+export async function getActiveConnection(workspaceId: string, provider = "whatsapp") {
+  return db.socialConnection.findFirst({
+    where: { workspaceId, provider, status: "active" },
+    orderBy: { updatedAt: "desc" },
+  })
+}
+
+/**
+ * Inbound tenant resolution: which workspace owns this Meta phone-number id?
+ *
+ * Returns every candidate because a shared number can legitimately be bound by
+ * more than one workspace, and picking one arbitrarily would hand tenant A's
+ * customer messages to tenant B. Callers must treat length > 1 as ambiguous.
+ */
+export async function findConnectionsByPhoneNumberId(phoneNumberId: string, provider = "whatsapp") {
+  if (!phoneNumberId) return []
+  return db.socialConnection.findMany({
+    where: {
+      provider,
+      status: "active",
+      OR: [
+        { externalAccountId: phoneNumberId },
+        { metadata: { path: ["phoneNumberId"], equals: phoneNumberId } },
+      ],
+    },
+    orderBy: { updatedAt: "desc" },
+  })
+}
+
+export async function touchLastSync(id: string) {
+  return db.socialConnection.update({ where: { id }, data: { lastSyncAt: new Date() } })
 }

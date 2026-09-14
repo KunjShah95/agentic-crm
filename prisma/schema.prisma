@@ -295,6 +295,9 @@ model SocialConnection {
   expiresAt         DateTime?
   status            String    @default("active")
   lastSyncAt        DateTime?
+  // Provider-specific routing identity. For WhatsApp: { phoneNumberId, wabaId,
+  // cloudApiVersion }. This is the tenant-resolution key for inbound webhooks.
+  metadata          Json?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
@@ -302,6 +305,7 @@ model SocialConnection {
 
   @@unique([workspaceId, provider, externalAccountId])
   @@index([provider, status])
+  @@index([provider, externalAccountId])
 }
 
 model SocialEvent {
@@ -530,6 +534,17 @@ model Activity {
   channel       String?
   templateId    String?
   direction     String?
+  // Provider message id (WhatsApp wamid). Enables delivery-receipt updates on the
+  // outbound bubble and replay dedupe on the inbound one. NULL for manual rows.
+  // Intentionally NOT unique: a duplicate webhook retry must degrade to "no-op",
+  // never a thrown unique violation (Meta hammers non-200s). Idempotency is
+  // enforced upstream by SocialEvent.dedupeKey.
+  externalId    String?
+  // Outbound delivery state: sent | delivered | read | failed
+  status        String?
+  // Set once a delivery receipt has been applied, so late/duplicate status
+  // webhooks can never move a bubble backwards (read -> delivered).
+  statusAt      DateTime?
 
   contact     Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
   deal        Deal?        @relation(fields: [dealId], references: [id], onDelete: Cascade)
@@ -543,6 +558,8 @@ model Activity {
   @@index([createdAt])
   @@index([source])
   @@index([socialEventId])
+  @@index([externalId])
+  @@index([contactId, direction, createdAt])
 }
 
 model Tag {

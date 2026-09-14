@@ -1,22 +1,65 @@
 /**
- * SocialProvider seam types.
- * Workspace-scoped normalization for X / WhatsApp / LinkedIn (Unipile).
+ * MessagingProvider seam — WhatsApp only.
+ *
+ * Scope note: X and LinkedIn (Unipile) support were removed on 2026-09-14. The
+ * generic shape is kept so a future provider is one file + one registry entry,
+ * but nothing outside WhatsApp is wired or advertised to users.
  */
 
-export type SocialNormalized = {
+export type NormalizedMessage = {
+  kind: "message"
+  /** Provider message id (WhatsApp wamid). Always present for real webhooks. */
   externalId: string
-  type: string // "message" | "mention" | "comment"
   from: {
-    handle: string
-    displayName?: string
+    /** E.164-ish sender number, digits only for WhatsApp. */
+    number?: string
+    handle?: string
+    name?: string
   }
   body: string
-  timestamp: string // ISO 8601
+  /** Media kind when the message is not plain text. Raw handle stays in payload. */
+  mediaType?: "image" | "audio" | "document" | "video" | "sticker"
+  timestamp: string
   threadId?: string
 }
 
-export interface SocialProvider {
+export type NormalizedStatus = {
+  kind: "status"
+  /** The wamid of the outbound message this receipt belongs to. */
+  externalId: string
+  status: "sent" | "delivered" | "read" | "failed"
+  /** Provider error detail when status === "failed". */
+  error?: string
+  timestamp: string
+}
+
+export type NormalizedEvent = NormalizedMessage | NormalizedStatus
+
+export type Tokens = {
+  accessToken: string
+  refreshToken?: string
+  expiresAt?: Date
+  /** Stable account identifier for the connection row. */
+  externalAccountId: string
+  displayName?: string
+  /** Routing identity, e.g. { phoneNumberId, wabaId } for WhatsApp. */
+  metadata?: Record<string, unknown>
+}
+
+export type SendResult = {
+  externalId: string
+  /** True when no credentials exist and nothing actually left the building. */
+  mock: boolean
+}
+
+export interface MessagingProvider {
   readonly name: string
+
+  /** True when this provider has what it needs to make real API calls. */
+  isConfigured(): boolean
+
+  /** Human-readable missing-config report, for the settings UI. */
+  configStatus(): { ok: boolean; missing: string[]; present: string[] }
 
   getAuthUrl(state: string): string | Promise<string>
 
@@ -24,19 +67,9 @@ export interface SocialProvider {
     code: string
     codeVerifier?: string
     state?: string
-  }): Promise<{
-    accessToken: string
-    refreshToken?: string
-    expiresAt?: Date
-    raw?: unknown
-  }>
+  }): Promise<Tokens>
 
-  refresh(refreshToken: string): Promise<{
-    accessToken: string
-    refreshToken?: string
-    expiresAt?: Date
-    raw?: unknown
-  }>
+  refresh(refreshToken: string): Promise<Tokens>
 
   verifyWebhook(request: {
     headers?: Record<string, string>
@@ -45,35 +78,32 @@ export interface SocialProvider {
     rawBody?: string
   }): boolean | Promise<boolean>
 
-  normalize(payload: unknown): SocialNormalized
-
   /**
-   * Optional: send an outbound DM/message via the provider.
-   * Only implemented for providers that support outbound messaging.
+   * Batch parse — Meta posts arrays, and one webhook body can carry several
+   * messages and several delivery receipts. Replaces the old single-event
+   * normalize(), which silently dropped everything after the first message.
    */
-  sendDm?(params: {
+  parseEvents(payload: unknown): NormalizedEvent[]
+
+  send(ctx: {
     accessToken: string
+    metadata: Record<string, unknown>
     to: string
     body: string
-  }): Promise<{ id: string }>
+  }): Promise<SendResult>
 
-  /**
-   * Optional: send a message (generic alias for providers that don't use "DM" terminology).
-   */
-  sendMessage?(params: {
+  /** Subscribe the account to the webhook fields we need. */
+  subscribeWebhook?(ctx: {
     accessToken: string
-    to: string
-    body: string
-  }): Promise<{ id: string }>
+    metadata: Record<string, unknown>
+  }): Promise<{ ok: boolean; fields: string[]; error?: string }>
 
-  /**
-   * Optional: register the workspace webhook URL with the provider.
-   * Called after OAuth connection to enable inbound event delivery.
-   */
-  registerWebhook?(params: {
+  /** Live read-back of the connected number's state, for "Test connection". */
+  fetchAccountInfo?(ctx: {
     accessToken: string
-    workspaceId: string
-    webhookUrl: string
-    provider: string
-  }): Promise<{ ok: boolean; id?: string }>
+    metadata: Record<string, unknown>
+  }): Promise<Record<string, unknown>>
 }
+
+/** Back-compatible alias — existing imports reference SocialProvider. */
+export type SocialProvider = MessagingProvider

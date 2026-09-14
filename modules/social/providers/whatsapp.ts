@@ -1,124 +1,183 @@
-import crypto from "crypto"
-import type { SocialProvider, SocialNormalized } from "../types"
+/**
+ * WhatsApp Cloud API provider — the only MessagingProvider in the app.
+ *
+ * Real account linking chain:
+ *   code -> short-lived token -> long-lived token -> /me/accounts (WABA + page token)
+ *        -> /{wabaId}/account_phones -> the number we send/receive as
+ *
+ * The WABA-scoped page token (not the user token) is what we persist, because
+ * that is the token that can actually send messages for that business account.
+ */
 
-function timingSafeEqual(a: string, b: string): boolean {
+import crypto from "crypto"
+import type { MessagingProvider, NormalizedEvent, SendResult, Tokens } from "../types"
+import { getWhatsAppConfig, whatsappReadiness, type WhatsAppConfig } from "@/modules/whatsapp/config"
+import {
+  cloudConversationSummary,
+  cloudPhoneNumberInfo,
+  cloudSendText,
+  cloudSubscribeAppWebhook,
+} from "@/modules/whatsapp/cloud"
+
+function safeEqual(a: string, b: string): boolean {
   const bufA = Buffer.from(a)
   const bufB = Buffer.from(b)
   if (bufA.length !== bufB.length) return false
   return crypto.timingSafeEqual(bufA, bufB)
 }
 
-export function verifyWAWebhook(request: {
-  headers?: Record<string, string>
-  query?: Record<string, string | string[] | undefined>
-  body?: unknown
-  rawBody?: string
-}): boolean {
-  const lowerHeaders: Record<string, string> = {}
-  if (request.headers) {
-    for (const [k, v] of Object.entries(request.headers)) lowerHeaders[k.toLowerCase()] = v
-  }
-
-  // Hub verification for GET challenge
-  const hubMode = request.query?.["hub.mode"] ?? request.query?.["hub_mode"]
-  const hubToken = request.query?.["hub.verify_token"] ?? request.query?.["hub_verify_token"]
-  const hubChallenge = request.query?.["hub.challenge"]
-  if (hubMode !== undefined || hubToken !== undefined || hubChallenge !== undefined) {
-    const expectedToken = process.env.WHATSAPP_VERIFY_TOKEN ?? process.env.WA_VERIFY_TOKEN ?? "test_verify_token"
-    const modeVal = Array.isArray(hubMode) ? hubMode[0] : (hubMode as string | undefined)
-    const tokenVal = Array.isArray(hubToken) ? hubToken[0] : (hubToken as string | undefined)
-    if (modeVal === "subscribe" && tokenVal !== undefined) {
-      return timingSafeEqual(String(tokenVal), expectedToken)
-    }
-    return false
-  }
-
-  // Signature verification for POST: X-Hub-Signature-256
-  const signature = lowerHeaders["x-hub-signature-256"] ?? lowerHeaders["x-hub-signature"]
-  if (signature && request.rawBody) {
-    const appSecret = process.env.WHATSAPP_APP_SECRET ?? process.env.WA_APP_SECRET ?? ""
-    if (!appSecret) return false
-    // signature format: sha256=<hex>
-    const expectedHex = crypto.createHmac("sha256", appSecret).update(request.rawBody).digest("hex")
-    const expected = `sha256=${expectedHex}`
-    return timingSafeEqual(signature, expected)
-  }
-
-  // If no hub challenge and no signature, fail closed unless explicitly allowlisted for tests without secret
-  // For local tests without secret, return false to match spec "rejects bad signature"
-  return false
+function asText(msg: Record<string, unknown>): Record<string, unknown> | undefined {
+  const t = msg["text"]
+  if (t && typeof t === "object") return t as Record<string, unknown>
+  return undefined
 }
 
-export class WADirectProvider implements SocialProvider {
+export class WhatsAppProvider implements MessagingProvider {
   readonly name = "whatsapp"
 
+  private cfg: WhatsAppConfig
+
+  constructor(cfg?: WhatsAppConfig) {
+    this.cfg = cfg ?? getWhatsAppConfig()
+  }
+
+  isConfigured(): boolean {
+    const r = whatsappReadiness(this.cfg)
+    return r.canSend && r.canReceive
+  }
+
+  configStatus() {
+    const r = whatsappReadiness(this.cfg)
+    return { ok: r.canSend && r.canReceive, missing: r.missing, present: r.configured }
+  }
+
+  // ── Connect ────────────────────────────────────────────────────────────────
+
   getAuthUrl(state: string): string {
-    // WhatsApp Cloud uses Meta OAuth; redirect through Facebook dialog
-    const appId = process.env.WHATSAPP_APP_ID ?? process.env.FACEBOOK_APP_ID ?? "wa_app_id"
-    const redirectUri = process.env.WHATSAPP_REDIRECT_URI ?? "http://localhost:3000/api/auth/whatsapp/callback"
-    const scope = encodeURIComponent("whatsapp_business_messaging,whatsapp_business_management")
+    const appId = this.cfg.appId
+    if (!appId) {
+      // Refuse to build a URL that could never work. Previously this silently
+      // substituted the literal string "wa_app_id".
+      throw new Error("WhatsApp is not configured: set WHATSAPP_APP_ID (or FACEBOOK_APP_ID).")
+    }
     const params = new URLSearchParams({
       client_id: appId,
-      redirect_uri: redirectUri,
+      redirect_uri: this.redirectUri(),
       state,
-      scope: decodeURIComponent(scope),
       response_type: "code",
+      scope: "whatsapp_business_messaging,whatsapp_business_management",
     })
-    return `https://www.facebook.com/v19.0/dialog/oauth?${params.toString()}`
+    return `https://www.facebook.com/${this.cfg.graphVersion || "v23.0"}/dialog/oauth?${params.toString()}`
   }
 
-  async handleCallback(params: { code: string; codeVerifier?: string; state?: string }) {
-    const appId = process.env.WHATSAPP_APP_ID ?? process.env.FACEBOOK_APP_ID ?? ""
-    const appSecret = process.env.WHATSAPP_APP_SECRET ?? process.env.FACEBOOK_APP_SECRET ?? ""
-    const redirectUri = process.env.WHATSAPP_REDIRECT_URI ?? "http://localhost:3000/api/auth/whatsapp/callback"
-    if (!appId || !appSecret) {
-      return {
-        accessToken: `wa_access_${params.code}`,
-        refreshToken: undefined,
-        expiresAt: new Date(Date.now() + 60 * 24 * 3600 * 1000),
-        raw: { code: params.code },
-      }
+  private redirectUri() {
+    if (this.cfg.redirectUri) return this.cfg.redirectUri
+    const base = this.cfg.webhookBaseUrl.replace(/\/+$/, "") || "http://localhost:3000"
+    return `${base}/api/auth/whatsapp/callback`
+  }
+
+  async handleCallback(params: { code: string; codeVerifier?: string; state?: string }): Promise<Tokens> {
+    const { appId, appSecret } = this.cfg
+    if (!appId || !appSecret) throw new Error("WhatsApp OAuth needs WHATSAPP_APP_ID and WHATSAPP_APP_SECRET.")
+
+    // 1. code -> short-lived user token
+    const shortUrl = new URL(`https://graph.facebook.com/${this.cfg.graphVersion}/oauth/access_token`)
+    shortUrl.searchParams.set("client_id", appId)
+    shortUrl.searchParams.set("client_secret", appSecret)
+    shortUrl.searchParams.set("redirect_uri", this.redirectUri())
+    shortUrl.searchParams.set("code", params.code)
+    const shortRes = await fetch(shortUrl)
+    const shortData = (await shortRes.json().catch(() => ({}))) as {
+      access_token?: string
+      expires_in?: number
+      error_message?: string
     }
-    const url = new URL("https://graph.facebook.com/v19.0/oauth/access_token")
-    url.searchParams.set("client_id", appId)
-    url.searchParams.set("client_secret", appSecret)
-    url.searchParams.set("redirect_uri", redirectUri)
-    url.searchParams.set("code", params.code)
-    const res = await fetch(url.toString())
-    if (!res.ok) throw new Error(`WA token exchange failed: ${res.status}`)
-    const data = (await res.json()) as { access_token: string; expires_in?: number }
+    if (!shortRes.ok || !shortData.access_token) {
+      throw new Error(`WhatsApp code exchange failed: ${shortRes.status} ${shortData.error_message ?? ""}`.trim())
+    }
+
+    // 2. -> long-lived (60d) user token
+    const longUrl = new URL(`https://graph.facebook.com/${this.cfg.graphVersion}/oauth/access_token`)
+    longUrl.searchParams.set("grant_type", "fb_exchange_token")
+    longUrl.searchParams.set("client_id", appId)
+    longUrl.searchParams.set("client_secret", appSecret)
+    longUrl.searchParams.set("fb_exchange_token", shortData.access_token)
+    const longRes = await fetch(longUrl)
+    const longData = (await longRes.json().catch(() => ({}))) as { access_token?: string; expires_in?: number }
+    const userToken = longData.access_token ?? shortData.access_token
+    const expiresIn = longData.expires_in ?? shortData.expires_in
+
+    // 3. -> WABAs the user controls, each with its own page token
+    const acctRes = await fetch(
+      `https://graph.facebook.com/${this.cfg.graphVersion}/me/accounts?fields=id,name,access_token,whatsapp_business_account{id,name}&access_token=${encodeURIComponent(userToken)}`,
+    )
+    if (!acctRes.ok) throw new Error(`WhatsApp account lookup failed: ${acctRes.status}`)
+    const accts = (await acctRes.json()) as {
+      data?: Array<{ id?: string; name?: string; access_token?: string; whatsapp_business_account?: { id?: string; name?: string } }>
+    }
+    const businessAccounts = (accts.data ?? []).filter((a) => a.whatsapp_business_account?.id)
+    if (!businessAccounts.length) {
+      throw new Error("No WhatsApp Business Account found on this Meta account.")
+    }
+
+    // With a platform-shared setup there is normally exactly one WABA. If the
+    // admin has several, take the first and let them correct it in settings —
+    // silently binding the wrong one is worse.
+    const chosen = businessAccounts[0]
+    const wabaId = chosen.whatsapp_business_account!.id!
+    const wabaToken = chosen.access_token || userToken
+
+    // 4. -> the number we will send from
+    let phoneNumberId = this.cfg.phoneNumberId
+    let displayNumber: string | null = null
+    try {
+      const phonesRes = await fetch(
+        `https://graph.facebook.com/${this.cfg.graphVersion}/${wabaId}/account_phones?fields=id,display_phone_number,verified_name&access_token=${encodeURIComponent(wabaToken)}`,
+      )
+      if (phonesRes.ok) {
+        const phones = (await phonesRes.json()) as {
+          data?: Array<{ id: string; display_phone_number?: string; verified_name?: string }>
+        }
+        const match = phones.data?.find((p) => p.id === this.cfg.phoneNumberId) ?? phones.data?.[0]
+        if (match) {
+          phoneNumberId = match.id
+          displayNumber = match.display_phone_number ?? match.verified_name ?? null
+        }
+      }
+    } catch {
+      /* fall back to env phoneNumberId */
+    }
+    if (!phoneNumberId) throw new Error("Linked a WhatsApp Business Account but found no phone number on it.")
+
     return {
-      accessToken: data.access_token,
-      expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : undefined,
-      raw: data,
+      accessToken: wabaToken,
+      refreshToken: userToken !== wabaToken ? userToken : undefined,
+      expiresAt: expiresIn ? new Date(Date.now() + expiresIn * 1000) : undefined,
+      externalAccountId: phoneNumberId,
+      displayName: displayNumber ?? chosen.name ?? undefined,
+      metadata: { phoneNumberId, wabaId },
     }
   }
 
-  async refresh(refreshToken: string) {
-    // WhatsApp long-lived token exchange; stub if no secret
-    const appId = process.env.WHATSAPP_APP_ID ?? process.env.FACEBOOK_APP_ID ?? ""
-    const appSecret = process.env.WHATSAPP_APP_SECRET ?? process.env.FACEBOOK_APP_SECRET ?? ""
-    if (!appId || !appSecret) {
-      return {
-        accessToken: `wa_refreshed_${refreshToken.slice(0, 8)}`,
-        expiresAt: new Date(Date.now() + 60 * 24 * 3600 * 1000),
-      }
-    }
-    // Facebook long-lived: GET /oauth/access_token?grant_type=fb_exchange_token&...
-    const url = new URL("https://graph.facebook.com/v19.0/oauth/access_token")
+  async refresh(refreshToken: string): Promise<Tokens> {
+    const { appId, appSecret } = this.cfg
+    if (!appId || !appSecret) throw new Error("WhatsApp refresh needs WHATSAPP_APP_ID and WHATSAPP_APP_SECRET.")
+    const url = new URL(`https://graph.facebook.com/${this.cfg.graphVersion}/oauth/access_token`)
     url.searchParams.set("grant_type", "fb_exchange_token")
     url.searchParams.set("client_id", appId)
     url.searchParams.set("client_secret", appSecret)
     url.searchParams.set("fb_exchange_token", refreshToken)
-    const res = await fetch(url.toString())
-    if (!res.ok) throw new Error(`WA refresh failed: ${res.status}`)
+    const res = await fetch(url)
+    if (!res.ok) throw new Error(`WhatsApp token refresh failed: ${res.status}`)
     const data = (await res.json()) as { access_token: string; expires_in?: number }
     return {
       accessToken: data.access_token,
+      externalAccountId: "",
       expiresAt: data.expires_in ? new Date(Date.now() + data.expires_in * 1000) : undefined,
-      raw: data,
     }
   }
+
+  // ── Inbound ────────────────────────────────────────────────────────────────
 
   verifyWebhook(request: {
     headers?: Record<string, string>
@@ -126,191 +185,141 @@ export class WADirectProvider implements SocialProvider {
     body?: unknown
     rawBody?: string
   }): boolean {
-    return verifyWAWebhook(request)
+    const lower: Record<string, string> = {}
+    for (const [k, v] of Object.entries(request.headers ?? {})) lower[k.toLowerCase()] = v
+
+    const mode = request.query?.["hub.mode"]
+    const token = request.query?.["hub.verify_token"]
+    const challenge = request.query?.["hub.challenge"]
+
+    // Meta's one-time subscription handshake.
+    if (mode !== undefined || token !== undefined || challenge !== undefined) {
+      const modeVal = Array.isArray(mode) ? mode[0] : mode
+      const tokenVal = Array.isArray(token) ? token[0] : token
+      // Fail closed: without a configured verify token there is nothing to
+      // verify against, so subscribing is not allowed.
+      if (!this.cfg.verifyToken) return false
+      return modeVal === "subscribe" && typeof tokenVal === "string" && safeEqual(tokenVal, this.cfg.verifyToken)
+    }
+
+    // Every message delivery must carry a signature.
+    if (!this.cfg.appSecret) return false
+    const signature = lower["x-hub-signature-256"]
+    if (!signature || request.rawBody === undefined) return false
+    if (!signature.startsWith("sha256=")) return false
+    const expected = "sha256=" + crypto.createHmac("sha256", this.cfg.appSecret).update(request.rawBody).digest("hex")
+    return safeEqual(signature, expected)
   }
 
-  async registerWebhook(params: { accessToken: string; workspaceId: string; webhookUrl: string; provider: string }): Promise<{ ok: boolean; id?: string }> {
-    // WhatsApp Cloud inbound requires two Graph API steps:
-    //   1. App-level subscription — registers the callback URL + verify token so Meta
-    //      delivers events. Uses an app access token ({app-id}|{app-secret}).
-    //   2. WABA subscribed_apps — subscribes this app to a specific WhatsApp Business
-    //      Account's events. Uses the connection's user access token.
-    // Both are best-effort: failure is logged, never blocks the connection.
-    const appId = process.env.WHATSAPP_APP_ID ?? process.env.FACEBOOK_APP_ID ?? ""
-    const appSecret = process.env.WHATSAPP_APP_SECRET ?? process.env.WA_APP_SECRET ?? ""
-    const wabaId =
-      process.env.WHATSAPP_BUSINESS_ACCOUNT_ID ?? process.env.WA_BUSINESS_ACCOUNT_ID ?? ""
-    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN ?? process.env.WA_VERIFY_TOKEN ?? "estate360_wa_verify"
-    const base = "https://graph.facebook.com/v19.0"
+  parseEvents(payload: unknown): NormalizedEvent[] {
+    const events: NormalizedEvent[] = []
+    const root = payload as Record<string, unknown>
+    const entries = Array.isArray(root?.entry) ? root.entry : []
 
-    if (!params.accessToken || (!appId && !wabaId)) return { ok: false }
+    for (const entry of entries) {
+      const changes = Array.isArray((entry as Record<string, unknown>).changes)
+        ? ((entry as Record<string, unknown>).changes as Array<Record<string, unknown>>)
+        : []
 
-    let appSubscribed = false
-    try {
-      // Step 1 — app-level subscription (registers the callback URL with Meta).
-      if (appId && appSecret) {
-        const appToken = `${appId}|${appSecret}`
-        const body = new URLSearchParams({
-          object: "whatsapp_business_account",
-          callback_url: params.webhookUrl,
-          verify_token: verifyToken,
-          fields: "messages",
-          access_token: appToken,
-        })
-        const reg = await fetch(`${base}/${appId}/subscriptions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        })
-        if (reg.ok) {
-          appSubscribed = true
-        } else {
-          console.warn(`[wa-register-webhook] app subscription failed: ${reg.status} ${await reg.text()}`)
+      for (const change of changes) {
+        const value = (change.value ?? {}) as Record<string, unknown>
+        const metadata = (value.metadata ?? {}) as Record<string, unknown>
+        const threadId = metadata.phone_number_id ? String(metadata.phone_number_id) : undefined
+
+        // Contact profile names arrive alongside messages; index by WhatsApp id.
+        const nameByNumber = new Map<string, string>()
+        for (const c of (Array.isArray(value.contacts) ? value.contacts : []) as Array<Record<string, unknown>>) {
+          const profile = c.profile as Record<string, unknown> | undefined
+          const waId = c.wa_id ?? profile?.id
+          const name = profile?.name
+          if (waId && name) nameByNumber.set(String(waId), String(name))
         }
-      }
 
-      // Step 2 — subscribe this app to the WABA so its events start flowing.
-      if (wabaId) {
-        const sub = await fetch(`${base}/${wabaId}/subscribed_apps`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${params.accessToken}` },
-        })
-        if (sub.ok) {
-          return { ok: true, id: wabaId }
-        }
-        console.warn(`[wa-register-webhook] WABA subscribe failed: ${sub.status} ${await sub.text()}`)
-      }
+        for (const msg of (Array.isArray(value.messages) ? value.messages : []) as Array<Record<string, unknown>>) {
+          const number = msg.from ? String(msg.from) : undefined
+          if (!number) continue
+          const type = String(msg.type ?? "text")
+          const externalId = msg.id ? String(msg.id) : undefined
+          if (!externalId) continue // no id -> cannot dedupe -> cannot safely store
 
-      return { ok: appSubscribed }
-    } catch (err) {
-      console.error("[wa-register-webhook] error", err)
-      return { ok: false }
-    }
-  }
-
-  async sendMessage(params: { accessToken: string; to: string; body: string }): Promise<{ id: string }> {
-    // WhatsApp Cloud: POST /{phone-number-id}/messages
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID ?? ""
-    if (!phoneNumberId || !params.accessToken) {
-      return { id: `wa_msg_mock_${Date.now()}` }
-    }
-    try {
-      const res = await fetch(
-        `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${params.accessToken}`,
-          },
-          body: JSON.stringify({
-            messaging_product: "whatsapp",
-            to: params.to,
-            type: "text",
-            text: { body: params.body },
-          }),
-        }
-      )
-      if (res.ok) {
-        const data = (await res.json()) as { messages?: Array<{ id?: string }> }
-        return { id: data.messages?.[0]?.id ?? `wa_msg_${Date.now()}` }
-      }
-    } catch {
-      // fall through to mock
-    }
-    return { id: `wa_msg_mock_${Date.now()}` }
-  }
-
-  normalize(payload: unknown): SocialNormalized {
-    const p = payload as Record<string, unknown>
-    const nowIso = new Date().toISOString()
-
-    // Direct test shape shortcut: if payload already has message field etc.
-    // WhatsApp Cloud webhook shape: { entry: [{ changes: [{ value: { messages: [...], contacts: [...] } }] }] }
-    const entry = p?.["entry"] as unknown[] | undefined
-    if (Array.isArray(entry) && entry.length > 0) {
-      const firstEntry = entry[0] as Record<string, unknown>
-      const changes = firstEntry["changes"] as unknown[] | undefined
-      if (Array.isArray(changes) && changes.length > 0) {
-        const firstChange = changes[0] as Record<string, unknown>
-        const value = (firstChange["value"] ?? firstChange) as Record<string, unknown>
-        const messages = value["messages"] as unknown[] | undefined
-        const contacts = value["contacts"] as unknown[] | undefined
-        if (Array.isArray(messages) && messages.length > 0) {
-          const msg = messages[0] as Record<string, unknown>
-          const id = (msg["id"] as string | undefined) ?? `wa_${Date.now()}`
-          const from = (msg["from"] as string | undefined) ?? "unknown"
-          const type = (msg["type"] as string | undefined) ?? "text"
           let body = ""
+          let mediaType: "image" | "audio" | "document" | "video" | "sticker" | undefined
+          const text = asText(msg)
           if (type === "text") {
-            const textObj = msg["text"] as Record<string, unknown> | undefined
-            body = (textObj?.["body"] as string | undefined) ?? (msg["body"] as string | undefined) ?? ""
+            body = String(text?.body ?? "")
           } else if (type === "button") {
-            const btn = msg["button"] as Record<string, unknown> | undefined
-            body = (btn?.["text"] as string | undefined) ?? ""
+            body = String((msg.button as Record<string, unknown> | undefined)?.text ?? "")
+          } else if (type === "interactive") {
+            body = String((msg.interactive as Record<string, unknown> | undefined)?.type ?? "interactive")
+          } else if (["image", "audio", "video", "document", "sticker"].includes(type)) {
+            const media = (msg[type] ?? {}) as Record<string, unknown>
+            body = String(media.caption ?? "") || `[${type}]`
+            mediaType = type as "image"
           } else {
-            body = (msg["body"] as string | undefined) ?? JSON.stringify(msg)
+            body = `[${type}]`
           }
-          const tsRaw = msg["timestamp"] as string | undefined
-          const timestamp = tsRaw ? new Date(Number(tsRaw) * 1000).toISOString() : nowIso
-          const contact = Array.isArray(contacts) && contacts[0] ? (contacts[0] as Record<string, unknown>) : undefined
-          const profile = contact?.["profile"] as Record<string, unknown> | undefined
-          const displayName = (profile?.["name"] as string | undefined) ?? from
-          const threadId = (value["metadata"] as Record<string, unknown> | undefined)?.["phone_number_id"] as string | undefined
-          return {
-            externalId: String(id),
-            type: "message",
-            from: { handle: String(from), displayName: String(displayName) },
-            body: String(body),
-            timestamp,
-            threadId: threadId ? String(threadId) : undefined,
-          }
+
+          const ts = msg.timestamp
+          events.push({
+            kind: "message",
+            externalId,
+            from: { number, name: nameByNumber.get(number) },
+            body,
+            mediaType,
+            timestamp: ts ? new Date(Number(ts) * 1000).toISOString() : new Date().toISOString(),
+            threadId,
+          })
+        }
+
+        for (const st of (Array.isArray(value.statuses) ? value.statuses : []) as Array<Record<string, unknown>>) {
+          const externalId = st.id ? String(st.id) : undefined
+          if (!externalId) continue
+          const raw = String(st.status ?? "").toLowerCase()
+          const status = (["sent", "delivered", "read", "failed"] as const).includes(raw as "sent")
+            ? (raw as "sent" | "delivered" | "read" | "failed")
+            : null
+          if (!status) continue
+          const errors = st.errors as Array<Record<string, unknown>> | undefined
+          const ts = st.timestamp
+          events.push({
+            kind: "status",
+            externalId,
+            status,
+            error: errors?.[0]?.title ? String(errors[0].title) : undefined,
+            timestamp: ts ? new Date(Number(ts) * 1000).toISOString() : new Date().toISOString(),
+          })
         }
       }
     }
+    return events
+  }
 
-    // Fallback: handle simplified { messages: [{id, from, text:{body}}] } or direct object
-    const messages = p?.["messages"] as unknown[] | undefined
-    if (Array.isArray(messages) && messages[0]) {
-      const msg = messages[0] as Record<string, unknown>
-      const id = (msg["id"] as string | undefined) ?? `wa_${Date.now()}`
-      const from = (msg["from"] as string | undefined) ?? "unknown"
-      const textObj = msg["text"] as Record<string, unknown> | string | undefined
-      let body = ""
-      if (typeof textObj === "string") body = textObj
-      else if (textObj && typeof textObj === "object") body = (textObj["body"] as string | undefined) ?? ""
-      else body = (msg["body"] as string | undefined) ?? ""
-      const tsRaw = msg["timestamp"] as string | undefined
-      const timestamp = tsRaw ? new Date(Number(tsRaw) * 1000).toISOString() : nowIso
-      return {
-        externalId: String(id),
-        type: "message",
-        from: { handle: String(from), displayName: String(from) },
-        body: String(body),
-        timestamp,
-      }
-    }
+  // ── Outbound ───────────────────────────────────────────────────────────────
 
-    // Generic fallback
-    const body =
-      (p?.["body"] as string | undefined) ??
-      (p?.["text"] as string | undefined) ??
-      (typeof p?.["message"] === "string" ? (p["message"] as string) : undefined) ??
-      ""
-    const externalId = (p?.["id"] as string | undefined) ?? (p?.["message_id"] as string | undefined) ?? `wa_${Date.now()}`
-    const handle = (p?.["from"] as string | undefined) ?? (p?.["handle"] as string | undefined) ?? "unknown"
-    const ts = (p?.["timestamp"] as string | undefined) ?? nowIso
-    let timestamp = ts
-    // try numeric timestamp
-    if (/^\d+$/.test(ts)) {
-      timestamp = new Date(Number(ts) * 1000).toISOString()
+  async send(ctx: { accessToken: string; metadata: Record<string, unknown>; to: string; body: string }): Promise<SendResult> {
+    const phoneNumberId = ctx.metadata?.phoneNumberId ? String(ctx.metadata.phoneNumberId) : undefined
+    const { messageId } = await cloudSendText({
+      to: ctx.to,
+      body: ctx.body,
+      phoneNumberId,
+      token: ctx.accessToken,
+    })
+    return { externalId: messageId, mock: false }
+  }
+
+  async subscribeWebhook(): Promise<{ ok: boolean; fields: string[]; error?: string }> {
+    return cloudSubscribeAppWebhook({ appId: this.cfg.appId, appSecret: this.cfg.appSecret, verifyToken: this.cfg.verifyToken })
+  }
+
+  async fetchAccountInfo(ctx?: { accessToken?: string; metadata?: Record<string, unknown> }) {
+    const phoneNumberId = ctx?.metadata?.phoneNumberId ? String(ctx.metadata.phoneNumberId) : this.cfg.phoneNumberId
+    const info = await cloudPhoneNumberInfo({ phoneNumberId, token: ctx?.accessToken })
+    let conversations: unknown = null
+    try {
+      conversations = await cloudConversationSummary({ phoneNumberId, token: ctx?.accessToken })
+    } catch {
+      /* conversations endpoint is optional */
     }
-    return {
-      externalId: String(externalId),
-      type: "message",
-      from: { handle: String(handle), displayName: String(handle) },
-      body: String(body),
-      timestamp: String(timestamp),
-    }
+    return { ...info, conversations }
   }
 }

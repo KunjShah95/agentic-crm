@@ -1,11 +1,19 @@
 /**
  * WhatsApp Meta Cloud adapter.
- * Sends text messages via the Graph API when WHATSAPP_TOKEN + WHATSAPP_PHONE_ID
- * are configured; otherwise returns a mock result (dev / BSP-approval lag).
- * Templates reuse the {{shortcode}} render from modules/documents.
+ *
+ * Thin backwards-compatible surface over modules/whatsapp/cloud so existing
+ * callers (lead auto-ack, tests) keep working while there is exactly one place
+ * that knows the Graph URL, version and credential names.
+ *
+ * The old version silently returned `id: "wa_msg_mock_..."` when credentials
+ * were missing *or when the request failed*, so the caller could not tell a
+ * delivered message from a fabrication. That behaviour is gone: mocks require an
+ * explicit opt-in, and real failures throw.
  */
 
 import { renderShortcodes } from "@/modules/documents/shortcodes"
+import { cloudSendText, WhatsAppApiError } from "./cloud"
+import { getWhatsAppConfig, whatsappReadiness } from "./config"
 
 export const WA_TEMPLATES: Record<string, string> = {
   lead_ack:
@@ -44,27 +52,26 @@ export function formatCostSheetMessage(sheet: {
 
 export type SendResult = { id: string; mock: boolean; to: string }
 
+function mockAllowed(): boolean {
+  return process.env.NODE_ENV !== "production" && process.env.WHATSAPP_ALLOW_MOCK === "true"
+}
+
 export async function sendWhatsApp({ to, body }: { to: string; body: string }): Promise<SendResult> {
-  const token = process.env.WHATSAPP_TOKEN
-  const phoneId = process.env.WHATSAPP_PHONE_ID
-  if (!token || !phoneId) {
+  const cfg = getWhatsAppConfig()
+  const readiness = whatsappReadiness(cfg)
+
+  if (!readiness.canSend) {
+    if (!mockAllowed()) {
+      throw new WhatsAppApiError(`WhatsApp is not configured (missing ${readiness.missing.join(", ")})`, 0)
+    }
     return { id: `mock-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, mock: true, to }
   }
 
-  const res = await fetch(`https://graph.facebook.com/v21.0/${phoneId}/messages`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messaging_product: "whatsapp",
-      to: to.replace(/[^\d]/g, ""),
-      type: "text",
-      text: { body },
-    }),
-  })
-  if (!res.ok) {
-    const errText = await res.text().catch(() => "")
-    throw new Error(`WhatsApp send failed: ${res.status} ${errText}`)
-  }
-  const data = (await res.json()) as { messages?: Array<{ id: string }> }
-  return { id: data.messages?.[0]?.id ?? "", mock: false, to }
+  const { messageId } = await cloudSendText({ to, body, phoneNumberId: cfg.phoneNumberId, token: cfg.accessToken })
+  return { id: messageId, mock: false, to }
+}
+
+/** Lets callers degrade gracefully where a hard failure would be worse. */
+export function isWhatsAppSendConfigured(): boolean {
+  return whatsappReadiness().canSend
 }

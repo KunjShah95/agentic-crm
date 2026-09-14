@@ -1,7 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { useRouter } from "next/navigation"
 import {
   ArrowLeft,
   Briefcase,
@@ -22,10 +21,8 @@ import { Timeline } from "@/components/activities/timeline"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
-import { toast } from "sonner"
-import { useState } from "react"
-import { sendSocialMessage } from "@/lib/actions/social-send"
+import { WhatsAppContactCard } from "@/components/contacts/whatsapp-contact-card"
+import { SocialAccountsCard } from "@/components/contacts/social-accounts-card"
 import {
   Card,
   CardContent,
@@ -41,12 +38,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import {
-  MessageSquare,
-  MessageSquareQuote,
-  Send,
-  Check,
-} from "lucide-react"
 
 export const metadata: Metadata = { title: "Contact" }
 
@@ -76,7 +67,7 @@ export default async function ContactDetailPage({
   const contact = await getContactDetail(workspace.id, id)
   if (!contact) notFound()
 
-  const [members, tags, orgs, socialConnections] = await Promise.all([
+  const [members, tags, orgs, whatsAppConnection, socialConnections] = await Promise.all([
     listWorkspaceMembers(workspace.id),
     db.tag.findMany({
       where: { workspaceId: workspace.id },
@@ -87,6 +78,11 @@ export default async function ContactDetailPage({
       where: { workspaceId: workspace.id },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    db.socialConnection.findFirst({
+      where: { workspaceId: workspace.id, provider: "whatsapp", status: "active" },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true, status: true, externalAccountId: true, displayName: true },
     }),
     db.socialConnection.findMany({
       where: { workspaceId: workspace.id, status: "active" },
@@ -247,15 +243,18 @@ export default async function ContactDetailPage({
             </CardContent>
           </Card>
 
-          {/* Social connections for this contact */}
-          {contact.handles && Object.keys(contact.handles as Record<string, unknown>).length > 0 ? (
-            <SocialAccountsCard
-              workspaceId={workspace.id}
-              workspaceSlug={slug}
-              contact={contact}
-              socialConnections={socialConnections}
-            />
-          ) : null}
+          {/* WhatsApp thread for this contact */}
+          <WhatsAppContactCard
+            workspaceId={workspace.id}
+            contact={{
+              id: contact.id,
+              firstName: contact.firstName,
+              lastName: contact.lastName,
+              phone: contact.phone,
+              handles: contact.handles,
+            }}
+            connection={whatsAppConnection}
+          />
         </div>
 
         {/* Right column: deals + activity */}
@@ -331,191 +330,6 @@ export default async function ContactDetailPage({
         </div>
       </div>
     </div>
-  )
-}
-
-function SocialAccountsCard({
-  workspaceId,
-  contact,
-  socialConnections,
-  workspaceSlug,
-}: {
-  workspaceId: string
-  contact: {
-    id: string
-    firstName: string
-    lastName: string
-    handles: Record<string, string> | null
-  }
-  socialConnections: Array<{
-    id: string
-    provider: string
-    externalAccountId: string
-    displayName: string | null
-    status: string
-    channel?: string | null
-  }>
-  workspaceSlug: string
-}) {
-  const router = useRouter()
-  const handles = (contact.handles as Record<string, string>) ?? {}
-  const [replyBody, setReplyBody] = useState("")
-  const [replyingTo, setReplyingTo] = useState<string | null>(null)
-  const [sending, setSending] = useState<string | null>(null)
-
-  const providerLabel: Record<string, string> = {
-    x: "X",
-    twitter: "X",
-    linkedin: "LinkedIn",
-    li: "LinkedIn",
-    whatsapp: "WhatsApp",
-    wa: "WhatsApp",
-  }
-
-  async function handleReply(provider: string, handle: string) {
-    const body = replyBody.trim()
-    if (!body || !replyingTo) return
-    setSending(provider)
-    try {
-      const result = await sendSocialMessage({
-        workspaceId,
-        contactId: contact.id,
-        provider: provider as "x" | "linkedin" | "whatsapp",
-        body,
-      })
-      if (result.error) {
-        toast.error(result.error.message)
-      } else {
-        toast.success(
-          result.data?.sent
-            ? `Reply sent to ${providerLabel[provider]}`
-            : `Reply logged to ${providerLabel[provider]} (API not configured)`
-        )
-        setReplyBody("")
-        setReplyingTo(null)
-        router.refresh()
-      }
-    } finally {
-      setSending(null)
-    }
-  }
-
-  const connectedProviders = socialConnections
-    .filter((conn) => {
-      const key = conn.provider.toLowerCase()
-      return !!handles[key]
-    })
-    .sort((a, b) => a.provider.localeCompare(b.provider))
-
-  if (connectedProviders.length === 0) {
-    return null
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base flex items-center gap-2">
-          <MessageSquare className="size-4" />
-          Connected accounts
-        </CardTitle>
-        <CardDescription>
-          Quick-reply from connected social channels
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        {connectedProviders.map((conn) => {
-          const key = conn.provider.toLowerCase()
-          const handle = handles[key]
-          if (!handle) return null
-          const isActive = conn.status === "active"
-          return (
-            <div
-              key={conn.id}
-              className={"rounded-lg border bg-card p-3 " + (isActive ? "border-primary/20" : "border-muted")}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  {conn.provider === "x" || conn.provider === "twitter" ? (
-                    <MessageSquare className="size-4 text-[#1d9bf0]" />
-                  ) : conn.provider === "linkedin" || conn.provider === "li" ? (
-                    <MessageSquareQuote className="size-4 text-blue-700" />
-                  ) : (
-                    <MessageSquare className="size-4 text-green-600" />
-                  )}
-                  <div>
-                    <p className="text-sm font-medium">{providerLabel[conn.provider] ?? conn.provider}</p>
-                    <p className="text-xs text-muted-foreground">@{handle}</p>
-                  </div>
-                </div>
-                {isActive ? (
-                  <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
-                    Connected
-                  </span>
-                ) : (
-                  <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">
-                    Offline
-                  </span>
-                )}
-              </div>
-              {replyingTo === conn.provider ? (
-                <div className="mt-2 flex gap-2">
-                  <Textarea
-                    value={replyBody}
-                    onChange={(e) => setReplyBody(e.target.value)}
-                    placeholder={`Reply to ${handle} on ${providerLabel[conn.provider]}…`}
-                    className="min-h-[60px] resize-none text-sm"
-                    autoFocus
-                    disabled={sending !== null}
-                  />
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      size="sm"
-                      className="gap-1"
-                      onClick={() => handleReply(conn.provider, handle)}
-                      disabled={!replyBody.trim() || sending !== null}
-                    >
-                      {sending === conn.provider ? (
-                        <>
-                          <div className="size-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                          Sending…
-                        </>
-                      ) : (
-                        <>
-                          <Send className="size-3.5" />
-                          Send
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setReplyingTo(null)
-                        setReplyBody("")
-                      }}
-                      disabled={sending !== null}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              ) : (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-1"
-                  onClick={() => setReplyingTo(conn.provider)}
-                  disabled={!isActive}
-                >
-                  <Send className="size-3.5 mr-1" />
-                  Reply
-                </Button>
-              )}
-            </div>
-          )
-        })}
-      </CardContent>
-    </Card>
   )
 }
 

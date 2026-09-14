@@ -123,7 +123,9 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
       },
     })
 
-    // 6b. Auto-ack via WhatsApp for brand-new leads with a phone (opt-in gate)
+    // 6b. Auto-ack via WhatsApp for brand-new leads with a phone (opt-in gate).
+    // Best-effort: a lead must still be captured if WhatsApp is unconfigured or
+    // the send fails, so this never propagates out of processLead.
     let acked = false
     if (isNewContact && lead.phone && !contact.optedOut) {
       const body = renderWaTemplate("lead_ack", {
@@ -131,21 +133,38 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
         project: lead.project ?? "our project",
         workspace: "our team",
       })
-      const res = await sendWhatsApp({ to: lead.phone, body })
-      await db.activity.create({
-        data: {
-          workspaceId,
-          type: "NOTE",
-          contactId: contact.id,
-          dealId: dealId ?? null,
-          body,
-          source: "system",
-          channel: "WHATSAPP",
-          direction: "OUT",
-          createdBy: "system",
-        },
-      })
-      acked = res.mock ? false : true
+      try {
+        const res = await sendWhatsApp({ to: lead.phone, body })
+        acked = !res.mock
+        await db.activity.create({
+          data: {
+            workspaceId,
+            type: "NOTE",
+            contactId: contact.id,
+            dealId: dealId ?? null,
+            body,
+            source: "system",
+            channel: "WHATSAPP",
+            direction: "OUT",
+            createdBy: "system",
+          },
+        })
+      } catch (err) {
+        console.warn("[leadIngest] whatsapp auto-ack skipped:", err instanceof Error ? err.message : err)
+        await db.activity.create({
+          data: {
+            workspaceId,
+            type: "NOTE",
+            contactId: contact.id,
+            dealId: dealId ?? null,
+            body: `WhatsApp auto-ack not sent — ${body}`,
+            source: "system",
+            channel: "WHATSAPP",
+            direction: "OUT",
+            createdBy: "system",
+          },
+        })
+      }
       void acked
     }
 
