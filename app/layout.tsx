@@ -32,14 +32,18 @@ export const metadata: Metadata = {
     default: "Estate360 — Multi-tenant CRM for founders & sales teams",
     template: "%s · Estate360",
   },
-  description:
-    "Real Estate + generic CRM for NAAR/Gujarat: inventory (Project→Unit), HOLD→BOOKING→CLP, GPS site visits, broker scope, RERA docs, WhatsApp inbox, AI next-best-action, reports, public sites + buyer portal, and association shared pool. Workspace-scoped, verified.",
+    description:
+    "Estate360 is the daily operating system for Indian real-estate sales. Morning brief, Next Best Action, lead temperature, at-risk deals, property matching, WhatsApp-first workflow, and cost sheets — open it, know what to do next.",
   keywords: [
     "Estate360",
     "Real Estate CRM",
     "NAAR",
     "Ahmedabad CRM",
-    "multi-tenant CRM",
+    "daily operating system",
+    "lead temperature",
+    "next best action",
+    "deals at risk",
+    "Close Today",
     "RERA",
     "CLP",
     "broker CRM",

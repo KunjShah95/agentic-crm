@@ -17,7 +17,7 @@ export function StaffSection() {
           <div>
             <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</span>
             <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
-            <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
+                        <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">One screen per role. Owners see revenue, collections and at-risk bookings. Sales see their leads, follow-ups, and today&apos;s visits. Brokers see only their allocation. Site verifies with GPS, Accounts sends RERA demands — same workspace, one loop. Gujarati + Hindi where the buyer reads it.</p>
           </div>
         </div>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">

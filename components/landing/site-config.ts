@@ -4,9 +4,9 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://estate360.v
 
 export const SITE = {
   name: "Estate360",
-  tagline: "Ahmedabad sites. Foundation to possession — on loop.",
+    tagline: "The daily operating system for real-estate sales.",
   description:
-    "The complete Real Estate CRM for builders and developers. Manage inventory, instant cost sheets, CLP booking milestones, RERA demand letters, GPS site visits, and broker allocations — without Excel or data leaks.",
+    "Estate360 turns enquiries, WhatsApp conversations, site visits, inventory, bookings and collections into one daily workflow for Indian real-estate teams. Open it — it tells you what to do next.",
   contact: {
     company: "Estate360 Technologies Pvt. Ltd.",
     addressLines: [
