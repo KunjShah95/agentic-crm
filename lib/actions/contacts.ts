@@ -112,7 +112,11 @@ export async function setContactOwnerAction(
     })
     if (!exists) throw new AppError("NOT_FOUND", "Contact not found.", 404)
 
-    await db.contact.update({ where: { id: contactId }, data: { ownerId: ownerId || null } })
+    // Normalize sentinel values ("unassigned", empty) to null — previous UI sent
+    // literal "unassigned" which was persisted as an ownerId and then rendered
+    // as raw cuid-like text beside Edit (e.g. cmfzvz...). Treat it as null.
+    const normalizedOwnerId = !ownerId || ownerId === "unassigned" ? null : ownerId
+    await db.contact.update({ where: { id: contactId }, data: { ownerId: normalizedOwnerId } })
     return { ok: true }
   })
 }

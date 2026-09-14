@@ -29,7 +29,7 @@ const WINS = [
 ]
 
 export function WinsSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; workspaceSlug?: string | null }) {
-  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/dashboard` : "/signup"
+  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/today` : "/signup"
   return (
     <section className="border-y bg-background">
       <div className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">

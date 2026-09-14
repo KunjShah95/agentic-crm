@@ -80,6 +80,7 @@ export function ContactDetailActions({
     linkedinUrl: string | null
     organizationId: string | null
   }
+  currentOwner?: { id: string; name: string } | null
 }) {
   const router = useRouter()
   const [tagDialogOpen, setTagDialogOpen] = React.useState(false)
@@ -88,8 +89,24 @@ export function ContactDetailActions({
   const [newTagColor, setNewTagColor] = React.useState(PRESET_COLORS[0])
   const [isPending, startTransition] = React.useTransition()
 
+  // If owner is not in workspace members (e.g. former member), the Select
+  // would otherwise fall back to displaying the raw cuid like
+  // "cmfzvz46900001499v4w4w3c6l". Track that case so we can render a proper label.
+  const ownerIsKnownMember = currentOwnerId
+    ? members.some((m) => m.user.id === currentOwnerId)
+    : true
+  const orphanOwnerName = (contact as unknown as { owner?: { name?: string } | null })?.owner?.name ?? null
+  // Effective value: if owner exists but isn't a current member, show as unassigned
+  // to avoid Base UI Select rendering the raw ID. We still render an extra
+  // SelectItem below so the name is visible when possible.
+  const selectValue = currentOwnerId && !ownerIsKnownMember ? "unassigned" : (currentOwnerId ?? "unassigned")
+
   async function changeOwner(ownerId: string) {
-    const result = await setContactOwnerAction(workspaceId, contactId, ownerId)
+    // Select sends "unassigned" for the Unassigned item — map it to "" so the
+    // server action's `ownerId || null` correctly clears the owner instead of
+    // storing the literal string "unassigned".
+    const mappedId = ownerId === "unassigned" ? "" : ownerId
+    const result = await setContactOwnerAction(workspaceId, contactId, mappedId)
     if (result.error) toast.error(result.error.message)
     else router.refresh()
   }
@@ -137,7 +154,7 @@ export function ContactDetailActions({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <Select
-        value={currentOwnerId ?? "unassigned"}
+        value={selectValue}
         onValueChange={(v) => v && changeOwner(v)}
       >
         <SelectTrigger className="w-auto gap-2" size="sm">
@@ -145,6 +162,18 @@ export function ContactDetailActions({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="unassigned">Unassigned</SelectItem>
+          {currentOwnerId && !ownerIsKnownMember && (
+            <SelectItem value={currentOwnerId}>
+              <span className="inline-flex items-center gap-1.5">
+                <Avatar className="size-4">
+                  <AvatarFallback className="text-[8px]">
+                    {(orphanOwnerName ?? currentOwnerId).slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                {orphanOwnerName ? `${orphanOwnerName} (former member)` : "Former member"}
+              </span>
+            </SelectItem>
+          )}
           {members.map((m) => (
             <SelectItem key={m.user.id} value={m.user.id}>
               <span className="inline-flex items-center gap-1.5">

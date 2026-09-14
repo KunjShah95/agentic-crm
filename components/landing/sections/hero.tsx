@@ -21,7 +21,7 @@ export function HeroSection({
   isAuthed: boolean
   workspaceSlug?: string | null
 }) {
-  const primaryHref = isAuthed && workspaceSlug ? `/${workspaceSlug}/dashboard` : "/signup"
+  const primaryHref = isAuthed && workspaceSlug ? `/${workspaceSlug}/today` : "/signup"
 
   return (
     <section className="relative overflow-hidden">

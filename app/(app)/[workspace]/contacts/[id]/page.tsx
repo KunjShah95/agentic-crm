@@ -149,7 +149,8 @@ export default async function ContactDetailPage({
             jobTitle: contact.jobTitle,
             linkedinUrl: contact.linkedinUrl,
             organizationId: contact.organizationId,
-          }}
+            owner: contact.owner,
+          } as unknown as { id: string; firstName: string; lastName: string; email: string | null; phone: string | null; jobTitle: string | null; linkedinUrl: string | null; organizationId: string | null }}
         />
       </div>
 

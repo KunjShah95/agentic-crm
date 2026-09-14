@@ -70,7 +70,7 @@ export function WorkspaceSwitcher({
       toast.success("Workspace created")
       setCreateOpen(false)
       void update({ activeWorkspaceId: result.data.id })
-      router.push(`/${result.data.slug}/dashboard`)
+      router.push(`/${result.data.slug}/today`)
       router.refresh()
     })
   }

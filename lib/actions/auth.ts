@@ -50,7 +50,7 @@ export async function loginAction(
           include: { workspace: { select: { slug: true } } },
         })
       : null
-    const redirectTo = membership ? `/${membership.workspace.slug}/dashboard` : "/"
+    const redirectTo = membership ? `/${membership.workspace.slug}/today` : "/"
     try {
       await signIn("credentials", {
         email: parsed.data.email,
@@ -164,7 +164,7 @@ export async function signupAction(
       await signIn("credentials", {
         email: parsed.data.email,
         password: parsed.data.password,
-        redirectTo: `/${workspaceSlug}/dashboard`,
+        redirectTo: `/${workspaceSlug}/today`,
       })
     } catch (err) {
       if (err instanceof AuthError) {
@@ -177,7 +177,7 @@ export async function signupAction(
       throw err
     }
 
-    return { ok: true, redirectTo: `/${workspaceSlug}/dashboard` }
+    return { ok: true, redirectTo: `/${workspaceSlug}/today` }
   })
 }
 

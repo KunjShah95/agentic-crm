@@ -14,35 +14,40 @@ import {
   Handshake,
   KanbanSquare,
   KeyRound,
-  LayoutDashboard,
   // MessageSquare, // re-enable with the Inbox nav item
   Settings,
   Share2,
   Sparkles,
+  Sun,
   Users,
 } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { WorkspaceSwitcher, type LiteWorkspace } from "@/components/shell/workspace-switcher"
 
+/**
+ * Navigation — simplified into everyday sections (master prompt #23).
+ * Group labels hide technical entities; every route stays reachable.
+ * `group` is only used by the sidebar; SIDEBAR_NAV stays flat for mobile-nav.
+ */
 const NAV = [
-  { href: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { href: "contacts", label: "Contacts", icon: Users },
-  { href: "deals", label: "Deals", icon: KanbanSquare },
-  { href: "organizations", label: "Organizations", icon: Building2 },
-  { href: "projects", label: "Projects", icon: Building2 },
-  { href: "bookings", label: "Bookings", icon: KeyRound },
-  { href: "site-visits", label: "Site Visits", icon: CalendarCheck },
-  { href: "channel-partners", label: "Brokers", icon: Handshake },
-  // { href: "documents", label: "Documents", icon: FileText },
-  // { href: "inbox", label: "Inbox", icon: MessageSquare }, // Inbox removed (WhatsApp integration parked)
-  { href: "tasks", label: "Tasks", icon: CheckSquare },
-  { href: "reports", label: "Reports", icon: BarChart3 },
-  { href: "ai", label: "AI", icon: Sparkles },
-  { href: "association", label: "Association", icon: Share2 },
+  { href: "today", label: "Today", icon: Sun, group: "Work" },
+  { href: "contacts", label: "Leads", icon: Users, group: "Work" },
+  { href: "deals", label: "Deals", icon: KanbanSquare, group: "Work" },
+  { href: "tasks", label: "Follow-ups", icon: CheckSquare, group: "Actions" },
+  { href: "site-visits", label: "Visits", icon: CalendarCheck, group: "Actions" },
+  { href: "bookings", label: "Bookings", icon: KeyRound, group: "Sell" },
+  { href: "projects", label: "Projects", icon: Building2, group: "Sell" },
+  { href: "channel-partners", label: "Brokers", icon: Handshake, group: "Sell" },
+  { href: "reports", label: "Reports", icon: BarChart3, group: "Insights" },
+  { href: "ai", label: "Assistant", icon: Sparkles, group: "Insights" },
+  { href: "organizations", label: "Organizations", icon: Building2, group: "More" },
+  { href: "association", label: "Association", icon: Share2, group: "More" },
 ]
 
 export const SIDEBAR_NAV = NAV
+
+const GROUPS = ["Work", "Actions", "Sell", "Insights", "More"] as const
 
 const COLLAPSE_KEY = "sidebar:collapsed"
 
@@ -136,26 +141,35 @@ export function Sidebar({
       </div>
 
       <nav className="relative flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto overflow-x-hidden px-3 py-2">
-        {NAV.map((item) => {
-          const isItemActive = isActive(item.href)
-          return (
-            <Link
-              key={item.href}
-              href={`/${workspace.slug}/${item.href}`}
-              title={collapsed ? item.label : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
-                collapsed && "justify-center px-0",
-                isItemActive &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-xs border-l-2 border-brand",
-                isItemActive && !collapsed && "pl-2"
-              )}
-            >
-              <item.icon className={cn("size-4 shrink-0 transition-colors", isItemActive ? "text-brand" : "text-muted-foreground")} />
-              {!collapsed && <span className="truncate">{item.label}</span>}
-            </Link>
-          )
-        })}
+        {GROUPS.map((group) => (
+          <div key={group} className="mt-0.5 flex flex-col gap-0.5 first:mt-0">
+            {!collapsed && (
+              <div className="px-2.5 pb-1 pt-1 font-mono text-[10px] font-medium uppercase tracking-[0.14em] text-sidebar-foreground/40">
+                {group}
+              </div>
+            )}
+            {NAV.filter((n) => n.group === group).map((item) => {
+              const isItemActive = isActive(item.href)
+              return (
+                <Link
+                  key={item.href}
+                  href={`/${workspace.slug}/${item.href}`}
+                  title={collapsed ? item.label : undefined}
+                  className={cn(
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
+                    collapsed && "justify-center px-0",
+                    isItemActive &&
+                      "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-xs border-l-2 border-brand",
+                    isItemActive && !collapsed && "pl-2"
+                  )}
+                >
+                  <item.icon className={cn("size-4 shrink-0 transition-colors", isItemActive ? "text-brand" : "text-muted-foreground")} />
+                  {!collapsed && <span className="truncate">{item.label}</span>}
+                </Link>
+              )
+            })}
+          </div>
+        ))}
 
         <div className="mt-auto flex shrink-0 flex-col gap-1 pt-3 border-t border-sidebar-border/60">
           {/*

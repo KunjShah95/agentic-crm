@@ -18,7 +18,7 @@ type Props = {
 export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false)
   const pathname = usePathname()
-  const primaryHref = isAuthed && workspaceSlug ? `/${workspaceSlug}/dashboard` : "/signup"
+  const primaryHref = isAuthed && workspaceSlug ? `/${workspaceSlug}/today` : "/signup"
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60">
