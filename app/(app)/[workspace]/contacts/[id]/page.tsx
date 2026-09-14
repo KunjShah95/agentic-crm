@@ -22,7 +22,6 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { WhatsAppContactCard } from "@/components/contacts/whatsapp-contact-card"
-import { SocialAccountsCard } from "@/components/contacts/social-accounts-card"
 import {
   Card,
   CardContent,
@@ -67,7 +66,7 @@ export default async function ContactDetailPage({
   const contact = await getContactDetail(workspace.id, id)
   if (!contact) notFound()
 
-  const [members, tags, orgs, whatsAppConnection, socialConnections] = await Promise.all([
+  const [members, tags, orgs, whatsAppConnection] = await Promise.all([
     listWorkspaceMembers(workspace.id),
     db.tag.findMany({
       where: { workspaceId: workspace.id },
@@ -83,10 +82,6 @@ export default async function ContactDetailPage({
       where: { workspaceId: workspace.id, provider: "whatsapp", status: "active" },
       orderBy: { updatedAt: "desc" },
       select: { id: true, status: true, externalAccountId: true, displayName: true },
-    }),
-    db.socialConnection.findMany({
-      where: { workspaceId: workspace.id, status: "active" },
-      orderBy: { provider: "asc" },
     }),
   ])
 

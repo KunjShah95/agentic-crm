@@ -23,12 +23,12 @@ describe("whatsapp adapter", () => {
     beforeEach(() => { process.env = { ...OLD } })
     afterEach(() => { process.env = OLD; vi.restoreAllMocks() })
 
-    it("returns mock result when creds absent", async () => {
+    it("throws instead of silently mocking when creds absent", async () => {
       delete process.env.WHATSAPP_TOKEN
       delete process.env.WHATSAPP_PHONE_ID
-      const r = await sendWhatsApp({ to: "+919812345678", body: "hi" })
-      expect(r.mock).toBe(true)
-      expect(r.id).toBeTruthy()
+      delete process.env.WHATSAPP_PHONE_NUMBER_ID
+      delete process.env.WHATSAPP_ACCESS_TOKEN
+      await expect(sendWhatsApp({ to: "+919812345678", body: "hi" })).rejects.toThrow(/not configured/)
     })
 
     it("calls Graph API when creds present", async () => {

@@ -80,6 +80,15 @@ async function graph<T>(
   } catch {
     /* non-JSON error body */
   }
+  // Fall back to json() when text() wasn't available or yielded nothing — this is
+  // what makes json()-only Response mocks work as the comment above promises.
+  if (json === undefined && typeof (res as Response).json === "function") {
+    try {
+      json = await (res as Response).json()
+    } catch {
+      /* body already consumed or non-JSON */
+    }
+  }
 
   if (!res.ok) {
     throw new WhatsAppApiError(

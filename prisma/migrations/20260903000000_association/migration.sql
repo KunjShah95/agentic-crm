@@ -1,4 +1,4 @@
-﻿-- Association network (P0 moat) + buyer portal
+-- Association network (P0 moat) + buyer portal
 -- Supabase-compatible: idempotent IF NOT EXISTS, correct quoting, pooler-safe, FK indexes per schema.prisma
 
 CREATE TABLE IF NOT EXISTS "Association" (

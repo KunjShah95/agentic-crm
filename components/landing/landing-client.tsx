@@ -2,8 +2,6 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 // Badge removed — landing uses plain typographic labels
@@ -23,7 +21,6 @@ import {
   TrendingUp,
   ShieldCheck,
   Star,
-  ChevronRight,
   Workflow,
   CreditCard,
   ReceiptText,
@@ -164,7 +161,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
   ]
 
   return (
-    <TooltipProvider>
+    <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd).replace(/</g, "\\u003c") }} />
       <div className="bg-background text-foreground">
         <SiteHeader isAuthed={isAuthed} workspaceSlug={workspaceSlug} />
@@ -347,10 +344,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </CardHeader>
               <CardContent className="relative">
                 <div className="flex flex-wrap gap-2 font-mono text-[11px]">
-                  <Tooltip>
-                    <TooltipTrigger render={<Button variant="default" size="sm" className="rounded-full gap-1 shadow-sm"><LayoutGrid className="size-3" /> Kanban</Button>} />
-                    <TooltipContent>Board + table share one source of truth.</TooltipContent>
-                  </Tooltip>
+                  <Button variant="default" size="sm" className="rounded-full gap-1 shadow-sm"><LayoutGrid className="size-3" /> Kanban</Button>
                   <Button variant="outline" size="sm" className="rounded-full gap-1"><TableIcon className="size-3" /> Table</Button>
                   <span className="ml-auto hidden sm:inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground"><Workflow className="size-3" /> same data</span>
                 </div>
@@ -378,22 +372,14 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 <CardDescription className="leading-relaxed">Notes, emails, calls, meetings, tasks — on every record. “My Tasks” aggregates what&apos;s yours. <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded border">source: manual | agent</span></CardDescription>
               </CardHeader>
               <CardContent className="relative flex-1">
-                <div className="flex flex-wrap gap-1.5">
+                <div className="flex flex-wrap items-center gap-1.5">
                   <span className="inline-flex items-center gap-1 text-[12px] text-success"><Activity className="size-3" /> {activities.length} today</span>
                   <span className="font-mono text-[10px] text-muted-foreground">{ws.contacts.length} contacts</span>
-                  <Popover>
-                    <PopoverTrigger render={<Button variant="outline" size="sm" className="ml-auto h-6 rounded-full text-[11px] gap-1 shadow-sm">Details <ChevronRight className="size-3" /></Button>} />
-                    <PopoverContent align="end" className="w-72">
-                      <div className="font-medium text-sm flex items-center gap-1.5"><Zap className="size-4 text-brand" /> Activity</div>
-                      <div className="text-xs text-muted-foreground mt-1 leading-relaxed">shadcn Popover — shows how activities are scoped to workspace and auto-logged on stage change. Try dragging a card.</div>
-                      <Separator className="my-3" />
-                      <div className="flex gap-1.5 flex-wrap">
-                        {activities.slice(0,3).map(a => (
-                          <span key={a.id} className="font-mono text-[10px] text-muted-foreground">{a.title}</span>
-                        ))}
-                      </div>
-                    </PopoverContent>
-                  </Popover>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {activities.slice(0,3).map(a => (
+                    <span key={a.id} className="font-mono text-[10px] text-muted-foreground">{a.title}</span>
+                  ))}
                 </div>
                 <div className="mt-4 flex items-center gap-2 text-xs font-mono text-muted-foreground"><div className="size-2 rounded-full bg-success" aria-hidden /> live · auto-log on drop</div>
               </CardContent>
@@ -703,6 +689,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
 
         <SiteFooter isAuthed={isAuthed} workspaceSlug={workspaceSlug} />
       </div>
-    </TooltipProvider>
+    </>
   )
 }

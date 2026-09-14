@@ -130,8 +130,6 @@ export function Timeline({
     if (a.channel) {
       const map: Record<string, string> = {
         WHATSAPP: "social",
-        X: "social",
-        LINKEDIN: "social",
         SMS: "social",
         EMAIL: "manual",
         CALL: "manual",

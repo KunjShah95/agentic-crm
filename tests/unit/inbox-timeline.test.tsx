@@ -1,6 +1,12 @@
 import { render, screen } from "@testing-library/react"
+import { describe, it, expect, vi } from "vitest"
+
+// InboxTimeline imports the WhatsApp server action, which pulls next-auth (and
+// thus next/server) at module load — unavailable in jsdom. Stub it: the timeline
+// render path under test never calls it.
+vi.mock("@/modules/whatsapp/actions", () => ({ sendWhatsAppMessage: vi.fn() }))
+
 import InboxTimeline from "@/components/inbox/InboxTimeline"
-import { describe, it, expect } from "vitest"
 
 describe("InboxTimeline", () => {
   it("renders inbound and outbound messages", () => {
@@ -17,6 +23,6 @@ describe("InboxTimeline", () => {
   })
   it("shows empty state", () => {
     render(<InboxTimeline items={[]} />)
-    expect(screen.getByText("No messages yet.")).toBeInTheDocument()
+    expect(screen.getByText(/No messages yet/)).toBeInTheDocument()
   })
 })

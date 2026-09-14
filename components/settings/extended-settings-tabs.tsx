@@ -41,7 +41,6 @@ export function ExtendedSettingsTabs({
   const [apiKey] = useState(() => "est_live_" + Math.random().toString(36).substring(2, 12))
   const [holdDays, setHoldDays] = useState("7")
   const [clpEnabled, setClpEnabled] = useState(true)
-  const [whatsappSync, setWhatsappSync] = useState(true)
   const [autoAssign, setAutoAssign] = useState(true)
 
   function copyApiKey() {
@@ -213,11 +212,13 @@ export function ExtendedSettingsTabs({
                   <Radio className="size-5" />
                 </span>
                 <div>
-                  <p className="text-sm font-medium">WhatsApp Cloud API Inbox</p>
-                  <p className="text-xs text-muted-foreground">Live chat webhook sync for customer chats & automated templates.</p>
+                  <p className="text-sm font-medium">WhatsApp</p>
+                  <p className="text-xs text-muted-foreground">Inbound messages land in the Inbox; replies go out through the Cloud API.</p>
                 </div>
               </div>
-              <Switch checked={whatsappSync} onCheckedChange={setWhatsappSync} />
+              <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
+                Configure
+              </Button>
             </div>
 
             <div className="flex items-center justify-between rounded-lg border p-4">
@@ -226,12 +227,12 @@ export function ExtendedSettingsTabs({
                   <Share2 className="size-5" />
                 </span>
                 <div>
-                  <p className="text-sm font-medium">Social Lead Ingestion</p>
-                  <p className="text-xs text-muted-foreground">Sync Facebook, Instagram, and LinkedIn ad lead forms into Contacts.</p>
+                  <p className="text-sm font-medium">Website & portal enquiries</p>
+                  <p className="text-xs text-muted-foreground">Lead-form webhooks land in Contacts automatically — see API &amp; Webhooks below.</p>
                 </div>
               </div>
               <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
-                Configure Social
+                Configure WhatsApp
               </Button>
             </div>
           </CardContent>
