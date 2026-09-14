@@ -16,7 +16,6 @@ import { deleteDealAction, moveDealStageAction } from "@/lib/actions/deals"
 import { formatDate, formatMoney, initials } from "@/lib/format"
 import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   AlertDialog,
@@ -49,6 +48,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
 
 type Row = {
   id: string
@@ -64,6 +64,7 @@ type Row = {
   contact: { id: string; firstName: string; lastName: string } | null
   organization: { id: string; name: string } | null
   owner: { id: string; name: string } | null
+  tags?: { tag: { id: string; name: string; color: string } }[]
 }
 
 type SortKey = "title" | "value" | "stage" | "updatedAt"
@@ -102,9 +103,21 @@ export function DealsTable({
     dir: "desc",
   })
   const [pendingDelete, setPendingDelete] = React.useState<Row | null>(null)
+  const [ownerFilter, setOwnerFilter] = React.useState<string>("all")
+  const [stageFilter, setStageFilter] = React.useState<string>("all")
+
+  const filtered = React.useMemo(() => {
+    return deals.filter((d) => {
+      if (ownerFilter === "unassigned" && d.ownerId) return false
+      if (ownerFilter !== "all" && ownerFilter !== "unassigned" && d.ownerId !== ownerFilter)
+        return false
+      if (stageFilter !== "all" && d.stageId !== stageFilter) return false
+      return true
+    })
+  }, [deals, ownerFilter, stageFilter])
 
   const rows = React.useMemo(() => {
-    const sorted = [...deals].sort((a, b) => {
+    const sorted = [...filtered].sort((a, b) => {
       const dir = sort.dir === "asc" ? 1 : -1
       switch (sort.key) {
         case "title":
@@ -118,7 +131,16 @@ export function DealsTable({
       }
     })
     return sorted
-  }, [deals, sort])
+  }, [filtered, sort])
+
+  const totals = React.useMemo(() => {
+    const sum = filtered.reduce((s, d) => s + (d.value ?? 0), 0)
+    const probs = filtered.filter((d) => d.probability != null).map((d) => d.probability as number)
+    const avgProb = probs.length
+      ? Math.round(probs.reduce((s, p) => s + p, 0) / probs.length)
+      : null
+    return { sum, avgProb }
+  }, [filtered])
 
   function toggleSort(key: SortKey) {
     setSort((prev) =>
@@ -145,12 +167,58 @@ export function DealsTable({
     router.refresh()
   }
 
+  const hasFilters = ownerFilter !== "all" || stageFilter !== "all"
+
   return (
     <>
-      <div className="rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow className="hover:bg-transparent">
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={ownerFilter} onValueChange={(v) => v && setOwnerFilter(v)}>
+            <SelectTrigger size="sm" className="w-auto gap-1.5 rounded-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All owners</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {members.map((m) => (
+                <SelectItem key={m.user.id} value={m.user.id}>
+                  {m.user.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={stageFilter} onValueChange={(v) => v && setStageFilter(v)}>
+            <SelectTrigger size="sm" className="w-auto gap-1.5 rounded-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Any stage</SelectItem>
+              {stages.map((stage) => (
+                <SelectItem key={stage.id} value={stage.id}>
+                  {stage.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {hasFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="rounded-full text-muted-foreground"
+              onClick={() => {
+                setOwnerFilter("all")
+                setStageFilter("all")
+              }}
+            >
+              Clear filters
+            </Button>
+          )}
+        </div>
+
+        <div className="overflow-hidden rounded-xl border bg-card">
+          <Table>
+          <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
+            <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
               <TableHead>
                 <button
                   type="button"
@@ -182,6 +250,7 @@ export function DealsTable({
                 </button>
               </TableHead>
               <TableHead className="hidden lg:table-cell">Owner</TableHead>
+              <TableHead className="hidden md:table-cell">Win probability</TableHead>
               <TableHead className="hidden sm:table-cell">
                 <button
                   type="button"
@@ -212,6 +281,7 @@ export function DealsTable({
                           ? `${deal.contact.firstName} ${deal.contact.lastName}`
                           : "—")}
                     </p>
+                    <TagPills tags={deal.tags} />
                   </div>
                 </TableCell>
                 <TableCell>
@@ -230,14 +300,9 @@ export function DealsTable({
                   </Select>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
-                  <span className="font-medium">
+                  <span className="font-medium tabular-nums">
                     {formatMoney(deal.value, deal.currency)}
                   </span>
-                  {deal.probability != null && (
-                    <Badge variant="secondary" className="ml-2 text-[10px]">
-                      {deal.probability}%
-                    </Badge>
-                  )}
                 </TableCell>
                 <TableCell className="hidden lg:table-cell">
                   {deal.owner ? (
@@ -252,6 +317,9 @@ export function DealsTable({
                   ) : (
                     <span className="text-sm text-muted-foreground/50">—</span>
                   )}
+                </TableCell>
+                <TableCell className="hidden md:table-cell">
+                  <WinBar value={deal.probability} />
                 </TableCell>
                 <TableCell className="hidden text-sm text-muted-foreground sm:table-cell">
                   {formatDate(deal.updatedAt)}
@@ -303,6 +371,15 @@ export function DealsTable({
             ))}
           </TableBody>
         </Table>
+        <TableTotalsBar>
+          <span className="font-medium">
+            <span className="tabular-nums">{rows.length}</span>{" "}
+            <span className="text-muted-foreground">{rows.length === 1 ? "deal" : "deals"} in view</span>
+          </span>
+          <Metric label="Sum of pipeline" value={formatMoney(totals.sum)} />
+          <Metric label="Avg win probability" value={totals.avgProb == null ? "—" : `${totals.avgProb}%`} />
+        </TableTotalsBar>
+        </div>
       </div>
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>

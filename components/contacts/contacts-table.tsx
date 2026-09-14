@@ -22,7 +22,6 @@ import {
 import { fullName, formatDate, initials } from "@/lib/format"
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -74,6 +73,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Metric, TableTotalsBar, TagPills } from "@/components/ui/table-metrics"
 import {
   Empty,
   EmptyDescription,
@@ -396,10 +396,10 @@ export function ContactsTable({
           )}
         </Empty>
       ) : (
-        <div className="rounded-lg border">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
+            <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
+              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                 <TableHead className="w-10">
                   <Checkbox
                     checked={allSelected}
@@ -464,23 +464,7 @@ export function ContactsTable({
                       )}
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
-                      <div className="flex flex-wrap gap-1">
-                        {contact.tags.slice(0, 2).map(({ tag }) => (
-                          <Badge
-                            key={tag.id}
-                            variant="outline"
-                            style={{ borderColor: tag.color, color: tag.color }}
-                            className="text-[11px]"
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
-                        {contact.tags.length > 2 && (
-                          <Badge variant="secondary" className="text-[11px]">
-                            +{contact.tags.length - 2}
-                          </Badge>
-                        )}
-                      </div>
+                      <TagPills tags={contact.tags} max={2} />
                     </TableCell>
                     <TableCell className="hidden lg:table-cell">
                       {owner ? (
@@ -536,6 +520,14 @@ export function ContactsTable({
               })}
             </TableBody>
           </Table>
+          <TableTotalsBar>
+            <span className="font-medium">
+              <span className="tabular-nums">{data.items.length}</span>{" "}
+              <span className="text-muted-foreground">on this page</span>
+            </span>
+            <Metric label="Total contacts" value={data.total} />
+            {selected.size > 0 && <Metric label="Selected" value={selected.size} />}
+          </TableTotalsBar>
         </div>
       )}
 

@@ -39,6 +39,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Metric, TableTotalsBar } from "@/components/ui/table-metrics"
 import {
   Empty,
   EmptyDescription,
@@ -114,10 +115,10 @@ export function OrgsTable({
           </EmptyDescription>
         </Empty>
       ) : (
-        <div className="rounded-lg border">
+        <div className="overflow-hidden rounded-xl border bg-card">
           <Table>
-            <TableHeader>
-              <TableRow className="hover:bg-transparent">
+            <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
+              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                 <TableHead>Company</TableHead>
                 <TableHead className="hidden md:table-cell">Domain</TableHead>
                 <TableHead className="hidden lg:table-cell">Industry</TableHead>
@@ -204,6 +205,22 @@ export function OrgsTable({
               ))}
             </TableBody>
           </Table>
+          <TableTotalsBar>
+            <span className="font-medium">
+              <span className="tabular-nums">{filtered.length}</span>{" "}
+              <span className="text-muted-foreground">
+                {filtered.length === 1 ? "company" : "companies"} in view
+              </span>
+            </span>
+            <Metric
+              label="Total contacts"
+              value={filtered.reduce((s, o) => s + o._count.contacts, 0)}
+            />
+            <Metric
+              label="Total deals"
+              value={filtered.reduce((s, o) => s + o._count.deals, 0)}
+            />
+          </TableTotalsBar>
         </div>
       )}
 
