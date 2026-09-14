@@ -79,6 +79,7 @@ export function ContactDetailActions({
     jobTitle: string | null
     linkedinUrl: string | null
     organizationId: string | null
+    owner?: { id: string; name: string | null } | null
   }
   currentOwner?: { id: string; name: string } | null
 }) {
@@ -89,17 +90,35 @@ export function ContactDetailActions({
   const [newTagColor, setNewTagColor] = React.useState(PRESET_COLORS[0])
   const [isPending, startTransition] = React.useTransition()
 
-  // If owner is not in workspace members (e.g. former member), the Select
-  // would otherwise fall back to displaying the raw cuid like
-  // "cmfzvz46900001499v4w4w3c6l". Track that case so we can render a proper label.
-  const ownerIsKnownMember = currentOwnerId
-    ? members.some((m) => m.user.id === currentOwnerId)
+  // If owner is not in workspace members (e.g. former member) Base UI
+  // Select would fall back to displaying the raw cuid like
+  // "cmfzvz46900001499v4w4w3c6l" because no matching SelectItem exists.
+  // We render a synthetic SelectItem for that orphan so the name is shown.
+  // Normalize legacy corrupted value "unassigned" stored as ownerId
+  const normalizedOwnerId = currentOwnerId === "unassigned" ? null : currentOwnerId
+  const ownerIsKnownMember = normalizedOwnerId
+    ? members.some((m) => m.user.id === normalizedOwnerId)
     : true
-  const orphanOwnerName = (contact as unknown as { owner?: { name?: string } | null })?.owner?.name ?? null
-  // Effective value: if owner exists but isn't a current member, show as unassigned
-  // to avoid Base UI Select rendering the raw ID. We still render an extra
-  // SelectItem below so the name is visible when possible.
-  const selectValue = currentOwnerId && !ownerIsKnownMember ? "unassigned" : (currentOwnerId ?? "unassigned")
+  // owner name may come via contact.owner (passed from page.tsx) or via members
+  const contactOwner = contact.owner ?? null
+  const orphanOwnerName =
+    contactOwner?.name ??
+    (normalizedOwnerId ? members.find((m) => m.user.id === normalizedOwnerId)?.user.name : null) ??
+    null
+  const selectValue = normalizedOwnerId ?? "unassigned"
+  const showOrphanItem = !!(normalizedOwnerId && !ownerIsKnownMember)
+
+  // Base UI Select.Value renders the raw value (the user cuid) unless given a
+  // render function. Map the selected id back to a display name here.
+  function ownerLabel(value: string): string {
+    if (value === "unassigned") return "Unassigned"
+    const member = members.find((m) => m.user.id === value)
+    if (member) return member.user.name
+    if (value === normalizedOwnerId) {
+      return orphanOwnerName ? `${orphanOwnerName} (former member)` : "Former member"
+    }
+    return orphanOwnerName ?? "Unassigned"
+  }
 
   async function changeOwner(ownerId: string) {
     // Select sends "unassigned" for the Unassigned item — map it to "" so the
@@ -158,16 +177,16 @@ export function ContactDetailActions({
         onValueChange={(v) => v && changeOwner(v)}
       >
         <SelectTrigger className="w-auto gap-2" size="sm">
-          <SelectValue />
+          <SelectValue>{(value: string) => ownerLabel(value)}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="unassigned">Unassigned</SelectItem>
-          {currentOwnerId && !ownerIsKnownMember && (
-            <SelectItem value={currentOwnerId}>
+          {showOrphanItem && (
+            <SelectItem value={normalizedOwnerId!}>
               <span className="inline-flex items-center gap-1.5">
                 <Avatar className="size-4">
                   <AvatarFallback className="text-[8px]">
-                    {(orphanOwnerName ?? currentOwnerId).slice(0, 2).toUpperCase()}
+                    {(orphanOwnerName ?? normalizedOwnerId!).slice(0, 2).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
                 {orphanOwnerName ? `${orphanOwnerName} (former member)` : "Former member"}

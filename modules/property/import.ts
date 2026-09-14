@@ -1,4 +1,3 @@
-"use server"
 import { db } from "@/lib/db"
 import { requireWorkspaceMember } from "@/lib/permissions"
 import { parseUnitsCsv } from "@/lib/csv"
@@ -20,6 +19,7 @@ export async function importUnitsCsv({
   projectId: string
   csv: string
 }) {
+  "use server"
   const s = await auth()
   if (!s?.user?.id) throw new Error("Unauthorized")
   await requireWorkspaceMember(workspaceId, s.user.id)

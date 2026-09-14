@@ -8,7 +8,7 @@ import { requireWorkspaceMember } from "@/lib/permissions"
 import { activitySchema, completeTaskSchema } from "@/lib/validators"
 import type { ActivityType } from "@/lib/generated/prisma/client"
 
-export const ACTIVITY_SOURCES = ["manual", "social", "agent"] as const
+const ACTIVITY_SOURCES = ["manual", "social", "agent"] as const
 export type ActivitySource = (typeof ACTIVITY_SOURCES)[number]
 
 export async function createActivityAction(
