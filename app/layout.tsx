@@ -50,11 +50,10 @@ export const metadata: Metadata = {
   authors: [{ name: "Estate360" }],
   creator: "Estate360",
   publisher: "Estate360",
-  alternates: { canonical: siteUrl, languages: { en: `${siteUrl}/`, gu: `${siteUrl}/?lang=gu`, hi: `${siteUrl}/?lang=hi` } },
+  alternates: { canonical: siteUrl },
   openGraph: {
     type: "website",
     locale: "en_IN",
-    alternateLocale: ["gu_IN", "hi_IN"],
     url: siteUrl,
     siteName: "Estate360",
     title: "Estate360 — The CRM that loops: contacts → deals → revenue",

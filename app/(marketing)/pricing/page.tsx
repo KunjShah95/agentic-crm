@@ -20,7 +20,6 @@ export default async function PricingPage() {
   return (
     <MarketingChrome isAuthed={isAuthed} workspaceSlug={workspaceSlug}>
       <PageHero
-        eyebrow="PRICING · FOR AHMEDABAD BUILDERS"
         title="Priced for site, not seat tricks."
         description="All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, and WhatsApp gu/hi. Cancel anytime — export your data."
         primaryCta={{

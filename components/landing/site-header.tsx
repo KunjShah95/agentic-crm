@@ -22,36 +22,34 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/75 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60">
-      <div className={cn("mx-auto flex h-[64px] w-full max-w-[1280px] items-center justify-between px-6 lg:px-8", compact && "h-14")}>
-        <div className="flex items-center gap-10">
-          <Link href="/" className="group flex items-center gap-2.5" aria-label="Estate360 home">
-            {/* Amber logo mark — brand-colored, not generic black */}
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand shadow-sm transition-shadow group-hover:shadow-md">
-              <Layers className="size-4 text-brand-foreground" aria-hidden />
-            </span>
-            <span className="text-[13px] font-semibold tracking-[0.18em]">ESTATE360</span>
-            <span className="hidden text-[13px] font-light tracking-[0.12em] text-muted-foreground sm:inline">CRM</span>
-          </Link>
-          <nav className="hidden items-center gap-7 text-[13px] font-medium md:flex" aria-label="Primary">
-            {NAV_LINKS.map((link) => {
-              const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={cn(
-                    "relative pb-1 transition-colors",
-                    active
-                      ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:bg-brand after:content-['']"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {link.label}
-                </Link>
-              )
-            })}
-          </nav>
-        </div>
+      <div className={cn("relative mx-auto flex h-[64px] w-full max-w-[1280px] items-center justify-between px-6 lg:px-8", compact && "h-14")}>
+        <Link href="/" className="group flex items-center gap-2.5" aria-label="Estate360 home">
+          {/* Amber logo mark — brand-colored, not generic black */}
+          <span className="flex size-8 items-center justify-center rounded-lg bg-brand shadow-sm transition-shadow group-hover:shadow-md">
+            <Layers className="size-4 text-brand-foreground" aria-hidden />
+          </span>
+          <span className="text-[13px] font-semibold tracking-[0.18em]">ESTATE360</span>
+          <span className="hidden text-[13px] font-light tracking-[0.12em] text-muted-foreground sm:inline">CRM</span>
+        </Link>
+        <nav className="absolute left-1/2 hidden -translate-x-1/2 items-center gap-7 text-[13px] font-medium md:flex" aria-label="Primary">
+          {NAV_LINKS.map((link) => {
+            const active = pathname === link.href || pathname.startsWith(`${link.href}/`)
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={cn(
+                  "relative pb-1 transition-colors",
+                  active
+                    ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:bg-brand after:content-['']"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                {link.label}
+              </Link>
+            )
+          })}
+        </nav>
         <div className="hidden items-center gap-2 md:flex">
           <ModeToggle />
           {!isAuthed ? (

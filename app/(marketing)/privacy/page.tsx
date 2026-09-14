@@ -81,7 +81,6 @@ export default async function PrivacyPage() {
   return (
     <MarketingChrome isAuthed={isAuthed} workspaceSlug={workspaceSlug}>
       <PageHero
-        eyebrow="LEGAL · PRIVACY"
         title="Privacy Policy"
         description="How Estate360 handles personal data for founders, sales teams, brokers, and the buyers you serve."
       />

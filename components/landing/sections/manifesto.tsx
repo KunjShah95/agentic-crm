@@ -22,7 +22,6 @@ export function ManifestoSection({ isAuthed, workspaceSlug }: { isAuthed: boolea
             <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Estate360 for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
             <div className="mt-6 flex gap-3">
               <Button className="rounded-full gap-1.5" render={<Link href={cta} />}>Enter Estate360 — NAAR demo <ArrowRight className="size-4" /></Button>
-              <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>See Shilp demo (/shilp)</Button>
             </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

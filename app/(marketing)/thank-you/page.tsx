@@ -23,7 +23,6 @@ export default async function ThankYouPage() {
   return (
     <MarketingChrome isAuthed={isAuthed} workspaceSlug={workspaceSlug}>
       <PageHero
-        eyebrow="MESSAGE RECEIVED"
         title="Thank you — we'll close this loop."
         description={`Our team at Mondeal Heights reads every note. Expect a reply at your email within one business day (${contact.hours}).`}
       />

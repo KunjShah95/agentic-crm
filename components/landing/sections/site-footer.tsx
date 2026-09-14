@@ -135,7 +135,6 @@ export function SiteFooter({}: { isAuthed: boolean; workspaceSlug?: string | nul
               </span>
             ))}
           </div>
-          <div className="font-mono text-[11px] tracking-wide">Built in Ahmedabad · gu / hi / en</div>
         </div>
       </div>
     </footer>

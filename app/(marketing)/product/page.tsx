@@ -75,7 +75,6 @@ export default async function ProductPage() {
   return (
     <MarketingChrome isAuthed={isAuthed} workspaceSlug={workspaceSlug}>
       <PageHero
-        eyebrow="PRODUCT · REAL ESTATE NA CRM"
         title={
           <>
             One loop for Owners, Sales,

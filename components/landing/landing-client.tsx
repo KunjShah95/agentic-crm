@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useMemo } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
@@ -156,6 +157,108 @@ function CountUp({ value }: { value: number }) {
   )
 }
 
+/** Scroll-reveal: fades + lifts children the first time they enter the
+ *  viewport. Honors reduced-motion (renders shown immediately). */
+function Reveal({
+  children,
+  className,
+  delay = 0,
+}: {
+  children: React.ReactNode
+  className?: string
+  delay?: number
+}) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setShown(true)
+      return
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShown(true)
+          io.disconnect()
+        }
+      },
+      { threshold: 0.15 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
+  }, [])
+
+  return (
+    <div
+      ref={ref}
+      style={{ transitionDelay: `${delay}ms` }}
+      className={`transition-all duration-700 ease-out ${shown ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"} ${className ?? ""}`}
+    >
+      {children}
+    </div>
+  )
+}
+
+/**
+ * Calm breather section — one line, lots of air. The brand accent line under
+ * the statement is *scroll-scrubbed*: its width tracks the section's progress
+ * through the viewport, so the reveal is tied to intent, not a one-shot fade.
+ */
+function CalmStatement() {
+  const ref = useRef<HTMLDivElement>(null)
+  const [progress, setProgress] = useState(0)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setProgress(1)
+      return
+    }
+    let raf = 0
+    const onScroll = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => {
+        const r = el.getBoundingClientRect()
+        const vh = window.innerHeight
+        // 0 when the section enters low, 1 once it's centered in the viewport.
+        const p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (vh * 0.55)))
+        setProgress(p)
+      })
+    }
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    window.addEventListener("resize", onScroll)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("scroll", onScroll)
+      window.removeEventListener("resize", onScroll)
+    }
+  }, [])
+
+  return (
+    <section className="border-y bg-background">
+      <div ref={ref} className="mx-auto flex min-h-[52vh] max-w-[900px] flex-col items-center justify-center px-6 py-24 text-center lg:py-32">
+        <p className="text-[13px] font-medium tracking-wide text-muted-foreground" style={{ opacity: 0.4 + progress * 0.6 }}>
+          The whole point
+        </p>
+        <h2 className="mt-6 font-display text-[30px] font-semibold leading-[1.12] tracking-[-0.02em] text-balance sm:text-[42px] lg:text-[48px]">
+          One loop, from the first WhatsApp
+          <br className="hidden sm:block" /> to the possession letter.
+        </h2>
+        <span
+          aria-hidden
+          className="mt-8 block h-[3px] rounded-full bg-brand"
+          style={{ width: `${Math.round(progress * 180)}px` }}
+        />
+      </div>
+    </section>
+  )
+}
+
 export function LandingClient({ workspaceSlug, isAuthed }: Props) {
   const [activeWs, setActiveWs] = useState<WsKey>("acme")
   const [deals, setDeals] = useState<Deal[]>(WORKSPACES.acme.deals)
@@ -167,6 +270,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
   const [showWsMenuDark, setShowWsMenuDark] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const heroRef = useRef<HTMLDivElement>(null)
+  const specimenRef = useRef<HTMLDivElement>(null)
+  const didAutoMove = useRef(false)
   const ws = WORKSPACES[activeWs]
 
   const switchWs = (key: WsKey) => {
@@ -183,6 +288,38 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
     // TypeUI Premium: cursor spotlight / parallax removed — motion is reserved for state changes
     const m = window.matchMedia("(prefers-reduced-motion: reduce)")
     if (m.matches) return
+  }, [])
+
+  // Signature scroll moment: the first time the live specimen scrolls into
+  // view, a Lead card moves itself to Qualified — proving "drag → auto-log"
+  // without the visitor lifting a finger. Fires once, honors reduced-motion.
+  useEffect(() => {
+    const el = specimenRef.current
+    if (!el || didAutoMove.current) return
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting || didAutoMove.current) return
+        didAutoMove.current = true
+        io.disconnect()
+        setTimeout(() => {
+          setDeals((prev) => {
+            const lead = prev.find((d) => d.stage === "lead")
+            if (!lead) return prev
+            setActivities((a) => [
+              { id: Math.random().toString(36).slice(2, 7), kind: "stage", title: "Stage lead → qualified", detail: `${lead.title} moved automatically · just now`, time: "now" },
+              ...a.slice(0, 4),
+            ])
+            setToast(`${lead.title} → qualified · auto-logged`)
+            setTimeout(() => setToast(null), 2400)
+            return prev.map((d) => (d.id === lead.id ? { ...d, stage: "qualified" as Stage } : d))
+          })
+        }, 900)
+      },
+      { threshold: 0.55 }
+    )
+    io.observe(el)
+    return () => io.disconnect()
   }, [])
 
   const moveDeal = (id: string, to: Stage) => {
@@ -278,13 +415,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
             <div className="grid gap-10 pb-10 pt-10 lg:grid-cols-[1.04fr_0.96fr] lg:gap-8 lg:pb-16 lg:pt-[56px]">
               {/* LEFT — kinetic hero copy — Ahmedabad construction story */}
               <div className="relative">
-                <div className="animate-in fade-in slide-in-from-bottom-2 duration-500 inline-flex items-center gap-2 rounded-full border bg-card/80 px-3.5 py-1.5">
-                  <span className="size-1.5 rounded-full bg-brand" aria-hidden />
-                  <span className="text-[12px] font-medium tracking-[0.08em] text-muted-foreground">
-                    REAL ESTATE CRM · BUILT FOR BUILDERS
-                  </span>
-                </div>
-                <h1 className="mt-5 font-display text-[42px] font-[600] leading-[1.02] tracking-[-0.03em] text-balance sm:text-[54px] lg:text-[62px]">
+                <h1 className="font-display text-[42px] font-[600] leading-[1.02] tracking-[-0.03em] text-balance sm:text-[54px] lg:text-[62px]">
                   <span className="block animate-in fade-in slide-in-from-bottom-2 duration-500 delay-100 [animation-fill-mode:both]">
                     Close bookings faster.
                   </span>
@@ -328,7 +459,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </div>
 
               {/* RIGHT — Live specimen */}
-              <div className="relative lg:pl-2">
+              <div ref={specimenRef} className="relative lg:pl-2">
                 <div
                   className="relative overflow-visible rounded-[20px] border bg-card shadow-e3"
                 >
@@ -342,10 +473,10 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                         <Popover open={showWsMenu} onOpenChange={setShowWsMenu}>
                           <PopoverTrigger render={<Button variant="outline" size="sm" className="h-7 rounded-full gap-1.5 text-[11px] font-semibold tracking-[0.06em] bg-card hover:bg-card border-border/60 shadow-sm">
                               <span className="flex size-5 items-center justify-center rounded-full text-[10px] text-white shadow-sm" style={{ background: ws.color }}>{ws.letter}</span>
-                              {ws.name.toUpperCase()} · /{ws.slug} <span className="text-muted-foreground text-[10px]">▾</span>
+                              {ws.name} <span className="font-mono text-muted-foreground text-[10px]">/{ws.slug}</span> <span className="text-muted-foreground text-[10px]">▾</span>
                             </Button>} />
                           <PopoverContent className="w-[260px] p-2" align="start">
-                            <div className="font-mono text-[11px] tracking-widest text-muted-foreground px-2 py-1">WORKSPACES</div>
+                            <div className="text-[11px] font-medium text-muted-foreground px-2 py-1">Workspaces</div>
                             {(Object.keys(WORKSPACES) as WsKey[]).map((k) => (
                               <button
                                 key={k}
@@ -368,13 +499,13 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                       <Button
                         variant={view === "kanban" ? "default" : "outline"}
                         size="sm"
-                        className="h-7 rounded-full font-mono text-[11px] gap-1 shadow-sm"
+                        className="h-7 rounded-full text-[12px] gap-1 shadow-sm"
                         onClick={() => setView("kanban")}
                       ><LayoutGrid className="size-3" /> Kanban</Button>
                       <Button
                         variant={view === "table" ? "default" : "outline"}
                         size="sm"
-                        className="h-7 rounded-full font-mono text-[11px] gap-1"
+                        className="h-7 rounded-full text-[12px] gap-1"
                         onClick={() => setView("table")}
                       ><TableIcon className="size-3" /> Table</Button>
                     </div>
@@ -399,8 +530,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                             className={`rounded-2xl p-2 ring-1 transition-colors ${isDrop ? "bg-brand-soft ring-brand/50" : "bg-muted/25 ring-border hover:ring-border/80"}`}
                           >
                             <div className="mb-2 flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1 font-mono text-[11px] font-medium tracking-[0.08em] text-muted-foreground">{col.icon} {col.label.toUpperCase()}</span>
-                              <span className="font-mono text-[11px] text-muted-foreground tabular-nums">{colDeals.length}</span>
+                              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">{col.icon} {col.label}</span>
+                              <span className="text-[11px] text-muted-foreground tabular-nums">{colDeals.length}</span>
                             </div>
                             <div className="space-y-2">
                               {colDeals.map((d) => (
@@ -409,7 +540,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                                   draggable
                                   onDragStart={(e) => { setDragId(d.id); e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move" }}
                                   onDragEnd={() => { setDragId(null); setDropStage(null) }}
-                                  className={`group cursor-grab rounded-xl border bg-card p-3 shadow-sm transition-all active:cursor-grabbing ${dragId === d.id ? "opacity-40 scale-[0.98] border-brand/40" : "border-border hover:border-foreground/25 hover:shadow-md"}`}
+                                  className={`group animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-300 cursor-grab rounded-xl border bg-card p-3 shadow-sm transition-all active:cursor-grabbing ${dragId === d.id ? "opacity-40 scale-[0.98] border-brand/40" : "border-border hover:border-foreground/25 hover:shadow-md"}`}
                                 >
                                   <div className="flex items-start justify-between gap-2">
                                     <div className="text-[13px] font-medium leading-tight tracking-tight">{d.title}</div>
@@ -467,7 +598,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   )}
 
                   <div className="flex items-center gap-3 border-t bg-card px-4 py-3">
-                    <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground inline-flex items-center gap-1.5"><Clock3 className="size-3" /> ACTIVITY</span>
+                    <span className="text-[12px] font-medium text-muted-foreground inline-flex items-center gap-1.5"><Clock3 className="size-3" /> Activity</span>
                     <Separator className="flex-1" />
                   </div>
                 </div>
@@ -477,14 +608,14 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
             {/* STATS BAR — construction bento, animated counters on scroll-in */}
             <div className="grid grid-cols-2 gap-px overflow-hidden rounded-[22px] border bg-border shadow-sm lg:grid-cols-4 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-600 [animation-fill-mode:both]">
               {[
-                { k: "COST SHEET", v: 18, suffix: " sec", sub: "base+GST+stamp+others → total", icon: ReceiptText, accent: "text-muted-foreground" },
-                { k: "HOLD → BOOKING", v: 48, suffix: " sec", sub: "KYC + 8 CLP milestones auto", icon: Hammer, accent: "text-brand" },
-                { k: "SITE GPS", v: 200, suffix: "m", sub: "geofence verified check-in", icon: Navigation, accent: "text-muted-foreground" },
-                { k: "RERA DEMAND #1", v: 9, suffix: " sec", sub: "shortcodes → PDF download", icon: FileCheck, accent: "text-muted-foreground" },
+                { k: "Cost sheet", v: 18, suffix: " sec", sub: "base+GST+stamp+others → total", icon: ReceiptText, accent: "text-muted-foreground" },
+                { k: "Hold → booking", v: 48, suffix: " sec", sub: "KYC + 8 CLP milestones auto", icon: Hammer, accent: "text-brand" },
+                { k: "Site GPS", v: 200, suffix: "m", sub: "geofence verified check-in", icon: Navigation, accent: "text-muted-foreground" },
+                { k: "RERA demand #1", v: 9, suffix: " sec", sub: "shortcodes → PDF download", icon: FileCheck, accent: "text-muted-foreground" },
               ].map((s) => (
                 <div key={s.k} className="group relative overflow-hidden bg-card px-6 py-5 hover:bg-muted/40 transition-colors">
                   <span aria-hidden className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
-                  <div className="relative flex items-center gap-2 font-mono text-[11px] tracking-[0.12em] text-muted-foreground"><s.icon className={`size-3 ${s.accent}`} /> {s.k}</div>
+                  <div className="relative flex items-center gap-2 text-[12px] font-medium text-muted-foreground"><s.icon className={`size-3 ${s.accent}`} /> {s.k}</div>
                   <div className="relative mt-1 text-[24px] font-semibold tracking-tight tabular-nums"><CountUp value={s.v} />{s.suffix}</div>
                   <div className="relative text-[12px] text-muted-foreground">{s.sub}</div>
                 </div>
@@ -503,19 +634,18 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               Excel ends. <span className="font-[500] italic text-muted-foreground">The loop begins.</span>
             </h2>
             <p className="mx-auto mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">
-              Project→Tower→Floor→Unit, cost sheets, CLP demand letters, broker scope, GPS site visits — not four tools, <span className="font-medium text-foreground">one construction loop</span>. Edit anywhere, RERA anywhere.{" "}
-              <button onClick={() => setView("table")} className="inline-flex items-center gap-1 text-brand hover:text-foreground underline underline-offset-4 font-medium">See deals as a table — gu/hi too <ChevronRight className="size-3" /></button>
+              Project→Tower→Floor→Unit, cost sheets, CLP demand letters, broker scope, GPS site visits — not four tools, <span className="font-medium text-foreground">one construction loop</span>. Edit anywhere, RERA anywhere.
             </p>
           </div>
 
           <div className="mt-10 grid gap-4 lg:grid-cols-12 auto-rows-fr">
             {/* Large — contacts with hoverCard bento effect */}
-            <Card className="bento-depth group relative overflow-hidden lg:col-span-7 flex flex-col justify-between hover:shadow-e2 hover:border-foreground/20 transition-colors border-border/60 h-full">
+            <Card className="bento-depth group relative overflow-hidden lg:col-span-7 flex flex-col justify-between border-transparent bg-gradient-to-br from-card to-muted/40 ring-1 ring-border shadow-e2 hover:shadow-e3 hover:ring-foreground/20 transition-all duration-300 h-full">
                 <div className="absolute right-0 top-0 hidden h-[200px] w-[320px] rounded-bl-[28px] bg-muted/60 p-4 sm:block border-l border-b backdrop-blur">
                     <div className="space-y-2">
-                      <div className="flex items-center gap-1.5 font-mono text-[10px] tracking-[0.12em] text-muted-foreground"><span>CONTACT</span><span className="h-px flex-1 bg-border" /><span className="text-brand">LIVE · {ws.name}</span></div>
+                      <div className="flex items-center gap-1.5 text-[11px] font-medium text-muted-foreground"><span>Contact</span><span className="h-px flex-1 bg-border" /><span className="text-brand">Live · {ws.name}</span></div>
                       <div className="rounded-xl border bg-card p-3 shadow-sm">
-                        <div className="flex items-center gap-2"><Avatar className="size-7"><AvatarFallback className="bg-brand-soft text-brand text-[10px] font-medium">{ws.contacts[0]?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2) ?? "—"}</AvatarFallback></Avatar><span className="text-sm font-medium">{ws.contacts[0]?.name}</span><span className="ml-auto text-[10px] font-medium text-brand">OWNER</span></div>
+                        <div className="flex items-center gap-2"><Avatar className="size-7"><AvatarFallback className="bg-brand-soft text-brand text-[10px] font-medium">{ws.contacts[0]?.name?.split(" ").map((w) => w[0]).join("").slice(0, 2) ?? "—"}</AvatarFallback></Avatar><span className="text-sm font-medium">{ws.contacts[0]?.name}</span><span className="ml-auto text-[10px] font-medium text-brand">Owner</span></div>
                         <div className="mt-3 flex gap-2.5 font-mono text-[10px] text-muted-foreground"><span># {ws.contacts[0]?.tag}</span><span># warm</span><span>verified</span></div>
                       </div>
                       <div className="flex items-center gap-2 text-[11px] font-mono text-muted-foreground"><Progress value={74} className="h-1 flex-1" /> 74% complete</div>
@@ -538,7 +668,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 </Card>
 
             {/* Dark card — organizations with popper */}
-            <Card className="bento-depth group lg:col-span-5 bg-foreground text-background border-foreground overflow-hidden hover:shadow-e2 transition-colors relative h-full flex flex-col">
+            <Card className="bento-depth group lg:col-span-5 bg-foreground text-background border-foreground overflow-hidden hover:-translate-y-1 hover:shadow-e3 transition-all duration-300 relative h-full flex flex-col">
               <CardHeader className="relative">
                 <div className="inline-flex size-9 items-center justify-center rounded-xl bg-background text-foreground shadow-sm"><Building2 className="size-4" /></div>
                 <CardTitle className="text-background tracking-tight">Organizations that link themselves</CardTitle>
@@ -546,7 +676,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </CardHeader>
               <CardContent className="relative flex-1 flex flex-col justify-end">
                 <div className="rounded-xl bg-background/10 p-3.5 backdrop-blur border border-background/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
-                  <div className="flex items-center justify-between font-mono text-[11px] tracking-[0.12em] text-background/60"><span>DOMAIN MATCH</span><span className="text-background font-medium tabular-nums">{activeWs === "acme" ? "94%" : activeWs === "vela" ? "88%" : "76%"} · AUTO-SUGGEST</span></div>
+                  <div className="flex items-center justify-between text-[12px] font-medium text-background/60"><span>Domain match</span><span className="text-background font-medium tabular-nums">{activeWs === "acme" ? "94%" : activeWs === "vela" ? "88%" : "76%"} · auto-suggest</span></div>
                   <Progress value={activeWs === "acme" ? 94 : activeWs === "vela" ? 88 : 76} className="mt-2 h-1.5 bg-background/10 [&>div]:bg-brand" />
                   <div className="mt-2.5 flex items-center gap-2 text-sm text-background font-medium"><span className="size-2 rounded-full bg-success" aria-hidden /> {activeWs === "acme" ? "shilp.co.in → 8 contacts · 3 deals" : activeWs === "vela" ? "safal.com → 5 contacts · 2 deals" : "galabuilders.in → 3 contacts"}</div>
                   <Button
@@ -560,7 +690,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
             </Card>
 
             {/* Deals — bento with tooltip popper */}
-            <Card className="group lg:col-span-5 hover:shadow-e2 transition-colors border-border/60 overflow-hidden relative h-full">
+            <Card className="group lg:col-span-5 border-l-2 border-l-brand/40 border-border/60 hover:-translate-y-1 hover:border-l-brand hover:shadow-e2 transition-all duration-300 overflow-hidden relative h-full">
               <CardHeader className="relative">
                 <div className="inline-flex size-9 items-center justify-center rounded-lg bg-brand-soft text-brand border border-brand/20"><Layers className="size-4" /></div>
                 <CardTitle className="text-[16px] tracking-tight">Deals: board + table, same truth</CardTitle>
@@ -592,7 +722,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
             </Card>
 
             {/* Activities — popover bento */}
-            <Card className="group lg:col-span-4 hover:shadow-e2 transition-colors border-border/60 relative overflow-hidden h-full flex flex-col">
+            <Card className="group lg:col-span-4 hover:-translate-y-1 hover:shadow-e2 hover:border-foreground/20 transition-all duration-300 border-border/60 relative overflow-hidden h-full flex flex-col">
               <CardHeader className="relative">
                 <div className="inline-flex size-9 items-center justify-center rounded-xl bg-brand-soft text-brand border border-brand/20"><Zap className="size-4" /></div>
                 <CardTitle className="text-[16px] tracking-tight">Activities that stay attached</CardTitle>
@@ -622,9 +752,9 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
             </Card>
 
             {/* WhatsApp bento — fills the slot left by the removed search card */}
-            <Card className="group lg:col-span-3 bg-brand-soft/60 border-brand/25 hover:border-brand/45 hover:shadow-e2 transition-colors relative overflow-hidden h-full flex flex-col">
+            <Card className="group lg:col-span-3 bg-brand-soft/60 border-brand/25 hover:-translate-y-1 hover:border-brand/45 hover:shadow-e2 transition-all duration-300 relative overflow-hidden h-full flex flex-col">
               <CardHeader className="relative">
-                <div className="font-mono text-[11px] tracking-[0.12em] text-brand flex items-center gap-1.5 font-semibold"><MessageSquare className="size-3" /> WHATSAPP</div>
+                <div className="text-[12px] text-brand flex items-center gap-1.5 font-semibold"><MessageSquare className="size-3" /> WhatsApp</div>
                 <CardTitle className="text-[18px] leading-tight tracking-tight">Demand letters that send themselves</CardTitle>
                 <CardDescription className="text-[13px] leading-5">RERA shortcodes fill the template, the UPI link rides along — gu/hi where the buyer reads it.</CardDescription>
               </CardHeader>
@@ -639,30 +769,150 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           </div>
         </section>
 
+        {/* REAL PRODUCT — actual app screenshot in a browser frame, not a mockup */}
+        <section id="screenshot" className="mx-auto max-w-[1280px] px-6 pb-4 lg:px-8">
+          <div className="mx-auto max-w-[720px] text-center">
+            <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70"><LayoutGrid className="size-3.5 text-brand" /> The actual product</span>
+            <h2 className="mt-3 text-[28px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[34px]">Not a mockup. This is the app.</h2>
+            <p className="mx-auto mt-3 max-w-[520px] text-[14px] leading-6 text-muted-foreground">The live deals board from the <span className="font-mono text-foreground">/shilp</span> workspace — 6 stages, real pipeline, every drag logged as activity.</p>
+          </div>
+          <Reveal className="relative mx-auto mt-10 max-w-[1080px] overflow-hidden rounded-[16px] border bg-card shadow-e3">
+            {/* browser chrome */}
+            <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2.5">
+              <span className="flex gap-1.5">
+                <span className="size-2.5 rounded-full bg-foreground/15" />
+                <span className="size-2.5 rounded-full bg-foreground/15" />
+                <span className="size-2.5 rounded-full bg-foreground/15" />
+              </span>
+              <span className="ml-3 hidden rounded-md border bg-card px-3 py-1 font-mono text-[11px] text-muted-foreground sm:block">estate360.app/shilp/deals</span>
+            </div>
+            <Image
+              src="/product-deals.png"
+              alt="Estate360 deals board — live 6-stage pipeline in the /shilp workspace"
+              width={1262}
+              height={624}
+              className="w-full"
+              sizes="(min-width: 1024px) 1080px, 100vw"
+            />
+          </Reveal>
+        </section>
+
+        {/* BOOKING WALKTHROUGH — one killer workflow, enquiry → possession, agent visible */}
+        <section id="how" className="border-y bg-muted/20">
+          <div className="mx-auto max-w-[1080px] px-6 py-14 lg:px-8 lg:py-20">
+            <div className="mx-auto max-w-[640px] text-center">
+              <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70"><Workflow className="size-3.5 text-brand" /> Enquiry to possession, one workflow</span>
+              <h2 className="mt-3 text-[30px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[36px]">Watch a booking happen.</h2>
+              <p className="mx-auto mt-3 max-w-[520px] text-[14px] leading-6 text-muted-foreground">One WhatsApp enquiry, seven steps, zero Excel. Each step logs itself — the agent does the searching and drafting, your team approves.</p>
+            </div>
+
+            <ol className="relative mx-auto mt-12 max-w-[720px]">
+              {/* connecting spine — brand at the top, fading into the rail */}
+              <span aria-hidden className="pointer-events-none absolute left-[27px] top-3 bottom-3 w-px bg-gradient-to-b from-brand via-brand/40 to-border" />
+              {[
+                { lane: "Buyer", actor: "WhatsApp enquiry", detail: "“3BHK available near SG Highway?”", icon: MessageSquare, agent: false, chat: true },
+                { lane: "Agent", actor: "Matched inventory", detail: "3 live units · Shaligram Lakeview — reply drafted, waiting on approval", icon: Zap, agent: true },
+                { lane: "Site", actor: "Visit — GPS verified", detail: "200m geofence check-in. No fake visits.", icon: Navigation, agent: false },
+                { lane: "Sales", actor: "Hold → KYC → Booking", detail: "8 CLP milestones created automatically", icon: Hammer, agent: false },
+                { lane: "Accounts", actor: "Cost sheet", detail: "base + GST + stamp + others → total", icon: ReceiptText, agent: false, time: "18s" },
+                { lane: "Agent", actor: "RERA demand #1", detail: "shortcodes fill the template → PDF", icon: FileCheck, agent: true, time: "9s" },
+                { lane: "Accounts", actor: "UPI collection → Possession", detail: "link rides the WhatsApp · receipt · Tally-ready", icon: CreditCard, agent: false },
+              ].map((s, i) => (
+                <li
+                  key={s.actor}
+                  className="relative flex gap-5 pb-5 last:pb-0 animate-in fade-in slide-in-from-bottom-2 [animation-fill-mode:both]"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  {/* node on the spine */}
+                  <div className="flex w-14 shrink-0 justify-center">
+                    <span
+                      className={`relative z-10 inline-flex size-9 items-center justify-center rounded-full transition-transform ${
+                        s.agent
+                          ? "bg-brand text-brand-foreground shadow-sm ring-4 ring-brand/15"
+                          : "border-2 border-border bg-card text-foreground"
+                      }`}
+                    >
+                      <s.icon className="size-4" />
+                    </span>
+                  </div>
+                  {/* step card */}
+                  <div className="group -mt-0.5 min-w-0 flex-1 rounded-2xl border border-border/70 bg-card p-4 shadow-sm transition-colors hover:border-foreground/20">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-mono text-[10px] tracking-[0.14em] text-muted-foreground">{String(i + 1).padStart(2, "0")}</span>
+                      <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] tracking-[0.08em] text-muted-foreground">{s.lane}</span>
+                      <span className="text-[14px] font-medium tracking-tight">{s.actor}</span>
+                      {s.agent && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-brand-soft px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-brand">
+                          <Zap className="size-2.5" /> AGENT
+                        </span>
+                      )}
+                      {s.time && (
+                        <span className="ml-auto rounded-full border border-brand/25 bg-brand-soft/60 px-2 py-0.5 font-mono text-[10px] font-semibold tabular-nums text-brand">{s.time}</span>
+                      )}
+                    </div>
+                    {s.chat ? (
+                      <div className="mt-2 inline-flex max-w-full rounded-2xl rounded-tl-sm bg-muted px-3 py-2 text-[13px] leading-5 text-foreground">
+                        {s.detail}
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-[13px] leading-5 text-muted-foreground">{s.detail}</div>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {/* outcome — reads like a receipt */}
+            <div className="mx-auto mt-6 max-w-[720px] overflow-hidden rounded-2xl border border-brand/30 bg-foreground text-background shadow-e3">
+              <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-brand text-brand-foreground"><Check className="size-5" /></span>
+                  <div>
+                    <div className="text-[15px] font-semibold tracking-tight">Booking created</div>
+                    <div className="font-mono text-[11px] tracking-[0.1em] text-background/60">Every step auto-logged · nothing typed twice</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="font-mono text-[10px] tracking-[0.14em] text-background/50">BOOKING VALUE</div>
+                  <div className="text-[26px] font-semibold tabular-nums text-brand">₹82,00,000</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* STAFF — for Ahmedabad construction teams, every role on loop */}
         <section id="staff" className="border-y bg-muted/20">
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
             <div className="mx-auto flex max-w-[720px] flex-col items-center gap-3 text-center">
-              <span className="inline-flex items-center gap-1.5 text-[12px] tracking-[0.1em] text-foreground/70"><Users className="size-3" /> STAFF · EVERY ROLE, ONE LOOP</span>
+              <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70"><Users className="size-3.5 text-brand" /> Every role, one loop</span>
               <h2 className="text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
               <p className="mx-auto max-w-[560px] text-[14px] leading-6 text-muted-foreground">Owner sees collections, Sales drags HOLD→Booking, Brokers see only their allocation, Site verifies GPS, Accounts sends RERA demand + UPI — same workspace, same audit, 5 voices, one loop. Gujarati + Hindi where it counts.</p>
             </div>
             <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-              {[                { role: "Owner / Director", icon: Building2, accent: "text-muted-foreground", kpi: "₹2.4Cr weighted", desc: "Funnel, inventory health, collections, team vs target — Excel-free." },
-                { role: "Sales Manager", icon: Phone, accent: "text-brand", kpi: "HOLD→Booking 48s", desc: "Drag kanban, auto-log Activity, cost sheet 18s, WhatsApp ack." }, // brand = the one highlighted role
-                { role: "Broker / CP", icon: Handshake, accent: "text-muted-foreground", kpi: "Scoped % allocation", desc: "Sees only allocated units, commission auto-calc, referral ledger." },
-                { role: "Site Engineer", icon: Navigation, accent: "text-muted-foreground", kpi: "200m GPS", desc: "Schedule visit, check-in verified, offline PWA on field." },
-                { role: "Accounts", icon: ReceiptText, accent: "text-muted-foreground", kpi: "Demand 9s", desc: "CLP 8 milestones, RERA {{rera_no}}, UPI link → receipt, Tally CSV." },
-              ].map((r) => (
-                <Card key={r.role} className="group hover:shadow-e2 hover:border-foreground/20 transition-colors overflow-hidden">
-                  <div className="h-1 bg-gradient-to-r from-foreground via-foreground/60 to-transparent opacity-60 group-hover:opacity-100 transition-opacity" />
-                  <CardHeader className="pb-2">
-                    <span className={`inline-flex size-8 items-center justify-center rounded-lg bg-muted border border-border/60 ${r.accent}`}><r.icon className="size-4" /></span>
-                    <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
-                    <span className="w-fit text-[11px] tabular-nums text-muted-foreground">{r.kpi}</span>
-                  </CardHeader>
-                  <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
-                </Card>
+              {[                { role: "Owner / Director", icon: Building2, kpi: "₹2.4Cr weighted", desc: "Funnel, inventory health, collections, team vs target — Excel-free.", featured: false },
+                { role: "Sales Manager", icon: Phone, kpi: "HOLD→Booking 48s", desc: "Drag kanban, auto-log Activity, cost sheet 18s, WhatsApp ack.", featured: true }, // the highlighted role — breaks the row
+                { role: "Broker / CP", icon: Handshake, kpi: "Scoped % allocation", desc: "Sees only allocated units, commission auto-calc, referral ledger.", featured: false },
+                { role: "Site Engineer", icon: Navigation, kpi: "200m GPS", desc: "Schedule visit, check-in verified, offline PWA on field.", featured: false },
+                { role: "Accounts", icon: ReceiptText, kpi: "Demand 9s", desc: "CLP 8 milestones, RERA {{rera_no}}, UPI link → receipt, Tally CSV.", featured: false },
+              ].map((r, i) => (
+                <Reveal key={r.role} delay={i * 70} className="h-full">
+                  <Card
+                    className={`group h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
+                      r.featured
+                        ? "border-brand/40 bg-brand-soft/30 shadow-e2 ring-1 ring-brand/15 lg:-translate-y-1.5 hover:shadow-e3"
+                        : "border-border/60 hover:border-foreground/20 hover:shadow-e2"
+                    }`}
+                  >
+                    <div className={`h-1 transition-opacity ${r.featured ? "bg-brand opacity-100" : "bg-gradient-to-r from-foreground via-foreground/60 to-transparent opacity-50 group-hover:opacity-100"}`} />
+                    <CardHeader className="pb-2">
+                      <span className={`inline-flex size-8 items-center justify-center rounded-lg border ${r.featured ? "border-brand/30 bg-brand text-brand-foreground" : "border-border/60 bg-muted text-muted-foreground"} transition-transform group-hover:scale-110`}><r.icon className="size-4" /></span>
+                      <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
+                      <span className={`w-fit text-[11px] tabular-nums ${r.featured ? "font-medium text-brand" : "text-muted-foreground"}`}>{r.kpi}</span>
+                    </CardHeader>
+                    <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
+                  </Card>
+                </Reveal>
               ))}
             </div>
           </div>
@@ -672,38 +922,21 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
         <section id="workflow" className="border-y bg-card">
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
             <div className="mx-auto flex max-w-[720px] flex-col items-center gap-3 text-center">
-              {/* Rhythm break: this section trades the mono-uppercase eyebrow
-                  for display-italic — one variation to kill pattern fatigue. */}
-              <span className="font-display text-[15px] italic text-muted-foreground">Three moves, one loop</span>
-              <h2 className="text-[28px] font-bold tracking-[-0.02em] sm:text-[32px]">How the loop runs</h2>
-            </div>
-            <div className="relative mt-10 grid gap-6 lg:grid-cols-3">
-              <div aria-hidden className="absolute left-6 right-6 top-[44px] hidden h-px bg-border lg:block"><div className="absolute inset-y-0 left-0 w-1/3 bg-brand" /></div>
-              {[                { label: "CAPTURE", title: "Everything lands in one place", desc: "Contacts, orgs, and deals flow in. Tags, owners, and domains auto-link.", icon: Users, accent: "bg-foreground text-background" },
-                { label: "MOVE", title: "Drag. It logs itself.", desc: "Move a deal — stage change becomes activity, timeline updates, search re-indexes.", icon: Layers, accent: "bg-brand text-brand-foreground" },
-                { label: "CLOSE", title: "Activity → revenue, visibly", desc: "Every note and call stays attached. Your “My Tasks” is always current.", icon: Zap, accent: "bg-foreground text-background" },
-              ].map((s) => (
-                <Card key={s.label} className="bento-depth group relative hover:border-brand/40 hover:shadow-e2 transition-colors overflow-hidden">
-                  <CardHeader className="relative">
-                    <div className={`inline-flex size-10 items-center justify-center rounded-xl text-sm transition-transform duration-200 group-hover:scale-110 group-hover:-rotate-3 ${s.accent}`}><s.icon className="size-4" /></div>
-                    <div className="font-mono text-[11px] tracking-[0.16em] text-muted-foreground">{s.label}</div>
-                    <CardTitle className="text-[18px] leading-tight tracking-tight">{s.title}</CardTitle>
-                    <CardDescription className="leading-relaxed">{s.desc}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
+              <span className="font-display text-[15px] italic text-muted-foreground">Every query scoped to one workspace</span>
+              <h2 className="text-[28px] font-bold tracking-[-0.02em] sm:text-[32px]">One live workspace, re-scoped instantly</h2>
+              <p className="max-w-[520px] text-[14px] leading-6 text-muted-foreground">Switch workspaces below — pipeline, timeline, and search all rebuild. Every action stays logged and filtered by <span className="font-mono text-foreground">workspaceId</span>.</p>
             </div>
 
             <Card className="mt-10 overflow-hidden border-foreground/10 bg-foreground text-background shadow-e3">
               <CardContent className="p-6 lg:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-3"><span className="size-2 rounded-full bg-success" aria-hidden /><span className="font-mono text-[11px] tracking-[0.14em] text-background/60">LIVE WORKSPACE · {ws.name.toUpperCase()}</span><Separator orientation="vertical" className="hidden h-4 bg-background/15 sm:block" /><span className="hidden font-mono text-[11px] text-background/50 sm:inline">switch below — pipeline, timeline, search all re-scope</span></div>
+                  <div className="flex items-center gap-3"><span className="size-2 rounded-full bg-success" aria-hidden /><span className="text-[12px] font-medium text-background/70">Live workspace · {ws.name}</span><Separator orientation="vertical" className="hidden h-4 bg-background/15 sm:block" /><span className="hidden font-mono text-[11px] text-background/50 sm:inline">switch below — pipeline, timeline, search all re-scope</span></div>
                   <span className="inline-flex items-center gap-1 font-mono text-[11px] tracking-widest text-background/60"><Workflow className="size-3" /> MULTI-TENANT · SLUG ROUTING</span>
                 </div>
                 <div className="mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
                   <Card className="bg-background text-foreground shadow-sm">
                     <CardHeader className="pb-2">
-                      <div className="flex items-center justify-between"><span className="font-mono text-[11px] tracking-[0.14em] text-muted-foreground">DEAL TIMELINE · LIVE</span><span className="font-mono text-[11px] text-muted-foreground">{activities.length} activities</span></div>
+                      <div className="flex items-center justify-between"><span className="text-[12px] font-medium text-muted-foreground">Deal timeline · live</span><span className="font-mono text-[11px] text-muted-foreground">{activities.length} activities</span></div>
                     </CardHeader>
                     <CardContent className="space-y-2.5">
                       {activities.map((r) => (
@@ -719,7 +952,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <div className="grid gap-3">
                     <Card className="border-background/10 bg-background/5 backdrop-blur text-background">
                       <CardHeader className="pb-2">
-                        <div className="font-mono text-[11px] tracking-[0.16em] text-background/50">WORKSPACE SWITCHER</div>
+                        <div className="text-[12px] font-medium text-background/60">Workspace switcher</div>
                       </CardHeader>
                       <CardContent className="space-y-2.5">
                         <Popover open={showWsMenuDark} onOpenChange={setShowWsMenuDark}>
@@ -752,7 +985,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     </Card>
                     <Card className="bg-brand text-brand-foreground border-brand shadow-e2">
                       <CardHeader className="pb-2">
-                        <div className="font-mono text-[11px] tracking-[0.14em] text-brand-foreground/70 inline-flex items-center gap-1.5"><ShieldCheck className="size-3" /> PERMISSIONS · RBAC</div>
+                        <div className="text-[12px] font-medium text-brand-foreground/70 inline-flex items-center gap-1.5"><ShieldCheck className="size-3" /> Permissions · RBAC</div>
                         <CardDescription className="text-brand-foreground/85 text-sm leading-5">Every server action checks <Kbd className="bg-background/15 text-brand-foreground border-brand-foreground/20 shadow-none">workspaceId</Kbd> and role — Owner / Admin / Member.</CardDescription>
                       </CardHeader>
                     </Card>
@@ -763,11 +996,14 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           </div>
         </section>
 
+        {/* CALM BREATHER — one line, lots of air, scroll-scrubbed accent */}
+        <CalmStatement />
+
         {/* PRICING — bento cards with featured lift */}
         <section id="pricing" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
           <div className="mx-auto max-w-[720px] text-center">
-            <span className="inline-flex items-center gap-1.5 tracking-[0.1em] text-foreground/70"><Building2 className="size-3" /> PRICING · FOR AHMEDABAD BUILDERS</span>
-            <h2 className="mt-3 text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[36px]">Priced for site, not seat tricks.</h2>
+            <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-foreground/70"><Building2 className="size-3" /> Pricing</span>
+            <h2 className="mt-3 text-[32px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[36px]">Priced for how builders work.</h2>
             <p className="mx-auto mt-3 max-w-[580px] text-[14px] leading-6 text-muted-foreground">All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, WhatsApp gu/hi, and association pool. RERA export anytime — your data, your possession letter.</p>
           </div>
           <div className="mt-10 grid items-start gap-4 overflow-visible pt-4 pb-3 lg:grid-cols-3">
@@ -775,11 +1011,12 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               { name: "Builder", price: "₹1,499", note: "per month · 1 project", receipt: "One site, from enquiry to possession", features: ["1 workspace · 1 project", "Unlimited contacts & deals", "Cost sheet 30s + RERA docs", "GPS + WhatsApp inbox"], cta: "Start Builder", featured: false },
               { name: "Team", price: "₹3,999", note: "per month · up to 6 staff", receipt: "Sales + Accounts + Site — same loop", features: ["3 workspaces · Owners + Sales + Brokers", "Roles: Owner/Admin/Sales/Broker/Viewer", "Invite + brokerScopeFilter + CLP", "NAAR pool trial · gu/hi"], cta: "Start Team — NAAR trial", featured: true },
               { name: "Network", price: "₹7,999", note: "per month · up to 12 staff · multi-site", receipt: "For 2–10 projects without Excel", features: ["Unlimited projects + Buyer portal", "Public sites + enquiry→scored lead", "UPI collection + Tally/PDF export", "Association exchange + referral ledger"], cta: "Set up Network", featured: false },
-            ].map((p) => (
-              <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-all ${p.featured ? "border-brand bg-foreground text-background shadow-e3 lg:-translate-y-2 hover:shadow-e3" : "hover:shadow-e2 hover:border-foreground/20 border-border/60"}`}>
-                {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-brand text-brand-foreground font-mono text-[11px] tracking-[0.12em] px-3 py-1">MOST CHOSEN</span>}
+            ].map((p, i) => (
+              <Reveal key={p.name} delay={i * 90} className="h-full">
+              <Card className={`group relative h-full min-w-0 overflow-visible flex flex-col transition-all duration-300 ${p.featured ? "border-brand bg-foreground text-background shadow-e3 lg:-translate-y-2 hover:shadow-e3" : "hover:-translate-y-1 hover:shadow-e2 hover:border-foreground/20 border-border/60"}`}>
+                {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-brand text-brand-foreground text-[11px] font-medium px-3 py-1">Most chosen</span>}
                 <CardHeader className="relative">
-                  <div className={`font-mono text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
+                  <div className={`text-[13px] font-semibold tracking-tight ${p.featured ? "text-background/70" : "text-muted-foreground"}`}>{p.name}</div>
                   <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 font-mono text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>
                   <div className={`mt-3 border-l-2 pl-3 text-[12px] leading-5 ${p.featured ? "border-brand text-background/70" : "border-brand/40 text-muted-foreground"}`}>{p.receipt}</div>
                 </CardHeader>
@@ -791,6 +1028,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <div className={`text-center font-mono text-[11px] ${p.featured ? "text-background/50" : "text-muted-foreground"}`}>14-day free · cancel anytime</div>
                 </div>
               </Card>
+              </Reveal>
             ))}
           </div>
           <Card className="mt-8 overflow-hidden border-brand/25 bg-brand-soft/50">
@@ -798,7 +1036,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <div className="flex items-center gap-3">
                 <span className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background"><CreditCard className="size-4" /></span>
                 <div>
-                  <div className="flex items-center gap-1.5 font-mono text-[11px] tracking-[0.14em] text-muted-foreground"><ReceiptText className="size-3" /> CHECKOUT, WITHOUT SURPRISES</div>
+                  <div className="flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground"><ReceiptText className="size-3" /> Checkout, without surprises</div>
                   <div className="text-sm font-medium">₹0 today · billing starts after your 14-day trial</div>
                 </div>
               </div>
@@ -812,31 +1050,36 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
             <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
               <div>
-                <span className="inline-flex items-center gap-1.5 tracking-[0.1em] text-foreground/70"><Building2 className="size-3" /> MANIFESTO</span>
+                <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70"><Building2 className="size-3.5 text-brand" /> Why we built it</span>
                 <h2 className="mt-3 text-[28px] font-semibold leading-[1.05] tracking-[-0.02em]">Possession isn&apos;t luck.<br />It&apos;s a loop that closes.</h2>
-                <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Estate360 for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
+                <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">Estate360 is built for how Indian real estate actually runs — 2–10 sites, SG Highway to South Bopal. One workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
                 <div className="mt-6 flex flex-wrap gap-3">
                   <Button className="rounded-full gap-1.5 shadow-sm" render={<Link href={isAuthed ? `/${workspaceSlug}/dashboard` : "/signup"} />}>Enter Estate360 — NAAR demo <ArrowRight className="size-4" /></Button>
                   {!isAuthed && (
                     <Button variant="outline" className="rounded-full bg-card" render={<Link href="/login" />}>Log in</Button>
                   )}
-                  <Button variant="outline" className="rounded-full bg-card" render={<Link href={isAuthed ? `/${workspaceSlug}/dashboard` : "/login"} />}>See Shilp demo (/shilp)</Button>
                 </div>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[
-                  { q: "“Cost sheet in 18s, demand letter while the family is still at the site. That was Excel never.”", a: "— Hemal Shah, Shilp Infra, Director — 3 sites SG Highway" },
-                  { q: "“GPS check-in killed fake visits. Our Site Engineers actually check in now.”", a: "— Nirav Doshi, Safal Corp, Site — 200m verified" },
-                  { q: "“Brokers see only their allocation now. No more ‘who showed that unit?’ fights.”", a: "— Riya Desai, Gala Builders, CP Lead — NAAR exchange" },
-                  { q: "“UPI link in the demand WhatsApp — collections before the 7th, Tally-ready.”", a: "— Accounts, Shilp Infra — CLP 8 milestones" },
-                ].map((t) => (
-                  <Card key={t.q} className="group hover:border-foreground/20 transition-colors border-border/60 overflow-hidden relative">
-                    <CardContent className="p-5 relative">
-                      <div className="text-[15px] font-medium leading-snug tracking-tight">{t.q}</div>
-                      <div className="mt-2 font-mono text-[11px] text-muted-foreground flex items-center gap-1"><Star className="size-3 fill-brand text-brand" /> {t.a}</div>
-                    </CardContent>
-                  </Card>
-                ))}
+              <div>
+                <div className="mb-3 flex items-center gap-2 font-mono text-[11px] tracking-[0.14em] text-muted-foreground">
+                  <span className="rounded-full border border-border/70 bg-card px-2 py-0.5">Illustrative</span>
+                  Sample workspaces — not customer quotes
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    { q: "“Cost sheet in 18s, demand letter while the family is still at the site. That was Excel never.”", a: "Sample — Director, 3-site builder · SG Highway" },
+                    { q: "“GPS check-in killed fake visits. Site Engineers actually check in now.”", a: "Sample — Site Engineer · 200m geofence" },
+                    { q: "“Brokers see only their allocation. No more ‘who showed that unit?’ fights.”", a: "Sample — CP Lead · NAAR exchange" },
+                    { q: "“UPI link in the demand WhatsApp — collections before the 7th, Tally-ready.”", a: "Sample — Accounts · CLP 8 milestones" },
+                  ].map((t) => (
+                    <Card key={t.q} className="group hover:border-foreground/20 transition-colors border-border/60 overflow-hidden relative">
+                      <CardContent className="p-5 relative">
+                        <div className="text-[15px] font-medium leading-snug tracking-tight">{t.q}</div>
+                        <div className="mt-2 font-mono text-[11px] text-muted-foreground flex items-center gap-1"><Star className="size-3 fill-brand text-brand" /> {t.a}</div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
