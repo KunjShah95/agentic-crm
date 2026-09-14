@@ -1,6 +1,3 @@
-"use client"
-
-import { useEffect, useRef, useState, useMemo } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -22,12 +19,9 @@ import {
   ArrowRight,
   LayoutGrid,
   TableIcon,
-  Plus,
   Check,
   TrendingUp,
   ShieldCheck,
-  MousePointer2,
-  Clock3,
   Star,
   ChevronRight,
   Workflow,
@@ -120,229 +114,14 @@ const WORKSPACES = {
 type WsKey = keyof typeof WORKSPACES
 type Props = { workspaceSlug?: string | null; isAuthed: boolean }
 
-/** Stats-bar counter: rolls 0 → value once, the first time it scrolls into view. */
-function CountUp({ value }: { value: number }) {
-  const ref = useRef<HTMLSpanElement>(null)
-  const [n, setN] = useState(0)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setN(value)
-      return
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting) return
-        io.disconnect()
-        const start = performance.now()
-        const step = (t: number) => {
-          const p = Math.min(1, (t - start) / 900)
-          setN(Math.round(value * (1 - Math.pow(1 - p, 3))))
-          if (p < 1) requestAnimationFrame(step)
-        }
-        requestAnimationFrame(step)
-      },
-      { threshold: 0.4 }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [value])
-
-  return (
-    <span ref={ref} className="tabular-nums">
-      {n}
-    </span>
-  )
-}
-
-/** Scroll-reveal: fades + lifts children the first time they enter the
- *  viewport. Honors reduced-motion (renders shown immediately). */
-function Reveal({
-  children,
-  className,
-  delay = 0,
-}: {
-  children: React.ReactNode
-  className?: string
-  delay?: number
-}) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [shown, setShown] = useState(false)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setShown(true)
-      return
-    }
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setShown(true)
-          io.disconnect()
-        }
-      },
-      { threshold: 0.15 }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  return (
-    <div
-      ref={ref}
-      style={{ transitionDelay: `${delay}ms` }}
-      className={`transition-all duration-700 ease-out ${shown ? "translate-y-0 opacity-100" : "translate-y-6 opacity-0"} ${className ?? ""}`}
-    >
-      {children}
-    </div>
-  )
-}
-
-/**
- * Calm breather section — one line, lots of air. The brand accent line under
- * the statement is *scroll-scrubbed*: its width tracks the section's progress
- * through the viewport, so the reveal is tied to intent, not a one-shot fade.
- */
-function CalmStatement() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [progress, setProgress] = useState(0)
-
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      setProgress(1)
-      return
-    }
-    let raf = 0
-    const onScroll = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => {
-        const r = el.getBoundingClientRect()
-        const vh = window.innerHeight
-        // 0 when the section enters low, 1 once it's centered in the viewport.
-        const p = Math.min(1, Math.max(0, (vh * 0.85 - r.top) / (vh * 0.55)))
-        setProgress(p)
-      })
-    }
-    onScroll()
-    window.addEventListener("scroll", onScroll, { passive: true })
-    window.addEventListener("resize", onScroll)
-    return () => {
-      cancelAnimationFrame(raf)
-      window.removeEventListener("scroll", onScroll)
-      window.removeEventListener("resize", onScroll)
-    }
-  }, [])
-
-  return (
-    <section className="border-y bg-background">
-      <div ref={ref} className="mx-auto flex min-h-[52vh] max-w-[900px] flex-col items-center justify-center px-6 py-24 text-center lg:py-32">
-        <p className="text-[13px] font-medium tracking-wide text-muted-foreground" style={{ opacity: 0.4 + progress * 0.6 }}>
-          The whole point
-        </p>
-        <h2 className="mt-6 font-display text-[30px] font-semibold leading-[1.12] tracking-[-0.02em] text-balance sm:text-[42px] lg:text-[48px]">
-          One loop, from the first WhatsApp
-          <br className="hidden sm:block" /> to the possession letter.
-        </h2>
-        <span
-          aria-hidden
-          className="mt-8 block h-[3px] rounded-full bg-brand"
-          style={{ width: `${Math.round(progress * 180)}px` }}
-        />
-      </div>
-    </section>
-  )
-}
-
 export function LandingClient({ workspaceSlug, isAuthed }: Props) {
-  const [activeWs, setActiveWs] = useState<WsKey>("acme")
-  const [deals, setDeals] = useState<Deal[]>(WORKSPACES.acme.deals)
-  const [activities, setActivities] = useState<ActivityItem[]>(WORKSPACES.acme.activities)
-  const [view, setView] = useState<"kanban" | "table">("kanban")
-  const [dragId, setDragId] = useState<string | null>(null)
-  const [dropStage, setDropStage] = useState<Stage | null>(null)
-  const [showWsMenu, setShowWsMenu] = useState(false)
-  const [showWsMenuDark, setShowWsMenuDark] = useState(false)
-  const [toast, setToast] = useState<string | null>(null)
-  const heroRef = useRef<HTMLDivElement>(null)
-  const specimenRef = useRef<HTMLDivElement>(null)
-  const didAutoMove = useRef(false)
+  // Static marketing snapshot — the landing renders one workspace, server-side.
+  // No live simulation (drag/toast/switcher): that shipped a large client bundle
+  // and janked on phones. The demo is now a static picture of the product.
+  const activeWs: WsKey = "acme"
   const ws = WORKSPACES[activeWs]
-
-  const switchWs = (key: WsKey) => {
-    setActiveWs(key)
-    setDeals(WORKSPACES[key].deals)
-    setActivities(WORKSPACES[key].activities)
-    setShowWsMenu(false)
-    setShowWsMenuDark(false)
-    setToast(`Switched to ${WORKSPACES[key].name} · /${WORKSPACES[key].slug}`)
-    setTimeout(() => setToast(null), 2400)
-  }
-
-  useEffect(() => {
-    // TypeUI Premium: cursor spotlight / parallax removed — motion is reserved for state changes
-    const m = window.matchMedia("(prefers-reduced-motion: reduce)")
-    if (m.matches) return
-  }, [])
-
-  // Signature scroll moment: the first time the live specimen scrolls into
-  // view, a Lead card moves itself to Qualified — proving "drag → auto-log"
-  // without the visitor lifting a finger. Fires once, honors reduced-motion.
-  useEffect(() => {
-    const el = specimenRef.current
-    if (!el || didAutoMove.current) return
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || didAutoMove.current) return
-        didAutoMove.current = true
-        io.disconnect()
-        setTimeout(() => {
-          setDeals((prev) => {
-            const lead = prev.find((d) => d.stage === "lead")
-            if (!lead) return prev
-            setActivities((a) => [
-              { id: Math.random().toString(36).slice(2, 7), kind: "stage", title: "Stage lead → qualified", detail: `${lead.title} moved automatically · just now`, time: "now" },
-              ...a.slice(0, 4),
-            ])
-            setToast(`${lead.title} → qualified · auto-logged`)
-            setTimeout(() => setToast(null), 2400)
-            return prev.map((d) => (d.id === lead.id ? { ...d, stage: "qualified" as Stage } : d))
-          })
-        }, 900)
-      },
-      { threshold: 0.55 }
-    )
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
-
-  const moveDeal = (id: string, to: Stage) => {
-    setDeals((prev) => {
-      const deal = prev.find((d) => d.id === id)
-      if (!deal || deal.stage === to) return prev
-      const from = deal.stage
-      const next = prev.map((d) => (d.id === id ? { ...d, stage: to } : d))
-      const entry: ActivityItem = {
-        id: Math.random().toString(36).slice(2, 7),
-        kind: "stage",
-        title: `Stage ${from} → ${to}`,
-        detail: `${deal.title} moved by You · just now`,
-        time: "now",
-      }
-      setActivities((a) => [entry, ...a.slice(0, 4)])
-      setToast(`${deal.title} → ${to} · auto-logged`)
-      setTimeout(() => setToast(null), 2200)
-      return next
-    })
-  }
-
-  const pipelineValue = useMemo(() => deals.reduce((s, d) => s + d.value, 0), [deals])
+  const deals = ws.deals
+  const activities = ws.activities
 
   const stageCols: { key: Stage; label: string; icon: React.ReactNode }[] = [
     { key: "lead", label: "Lead", icon: <Users className="size-3" /> },
@@ -388,19 +167,12 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
     <TooltipProvider>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(landingJsonLd).replace(/</g, "\\u003c") }} />
       <div className="bg-background text-foreground">
-        {/* TOAST — shadcn style */}
-        {toast && (
-          <div className="pointer-events-none fixed bottom-5 left-1/2 z-[80] -translate-x-1/2 rounded-full border bg-foreground px-4 py-2 text-sm font-medium text-background shadow-e3 animate-in fade-in slide-in-from-bottom-2">
-            {toast}
-          </div>
-        )}
-
         <SiteHeader isAuthed={isAuthed} workspaceSlug={workspaceSlug} />
 
         {/* ────────────────────────────────────────────────
            HERO — CRAFTED BACKGROUND + KINETIC TITLE + CTAs
            ──────────────────────────────────────────────── */}
-        <section ref={heroRef} className="relative overflow-hidden">
+        <section className="relative overflow-hidden">
           {/* Signature motion: slow monochrome mesh + cursor-revealed blueprint
               grid. Scrim keeps copy contrast + blends canvas edges into the wash. */}
           <div aria-hidden className="pointer-events-none absolute inset-0 -z-20">
@@ -458,149 +230,27 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 </div>
               </div>
 
-              {/* RIGHT — Live specimen */}
-              <div ref={specimenRef} className="relative lg:pl-2">
-                <div
-                  className="relative overflow-visible rounded-[20px] border bg-card shadow-e3"
-                >
-                  {/* card header */}
-                  <div className="flex items-center justify-between border-b bg-muted/35 px-4 py-3 backdrop-blur">
-                    <div className="flex items-center gap-2">
-                      <span className="flex size-7 items-center justify-center rounded-full bg-foreground text-background text-[11px] shadow-sm">
-                        <Layers className="size-3.5" />
-                      </span>
-                      <div className="relative">
-                        <Popover open={showWsMenu} onOpenChange={setShowWsMenu}>
-                          <PopoverTrigger render={<Button variant="outline" size="sm" className="h-7 rounded-full gap-1.5 text-[11px] font-semibold tracking-[0.06em] bg-card hover:bg-card border-border/60 shadow-sm">
-                              <span className="flex size-5 items-center justify-center rounded-full text-[10px] text-white shadow-sm" style={{ background: ws.color }}>{ws.letter}</span>
-                              {ws.name} <span className="font-mono text-muted-foreground text-[10px]">/{ws.slug}</span> <span className="text-muted-foreground text-[10px]">▾</span>
-                            </Button>} />
-                          <PopoverContent className="w-[260px] p-2" align="start">
-                            <div className="text-[11px] font-medium text-muted-foreground px-2 py-1">Workspaces</div>
-                            {(Object.keys(WORKSPACES) as WsKey[]).map((k) => (
-                              <button
-                                key={k}
-                                onClick={() => switchWs(k)}
-                                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2.5 text-left text-sm hover:bg-accent transition-colors ${k === activeWs ? "bg-accent ring-1 ring-border" : ""}`}
-                              >
-                                <span className="flex size-7 items-center justify-center rounded-full text-xs text-white shadow-sm" style={{ background: WORKSPACES[k].color }}>{WORKSPACES[k].letter}</span>
-                                <span className="font-medium">{WORKSPACES[k].name}</span>
-                                <span className="ml-auto font-mono text-[11px] text-muted-foreground">/{WORKSPACES[k].slug}</span>
-                                {k === activeWs && <Check className="size-3.5 text-brand" />}
-                              </button>
-                            ))}
-                            <Separator className="my-2" />
-                            <div className="px-2 py-1 font-mono text-[11px] text-muted-foreground leading-relaxed">Every query scoped by <span className="text-foreground font-medium">workspaceId</span> — switching re-scopes the whole demo.</div>
-                          </PopoverContent>
-                        </Popover>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <Button
-                        variant={view === "kanban" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 rounded-full text-[12px] gap-1 shadow-sm"
-                        onClick={() => setView("kanban")}
-                      ><LayoutGrid className="size-3" /> Kanban</Button>
-                      <Button
-                        variant={view === "table" ? "default" : "outline"}
-                        size="sm"
-                        className="h-7 rounded-full text-[12px] gap-1"
-                        onClick={() => setView("table")}
-                      ><TableIcon className="size-3" /> Table</Button>
-                    </div>
+              {/* RIGHT — the real product, in a browser frame (hero LCP image) */}
+              <div className="relative lg:pl-2">
+                <div className="relative overflow-hidden rounded-[20px] border bg-card shadow-e3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300 [animation-fill-mode:both]">
+                  {/* browser chrome */}
+                  <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2.5">
+                    <span className="flex gap-1.5">
+                      <span className="size-2.5 rounded-full bg-foreground/15" />
+                      <span className="size-2.5 rounded-full bg-foreground/15" />
+                      <span className="size-2.5 rounded-full bg-foreground/15" />
+                    </span>
+                    <span className="ml-3 hidden rounded-md border bg-card px-3 py-1 font-mono text-[11px] text-muted-foreground sm:block">estate360.app/{ws.slug}/deals</span>
                   </div>
-
-                  {view === "kanban" ? (
-                    <div className="grid grid-cols-3 gap-2 bg-muted/25 p-2.5 backdrop-blur">
-                      {stageCols.map((col) => {
-                        const colDeals = deals.filter((d) => d.stage === col.key)
-                        const isDrop = dropStage === col.key
-                        return (
-                          <div
-                            key={col.key}
-                            onDragOver={(e) => { e.preventDefault(); setDropStage(col.key) }}
-                            onDragLeave={() => setDropStage(null)}
-                            onDrop={(e) => {
-                              e.preventDefault()
-                              const id = e.dataTransfer.getData("text/plain")
-                              if (id) moveDeal(id, col.key)
-                              setDropStage(null); setDragId(null)
-                            }}
-                            className={`rounded-2xl p-2 ring-1 transition-colors ${isDrop ? "bg-brand-soft ring-brand/50" : "bg-muted/25 ring-border hover:ring-border/80"}`}
-                          >
-                            <div className="mb-2 flex items-center justify-between">
-                              <span className="inline-flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">{col.icon} {col.label}</span>
-                              <span className="text-[11px] text-muted-foreground tabular-nums">{colDeals.length}</span>
-                            </div>
-                            <div className="space-y-2">
-                              {colDeals.map((d) => (
-                                <div
-                                  key={d.id}
-                                  draggable
-                                  onDragStart={(e) => { setDragId(d.id); e.dataTransfer.setData("text/plain", d.id); e.dataTransfer.effectAllowed = "move" }}
-                                  onDragEnd={() => { setDragId(null); setDropStage(null) }}
-                                  className={`group animate-in fade-in zoom-in-95 slide-in-from-top-1 duration-300 cursor-grab rounded-xl border bg-card p-3 shadow-sm transition-all active:cursor-grabbing ${dragId === d.id ? "opacity-40 scale-[0.98] border-brand/40" : "border-border hover:border-foreground/25 hover:shadow-md"}`}
-                                >
-                                  <div className="flex items-start justify-between gap-2">
-                                    <div className="text-[13px] font-medium leading-tight tracking-tight">{d.title}</div>
-                                    <span className="hidden size-6 place-items-center rounded-full bg-muted text-[10px] group-hover:grid shrink-0"><MousePointer2 className="size-3" /></span>
-                                  </div>
-                                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">{d.org}</div>
-                                  <div className="mt-2 flex items-center justify-between">
-                                    <span className="font-mono text-[11px] font-semibold tracking-tight text-brand tabular-nums">₹{(d.value / 100000).toFixed(1)}L</span>
-                                    <span className="flex items-center gap-1.5">
-                                      <span className="size-6 rounded-full bg-foreground text-center font-mono text-[10px] leading-6 text-background shadow-sm">{d.owner}</span>
-                                      <Button
-                                        size="sm"
-                                        className="h-6 rounded-full px-2 font-mono text-[10px] opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
-                                        onClick={() => {
-                                          const next = col.key === "lead" ? "qualified" : col.key === "qualified" ? "closing" : "lead"
-                                          moveDeal(d.id, next as Stage)
-                                        }}
-                                      >Move →</Button>
-                                    </span>
-                                  </div>
-                                </div>
-                              ))}
-                              {isDrop && <div className="rounded-xl border-2 border-dashed border-brand/40 bg-brand-soft px-3 py-6 text-center font-mono text-[11px] font-medium text-brand">Drop to {col.label} → auto-log</div>}
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full rounded-xl border-dashed bg-muted/20 font-mono text-[11px] text-muted-foreground hover:text-foreground hover:bg-muted/40 hover:border-solid transition-colors"
-                                onClick={() => { const id = Math.random().toString(36).slice(2,6); const v = 15000+Math.floor(Math.random()*40000); setDeals(d => [...d, { id, title: `New Deal ${id}`, value: v, owner: "ME", stage: col.key, org: ws.name }]); setToast(`Added to ${col.label}`); setTimeout(()=>setToast(null),1500)}}
-                              ><Plus className="size-3" /> Add deal</Button>
-                            </div>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  ) : (
-                    <div className="bg-card p-2.5">
-                      <div className="overflow-hidden rounded-2xl border shadow-sm">
-                        <div className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.5fr] gap-px bg-border font-mono text-[11px] tracking-[0.08em] text-muted-foreground">
-                          <div className="bg-muted/50 px-3 py-2">DEAL</div><div className="bg-muted/50 px-3 py-2">ORG</div><div className="bg-muted/50 px-3 py-2">VALUE</div><div className="bg-muted/50 px-3 py-2">STAGE</div>
-                        </div>
-                        {deals.map((d) => (
-                          <div key={d.id} className="grid grid-cols-[1.4fr_0.7fr_0.7fr_0.5fr] gap-px bg-border text-sm">
-                            <div className="bg-card px-3 py-2.5 font-medium tracking-tight">{d.title}</div>
-                            <div className="bg-card px-3 py-2.5 text-muted-foreground text-xs">{d.org}</div>
-                            <div className="bg-card px-3 py-2.5 font-mono text-brand text-xs tabular-nums">₹{d.value.toLocaleString("en-IN")}</div>
-                            <div className="bg-card px-3 py-2.5">
-                              <select value={d.stage} onChange={(e) => moveDeal(d.id, e.target.value as Stage)} className="rounded-full border bg-muted px-2 py-1 font-mono text-xs focus:outline-none focus:ring-2 focus:ring-ring/40">
-                                <option value="lead">Lead</option><option value="qualified">Qualified</option><option value="closing">Closing</option>
-                              </select>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-3 border-t bg-card px-4 py-3">
-                    <span className="text-[12px] font-medium text-muted-foreground inline-flex items-center gap-1.5"><Clock3 className="size-3" /> Activity</span>
-                    <Separator className="flex-1" />
-                  </div>
+                  <Image
+                    src="/product-deals.png"
+                    alt="Estate360 deals board — live 6-stage pipeline in the /shilp workspace"
+                    width={1262}
+                    height={624}
+                    priority
+                    className="w-full"
+                    sizes="(min-width: 1024px) 620px, 100vw"
+                  />
                 </div>
               </div>
             </div>
@@ -616,7 +266,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 <div key={s.k} className="group relative overflow-hidden bg-card px-6 py-5 hover:bg-muted/40 transition-colors">
                   <span aria-hidden className="pointer-events-none absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-brand/50 to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
                   <div className="relative flex items-center gap-2 text-[12px] font-medium text-muted-foreground"><s.icon className={`size-3 ${s.accent}`} /> {s.k}</div>
-                  <div className="relative mt-1 text-[24px] font-semibold tracking-tight tabular-nums"><CountUp value={s.v} />{s.suffix}</div>
+                  <div className="relative mt-1 text-[24px] font-semibold tracking-tight tabular-nums">{s.v}{s.suffix}</div>
                   <div className="relative text-[12px] text-muted-foreground">{s.sub}</div>
                 </div>
               ))}
@@ -683,7 +333,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     variant="secondary"
                     size="sm"
                     className="mt-3 w-full rounded-full font-medium shadow-sm"
-                    onClick={() => { setToast("Linked 3 contacts → org"); setTimeout(()=>setToast(null),1800)}}
                   >Confirm links <ArrowRight className="size-3.5" /></Button>
                 </div>
               </CardContent>
@@ -699,10 +348,10 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               <CardContent className="relative">
                 <div className="flex flex-wrap gap-2 font-mono text-[11px]">
                   <Tooltip>
-                    <TooltipTrigger render={<Button variant={view==="kanban" ? "default" : "outline"} size="sm" className="rounded-full gap-1 shadow-sm" onClick={() => setView("kanban")}><LayoutGrid className="size-3" /> Kanban · interactive</Button>} />
-                    <TooltipContent>Drag & drop simulation — live above. Also try Table view.</TooltipContent>
+                    <TooltipTrigger render={<Button variant="default" size="sm" className="rounded-full gap-1 shadow-sm"><LayoutGrid className="size-3" /> Kanban</Button>} />
+                    <TooltipContent>Board + table share one source of truth.</TooltipContent>
                   </Tooltip>
-                  <Button variant={view==="table" ? "default" : "outline"} size="sm" className="rounded-full gap-1" onClick={() => setView("table")}><TableIcon className="size-3" /> Table</Button>
+                  <Button variant="outline" size="sm" className="rounded-full gap-1"><TableIcon className="size-3" /> Table</Button>
                   <span className="ml-auto hidden sm:inline-flex items-center gap-1 font-mono text-[11px] text-muted-foreground"><Workflow className="size-3" /> same data</span>
                 </div>
                 <div className="mt-4 grid grid-cols-3 gap-2">
@@ -743,7 +392,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           <span key={a.id} className="font-mono text-[10px] text-muted-foreground">{a.title}</span>
                         ))}
                       </div>
-                      <Button size="sm" className="mt-3 w-full rounded-full gap-1" onClick={() => { const id=Math.random().toString(36).slice(2,6); setActivities(a=>[{ id, kind:"note", title:"Note added", detail:`“Estate360 demo note ${id}” — You · just now`, time:"now"}, ...a.slice(0,4)]); setToast("Note added → timeline"); setTimeout(()=>setToast(null),1500)}}><Plus className="size-3" /> Add demo note</Button>
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -767,34 +415,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               </CardContent>
             </Card>
           </div>
-        </section>
-
-        {/* REAL PRODUCT — actual app screenshot in a browser frame, not a mockup */}
-        <section id="screenshot" className="mx-auto max-w-[1280px] px-6 pb-4 lg:px-8">
-          <div className="mx-auto max-w-[720px] text-center">
-            <span className="inline-flex items-center gap-1.5 text-[13px] text-foreground/70"><LayoutGrid className="size-3.5 text-brand" /> The actual product</span>
-            <h2 className="mt-3 text-[28px] font-semibold leading-[1.05] tracking-[-0.02em] sm:text-[34px]">Not a mockup. This is the app.</h2>
-            <p className="mx-auto mt-3 max-w-[520px] text-[14px] leading-6 text-muted-foreground">The live deals board from the <span className="font-mono text-foreground">/shilp</span> workspace — 6 stages, real pipeline, every drag logged as activity.</p>
-          </div>
-          <Reveal className="relative mx-auto mt-10 max-w-[1080px] overflow-hidden rounded-[16px] border bg-card shadow-e3">
-            {/* browser chrome */}
-            <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2.5">
-              <span className="flex gap-1.5">
-                <span className="size-2.5 rounded-full bg-foreground/15" />
-                <span className="size-2.5 rounded-full bg-foreground/15" />
-                <span className="size-2.5 rounded-full bg-foreground/15" />
-              </span>
-              <span className="ml-3 hidden rounded-md border bg-card px-3 py-1 font-mono text-[11px] text-muted-foreground sm:block">estate360.app/shilp/deals</span>
-            </div>
-            <Image
-              src="/product-deals.png"
-              alt="Estate360 deals board — live 6-stage pipeline in the /shilp workspace"
-              width={1262}
-              height={624}
-              className="w-full"
-              sizes="(min-width: 1024px) 1080px, 100vw"
-            />
-          </Reveal>
         </section>
 
         {/* BOOKING WALKTHROUGH — one killer workflow, enquiry → possession, agent visible */}
@@ -895,8 +515,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                 { role: "Broker / CP", icon: Handshake, kpi: "Scoped % allocation", desc: "Sees only allocated units, commission auto-calc, referral ledger.", featured: false },
                 { role: "Site Engineer", icon: Navigation, kpi: "200m GPS", desc: "Schedule visit, check-in verified, offline PWA on field.", featured: false },
                 { role: "Accounts", icon: ReceiptText, kpi: "Demand 9s", desc: "CLP 8 milestones, RERA {{rera_no}}, UPI link → receipt, Tally CSV.", featured: false },
-              ].map((r, i) => (
-                <Reveal key={r.role} delay={i * 70} className="h-full">
+              ].map((r) => (
+                <div key={r.role} className="h-full">
                   <Card
                     className={`group h-full overflow-hidden transition-all duration-300 hover:-translate-y-1 ${
                       r.featured
@@ -912,7 +532,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                     </CardHeader>
                     <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
                   </Card>
-                </Reveal>
+                </div>
               ))}
             </div>
           </div>
@@ -923,14 +543,14 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
             <div className="mx-auto flex max-w-[720px] flex-col items-center gap-3 text-center">
               <span className="font-display text-[15px] italic text-muted-foreground">Every query scoped to one workspace</span>
-              <h2 className="text-[28px] font-bold tracking-[-0.02em] sm:text-[32px]">One live workspace, re-scoped instantly</h2>
-              <p className="max-w-[520px] text-[14px] leading-6 text-muted-foreground">Switch workspaces below — pipeline, timeline, and search all rebuild. Every action stays logged and filtered by <span className="font-mono text-foreground">workspaceId</span>.</p>
+              <h2 className="text-[28px] font-bold tracking-[-0.02em] sm:text-[32px]">One workspace, cleanly scoped</h2>
+              <p className="max-w-[520px] text-[14px] leading-6 text-muted-foreground">Pipeline, timeline, and search all scope to the active workspace. Every action stays logged and filtered by <span className="font-mono text-foreground">workspaceId</span>.</p>
             </div>
 
             <Card className="mt-10 overflow-hidden border-foreground/10 bg-foreground text-background shadow-e3">
               <CardContent className="p-6 lg:p-8">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-3"><span className="size-2 rounded-full bg-success" aria-hidden /><span className="text-[12px] font-medium text-background/70">Live workspace · {ws.name}</span><Separator orientation="vertical" className="hidden h-4 bg-background/15 sm:block" /><span className="hidden font-mono text-[11px] text-background/50 sm:inline">switch below — pipeline, timeline, search all re-scope</span></div>
+                  <div className="flex items-center gap-3"><span className="size-2 rounded-full bg-success" aria-hidden /><span className="text-[12px] font-medium text-background/70">Live workspace · {ws.name}</span><Separator orientation="vertical" className="hidden h-4 bg-background/15 sm:block" /><span className="hidden font-mono text-[11px] text-background/50 sm:inline">pipeline, timeline, search — all workspace-scoped</span></div>
                   <span className="inline-flex items-center gap-1 font-mono text-[11px] tracking-widest text-background/60"><Workflow className="size-3" /> MULTI-TENANT · SLUG ROUTING</span>
                 </div>
                 <div className="mt-6 grid gap-3 lg:grid-cols-[1.2fr_0.8fr]">
@@ -946,7 +566,6 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                           <span className="ml-auto font-mono text-[11px] text-muted-foreground shrink-0">{r.time}</span>
                         </div>
                       ))}
-                      <Button variant="outline" className="w-full rounded-xl border-dashed font-mono text-xs hover:bg-muted" onClick={() => { const id=Math.random().toString(36).slice(2,6); setActivities(a=>[{ id, kind:"note", title:"Note added", detail:`“Estate360 demo note ${id}” — You · just now`, time:"now"}, ...a.slice(0,4)]); setToast("Note added → timeline"); setTimeout(()=>setToast(null),1500)}}><Plus className="size-3" /> Add note to {ws.name}</Button>
                     </CardContent>
                   </Card>
                   <div className="grid gap-3">
@@ -955,32 +574,20 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                         <div className="text-[12px] font-medium text-background/60">Workspace switcher</div>
                       </CardHeader>
                       <CardContent className="space-y-2.5">
-                        <Popover open={showWsMenuDark} onOpenChange={setShowWsMenuDark}>
-                          <PopoverTrigger render={<Button variant="secondary" className="w-full justify-start gap-2 rounded-xl h-11 shadow-sm">
-                              <span className="flex size-7 items-center justify-center rounded-full text-xs text-white shadow-sm" style={{ background: ws.color }}>{ws.letter}</span>
-                              <span className="text-sm font-medium">{ws.name}</span>
-                              <span className="ml-auto font-mono text-[11px] text-muted-foreground">/{ws.slug} ▾</span>
-                            </Button>} />
-                          <PopoverContent className="w-[280px]" align="start">
-                            {(Object.keys(WORKSPACES) as WsKey[]).map((k) => (
-                              <button key={k} onClick={() => switchWs(k)} className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm hover:bg-accent transition-colors ${k===activeWs ? "bg-accent ring-1 ring-border" : ""}`}>
-                                <span className="flex size-7 items-center justify-center rounded-full text-xs text-white" style={{ background: WORKSPACES[k].color }}>{WORKSPACES[k].letter}</span>
-                                <span>{WORKSPACES[k].name}</span><span className="ml-auto font-mono text-[11px] text-muted-foreground">/{WORKSPACES[k].slug}</span>{k===activeWs && <Check className="size-4 text-brand" />}
-                              </button>
-                            ))}
-                            <Separator className="my-2" />
-                            <div className="font-mono text-[11px] text-muted-foreground leading-relaxed">All data re-scopes — pipeline, timeline, and search rebuild instantly.</div>
-                          </PopoverContent>
-                        </Popover>
+                        <div className="flex w-full items-center gap-2 rounded-xl bg-background/10 px-3 py-2.5 shadow-sm">
+                          <span className="flex size-7 items-center justify-center rounded-full text-xs text-white shadow-sm" style={{ background: ws.color }}>{ws.letter}</span>
+                          <span className="text-sm font-medium">{ws.name}</span>
+                          <span className="ml-auto font-mono text-[11px] text-background/60">/{ws.slug}</span>
+                        </div>
                         <div className="space-y-1.5">
                           {(Object.keys(WORKSPACES) as WsKey[]).filter(k=>k!==activeWs).slice(0,2).map(k=> (
-                            <button key={k} onClick={()=>switchWs(k)} className="flex w-full items-center gap-2 rounded-xl bg-background/10 px-3 py-2.5 text-left text-background/80 hover:bg-background/15 transition-colors border border-background/5">
+                            <div key={k} className="flex w-full items-center gap-2 rounded-xl bg-background/10 px-3 py-2.5 text-background/80 border border-background/5">
                               <span className="flex size-7 items-center justify-center rounded-full bg-background/15 text-xs">{WORKSPACES[k].letter}</span>
                               <span className="text-sm">{WORKSPACES[k].name}</span><span className="ml-auto font-mono text-[11px]">/{WORKSPACES[k].slug}</span>
-                            </button>
+                            </div>
                           ))}
                         </div>
-                        <div className="font-mono text-[11px] leading-4 text-background/50">Click to switch — pipeline, timeline, and search all update. Every query filtered by <span className="text-background font-medium">workspaceId</span>.</div>
+                        <div className="font-mono text-[11px] leading-4 text-background/50">Every query filtered by <span className="text-background font-medium">workspaceId</span> — pipeline, timeline, and search all scope to the active workspace.</div>
                       </CardContent>
                     </Card>
                     <Card className="bg-brand text-brand-foreground border-brand shadow-e2">
@@ -996,8 +603,17 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
           </div>
         </section>
 
-        {/* CALM BREATHER — one line, lots of air, scroll-scrubbed accent */}
-        <CalmStatement />
+        {/* CALM BREATHER — one line, lots of air */}
+        <section className="border-y bg-background">
+          <div className="mx-auto flex min-h-[52vh] max-w-[900px] flex-col items-center justify-center px-6 py-24 text-center lg:py-32">
+            <p className="text-[13px] font-medium tracking-wide text-muted-foreground">The whole point</p>
+            <h2 className="mt-6 font-display text-[30px] font-semibold leading-[1.12] tracking-[-0.02em] text-balance sm:text-[42px] lg:text-[48px]">
+              One loop, from the first WhatsApp
+              <br className="hidden sm:block" /> to the possession letter.
+            </h2>
+            <span aria-hidden className="mt-8 block h-[3px] w-[180px] rounded-full bg-brand" />
+          </div>
+        </section>
 
         {/* PRICING — bento cards with featured lift */}
         <section id="pricing" className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8 lg:py-20">
@@ -1011,8 +627,8 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
               { name: "Builder", price: "₹1,499", note: "per month · 1 project", receipt: "One site, from enquiry to possession", features: ["1 workspace · 1 project", "Unlimited contacts & deals", "Cost sheet 30s + RERA docs", "GPS + WhatsApp inbox"], cta: "Start Builder", featured: false },
               { name: "Team", price: "₹3,999", note: "per month · up to 6 staff", receipt: "Sales + Accounts + Site — same loop", features: ["3 workspaces · Owners + Sales + Brokers", "Roles: Owner/Admin/Sales/Broker/Viewer", "Invite + brokerScopeFilter + CLP", "NAAR pool trial · gu/hi"], cta: "Start Team — NAAR trial", featured: true },
               { name: "Network", price: "₹7,999", note: "per month · up to 12 staff · multi-site", receipt: "For 2–10 projects without Excel", features: ["Unlimited projects + Buyer portal", "Public sites + enquiry→scored lead", "UPI collection + Tally/PDF export", "Association exchange + referral ledger"], cta: "Set up Network", featured: false },
-            ].map((p, i) => (
-              <Reveal key={p.name} delay={i * 90} className="h-full">
+            ].map((p) => (
+              <div key={p.name} className="h-full">
               <Card className={`group relative h-full min-w-0 overflow-visible flex flex-col transition-all duration-300 ${p.featured ? "border-brand bg-foreground text-background shadow-e3 lg:-translate-y-2 hover:shadow-e3" : "hover:-translate-y-1 hover:shadow-e2 hover:border-foreground/20 border-border/60"}`}>
                 {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-brand text-brand-foreground text-[11px] font-medium px-3 py-1">Most chosen</span>}
                 <CardHeader className="relative">
@@ -1028,7 +644,7 @@ export function LandingClient({ workspaceSlug, isAuthed }: Props) {
                   <div className={`text-center font-mono text-[11px] ${p.featured ? "text-background/50" : "text-muted-foreground"}`}>14-day free · cancel anytime</div>
                 </div>
               </Card>
-              </Reveal>
+              </div>
             ))}
           </div>
           <Card className="mt-8 overflow-hidden border-brand/25 bg-brand-soft/50">

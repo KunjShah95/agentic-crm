@@ -129,6 +129,98 @@ export class WADirectProvider implements SocialProvider {
     return verifyWAWebhook(request)
   }
 
+  async registerWebhook(params: { accessToken: string; workspaceId: string; webhookUrl: string; provider: string }): Promise<{ ok: boolean; id?: string }> {
+    // WhatsApp Cloud inbound requires two Graph API steps:
+    //   1. App-level subscription — registers the callback URL + verify token so Meta
+    //      delivers events. Uses an app access token ({app-id}|{app-secret}).
+    //   2. WABA subscribed_apps — subscribes this app to a specific WhatsApp Business
+    //      Account's events. Uses the connection's user access token.
+    // Both are best-effort: failure is logged, never blocks the connection.
+    const appId = process.env.WHATSAPP_APP_ID ?? process.env.FACEBOOK_APP_ID ?? ""
+    const appSecret = process.env.WHATSAPP_APP_SECRET ?? process.env.WA_APP_SECRET ?? ""
+    const wabaId =
+      process.env.WHATSAPP_BUSINESS_ACCOUNT_ID ?? process.env.WA_BUSINESS_ACCOUNT_ID ?? ""
+    const verifyToken = process.env.WHATSAPP_VERIFY_TOKEN ?? process.env.WA_VERIFY_TOKEN ?? "estate360_wa_verify"
+    const base = "https://graph.facebook.com/v19.0"
+
+    if (!params.accessToken || (!appId && !wabaId)) return { ok: false }
+
+    let appSubscribed = false
+    try {
+      // Step 1 — app-level subscription (registers the callback URL with Meta).
+      if (appId && appSecret) {
+        const appToken = `${appId}|${appSecret}`
+        const body = new URLSearchParams({
+          object: "whatsapp_business_account",
+          callback_url: params.webhookUrl,
+          verify_token: verifyToken,
+          fields: "messages",
+          access_token: appToken,
+        })
+        const reg = await fetch(`${base}/${appId}/subscriptions`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        })
+        if (reg.ok) {
+          appSubscribed = true
+        } else {
+          console.warn(`[wa-register-webhook] app subscription failed: ${reg.status} ${await reg.text()}`)
+        }
+      }
+
+      // Step 2 — subscribe this app to the WABA so its events start flowing.
+      if (wabaId) {
+        const sub = await fetch(`${base}/${wabaId}/subscribed_apps`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${params.accessToken}` },
+        })
+        if (sub.ok) {
+          return { ok: true, id: wabaId }
+        }
+        console.warn(`[wa-register-webhook] WABA subscribe failed: ${sub.status} ${await sub.text()}`)
+      }
+
+      return { ok: appSubscribed }
+    } catch (err) {
+      console.error("[wa-register-webhook] error", err)
+      return { ok: false }
+    }
+  }
+
+  async sendMessage(params: { accessToken: string; to: string; body: string }): Promise<{ id: string }> {
+    // WhatsApp Cloud: POST /{phone-number-id}/messages
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID ?? ""
+    if (!phoneNumberId || !params.accessToken) {
+      return { id: `wa_msg_mock_${Date.now()}` }
+    }
+    try {
+      const res = await fetch(
+        `https://graph.facebook.com/v19.0/${phoneNumberId}/messages`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${params.accessToken}`,
+          },
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            to: params.to,
+            type: "text",
+            text: { body: params.body },
+          }),
+        }
+      )
+      if (res.ok) {
+        const data = (await res.json()) as { messages?: Array<{ id?: string }> }
+        return { id: data.messages?.[0]?.id ?? `wa_msg_${Date.now()}` }
+      }
+    } catch {
+      // fall through to mock
+    }
+    return { id: `wa_msg_mock_${Date.now()}` }
+  }
+
   normalize(payload: unknown): SocialNormalized {
     const p = payload as Record<string, unknown>
     const nowIso = new Date().toISOString()

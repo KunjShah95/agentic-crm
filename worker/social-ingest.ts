@@ -271,7 +271,17 @@ export async function ingestSocialEvent(params: IngestSocialEventParams): Promis
     // Identity resolve (inside tx)
     const contact = await resolveOrCreateContact(workspaceId, normalizedProvider, fromHandle, displayName, tx as unknown as Parameters<Parameters<typeof db.$transaction>[0]>[0])
 
-    // Create Activity linked to social event
+    // Create Activity linked to social event — set channel so it shows in unified inbox
+    const providerChannel = {
+      x: "X" as const,
+      twitter: "X" as const,
+      linkedin: "LINKEDIN" as const,
+      li: "LINKEDIN" as const,
+      unipile: "LINKEDIN" as const,
+      whatsapp: "WHATSAPP" as const,
+      wa: "WHATSAPP" as const,
+    }[normalizedProvider] ?? "SOCIAL" as const
+
     const activity = await (tx as unknown as typeof db).activity.create({
       data: {
         workspaceId,
@@ -281,6 +291,8 @@ export async function ingestSocialEvent(params: IngestSocialEventParams): Promis
         source: "social",
         socialEventId,
         createdBy: "system:social",
+        channel: providerChannel,
+        direction: "IN",
       },
       select: { id: true },
     })

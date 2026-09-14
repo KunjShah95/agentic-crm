@@ -3,7 +3,7 @@ import { XDirectProvider } from "./providers/x"
 import { WADirectProvider } from "./providers/whatsapp"
 import { LIUnipileProvider } from "./providers/linkedin-unipile"
 
-export type ProviderName = "x" | "twitter" | "whatsapp" | "wa" | "linkedin" | "li" | "unipile" | "linkedin-unipile"
+
 
 const providerMap: Record<string, new () => SocialProvider> = {
   x: XDirectProvider,

@@ -46,4 +46,34 @@ export interface SocialProvider {
   }): boolean | Promise<boolean>
 
   normalize(payload: unknown): SocialNormalized
+
+  /**
+   * Optional: send an outbound DM/message via the provider.
+   * Only implemented for providers that support outbound messaging.
+   */
+  sendDm?(params: {
+    accessToken: string
+    to: string
+    body: string
+  }): Promise<{ id: string }>
+
+  /**
+   * Optional: send a message (generic alias for providers that don't use "DM" terminology).
+   */
+  sendMessage?(params: {
+    accessToken: string
+    to: string
+    body: string
+  }): Promise<{ id: string }>
+
+  /**
+   * Optional: register the workspace webhook URL with the provider.
+   * Called after OAuth connection to enable inbound event delivery.
+   */
+  registerWebhook?(params: {
+    accessToken: string
+    workspaceId: string
+    webhookUrl: string
+    provider: string
+  }): Promise<{ ok: boolean; id?: string }>
 }

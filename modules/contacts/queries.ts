@@ -71,7 +71,10 @@ export async function getContactDetail(workspaceId: string, contactId: string) {
         orderBy: { updatedAt: "desc" },
       },
       activities: {
-        include: { deal: { select: { id: true, title: true } } },
+        include: {
+          deal: { select: { id: true, title: true } },
+          socialEvent: { select: { provider: true, type: true } },
+        },
         orderBy: { createdAt: "desc" },
       },
     },
