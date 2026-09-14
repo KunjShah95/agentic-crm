@@ -30,6 +30,7 @@ type Task = {
   createdAt: Date
   contact: { id: string; firstName: string; lastName: string } | null
   deal: { id: string; title: string } | null
+  assigneeName?: string | null
 }
 
 export function TaskList({
@@ -111,6 +112,11 @@ export function TaskList({
                   </span>
                 )}
                 <span>created {relativeTime(task.createdAt)}</span>
+                {task.assigneeName && (
+                  <span className="inline-flex items-center gap-1">
+                    · {task.assigneeName}
+                  </span>
+                )}
               </p>
             </div>
             <div className="flex shrink-0 flex-wrap justify-end gap-1">

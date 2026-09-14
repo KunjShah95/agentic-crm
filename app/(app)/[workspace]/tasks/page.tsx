@@ -39,18 +39,30 @@ export default async function TasksPage({
     : null
   if (!membership) notFound()
 
-  const tasks = await db.activity.findMany({
-    where: {
-      workspaceId: workspace.id,
-      type: "TASK",
-      assigneeId: session!.user!.id,
-    },
-    include: {
-      contact: { select: { id: true, firstName: true, lastName: true } },
-      deal: { select: { id: true, title: true } },
-    },
-    orderBy: [{ completedAt: "asc" }, { scheduledAt: "asc" }],
-  })
+  const [rawTasks, members] = await Promise.all([
+    db.activity.findMany({
+      where: {
+        workspaceId: workspace.id,
+        type: "TASK",
+      },
+      include: {
+        contact: { select: { id: true, firstName: true, lastName: true } },
+        deal: { select: { id: true, title: true } },
+      },
+      orderBy: [{ completedAt: "asc" }, { scheduledAt: "asc" }],
+    }),
+    db.workspaceMember.findMany({
+      where: { workspaceId: workspace.id },
+      select: { user: { select: { id: true, name: true } } },
+    }),
+  ])
+
+  // assigneeId is a bare scalar (no relation), so resolve names via a map.
+  const nameById = new Map(members.map((m) => [m.user.id, m.user.name]))
+  const tasks = rawTasks.map((t) => ({
+    ...t,
+    assigneeName: t.assigneeId ? nameById.get(t.assigneeId) ?? null : null,
+  }))
 
   const open = tasks.filter((t) => !t.completedAt)
   const completed = tasks.filter((t) => t.completedAt)
@@ -65,7 +77,7 @@ export default async function TasksPage({
         <div className="relative flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · assigned to you</p>
+            <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · across the workspace</p>
           </div>
           <NewTaskDialog workspaceId={workspace.id} />
         </div>
@@ -78,7 +90,7 @@ export default async function TasksPage({
             <span className="flex size-8 items-center justify-center rounded-lg bg-brand/10 text-brand"><Circle className="size-4" /></span>
             <div>
               <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 font-mono text-[11px] text-white">{open.length}</span></CardTitle>
-              <CardDescription>To-dos assigned to you</CardDescription>
+              <CardDescription>Open to-dos across the workspace</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
