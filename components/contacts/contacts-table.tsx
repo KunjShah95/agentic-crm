@@ -6,7 +6,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { toast } from "sonner"
 import {
   Download,
+  Filter,
   MoreHorizontal,
+  Phone,
   Search,
   Tag as TagIcon,
   UserRound,
@@ -140,6 +142,7 @@ export function ContactsTable({
   const [exporting, setExporting] = React.useState(false)
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [assignOwnerId, setAssignOwnerId] = React.useState<string>("")
+  const [filtersOpen, setFiltersOpen] = React.useState(false)
 
   // Debounced search → URL
   React.useEffect(() => {
@@ -255,98 +258,112 @@ export function ContactsTable({
   return (
     <div className="flex flex-col gap-4">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-56 flex-1">
-          <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search contacts…"
-            className="pl-8"
+      <div className="flex flex-col gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative min-w-56 flex-1">
+            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search contacts…"
+              className="pl-8"
+            />
+          </div>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 md:hidden"
+            onClick={() => setFiltersOpen((o) => !o)}
+          >
+            <Filter className="size-3.5" />
+            Filters
+          </Button>
+
+          <div className={cn("flex flex-wrap items-center gap-2", "max-md:w-full", !filtersOpen && "max-md:hidden")}>
+            <Select
+              value={filters.organizationId ?? "all"}
+              onValueChange={(v) => updateParam("org", v)}
+            >
+              <SelectTrigger className="w-auto gap-2">
+                <SelectValue placeholder="Company" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All companies</SelectItem>
+                {orgs.map((org) => (
+                  <SelectItem key={org.id} value={org.id}>
+                    {org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.tagId ?? "all"}
+              onValueChange={(v) => updateParam("tag", v)}
+            >
+              <SelectTrigger className="w-auto gap-2">
+                <SelectValue placeholder="Tag" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All tags</SelectItem>
+                {tags.map((tag) => (
+                  <SelectItem key={tag.id} value={tag.id}>
+                    {tag.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.ownerId ?? "all"}
+              onValueChange={(v) => updateParam("owner", v)}
+            >
+              <SelectTrigger className="w-auto gap-2">
+                <SelectValue placeholder="Owner" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All owners</SelectItem>
+                {members.map((m) => (
+                  <SelectItem key={m.user.id} value={m.user.id}>
+                    {m.user.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={filters.sort ?? "newest"}
+              onValueChange={(v) => updateParam("sort", v)}
+            >
+              <SelectTrigger className="w-auto gap-2">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="newest">Newest first</SelectItem>
+                <SelectItem value="oldest">Oldest first</SelectItem>
+                <SelectItem value="name">Name A→Z</SelectItem>
+                <SelectItem value="updated">Recently updated</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <Button variant="outline" size="icon" onClick={() => runExport()} disabled={exporting}>
+            <Download />
+            <span className="sr-only">Export CSV</span>
+          </Button>
+
+          <ContactFormDialog
+            workspaceId={workspaceId}
+            organizations={orgs}
+            trigger={
+              <Button size="sm">
+                <Users data-icon="inline-start" />
+                Add contact
+              </Button>
+            }
           />
         </div>
-
-        <Select
-          value={filters.organizationId ?? "all"}
-          onValueChange={(v) => updateParam("org", v)}
-        >
-          <SelectTrigger className="w-auto gap-2">
-            <SelectValue placeholder="Company" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All companies</SelectItem>
-            {orgs.map((org) => (
-              <SelectItem key={org.id} value={org.id}>
-                {org.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.tagId ?? "all"}
-          onValueChange={(v) => updateParam("tag", v)}
-        >
-          <SelectTrigger className="w-auto gap-2">
-            <SelectValue placeholder="Tag" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All tags</SelectItem>
-            {tags.map((tag) => (
-              <SelectItem key={tag.id} value={tag.id}>
-                {tag.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.ownerId ?? "all"}
-          onValueChange={(v) => updateParam("owner", v)}
-        >
-          <SelectTrigger className="w-auto gap-2">
-            <SelectValue placeholder="Owner" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All owners</SelectItem>
-            {members.map((m) => (
-              <SelectItem key={m.user.id} value={m.user.id}>
-                {m.user.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <Select
-          value={filters.sort ?? "newest"}
-          onValueChange={(v) => updateParam("sort", v)}
-        >
-          <SelectTrigger className="w-auto gap-2">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="newest">Newest first</SelectItem>
-            <SelectItem value="oldest">Oldest first</SelectItem>
-            <SelectItem value="name">Name A→Z</SelectItem>
-            <SelectItem value="updated">Recently updated</SelectItem>
-          </SelectContent>
-        </Select>
-
-        <Button variant="outline" size="icon" onClick={() => runExport()} disabled={exporting}>
-          <Download />
-          <span className="sr-only">Export CSV</span>
-        </Button>
-
-        <ContactFormDialog
-          workspaceId={workspaceId}
-          organizations={orgs}
-          trigger={
-            <Button size="sm">
-              <Users data-icon="inline-start" />
-              Add contact
-            </Button>
-          }
-        />
       </div>
 
       {/* Bulk action bar */}
@@ -381,19 +398,17 @@ export function ContactsTable({
           <EmptyMedia variant="icon">
             <Users />
           </EmptyMedia>
-          <EmptyTitle>No contacts found</EmptyTitle>
+          <EmptyTitle>No contacts yet</EmptyTitle>
           <EmptyDescription>
             {filters.q || filters.tagId || filters.organizationId || filters.ownerId
-              ? "Try clearing some filters, or add a new contact."
-              : "Add your first contact to get started."}
+              ? "No contacts match your filters. Try clearing them, or add a new contact."
+              : "Add your first contact to start building your pipeline. You can import from CSV too."}
           </EmptyDescription>
-          {!filters.q && (
-            <ContactFormDialog
-              workspaceId={workspaceId}
-              organizations={orgs}
-              trigger={<Button>Add contact</Button>}
-            />
-          )}
+          <ContactFormDialog
+            workspaceId={workspaceId}
+            organizations={orgs}
+            trigger={<Button>Add your first contact</Button>}
+          />
         </Empty>
       ) : (
         <div className="overflow-hidden rounded-xl border bg-card">
@@ -408,6 +423,7 @@ export function ContactsTable({
                   />
                 </TableHead>
                 <TableHead>Name</TableHead>
+                <TableHead className="hidden sm:table-cell">Phone</TableHead>
                 <TableHead className="hidden md:table-cell">Company</TableHead>
                 <TableHead className="hidden lg:table-cell">Tags</TableHead>
                 <TableHead className="hidden lg:table-cell">Owner</TableHead>
@@ -453,6 +469,20 @@ export function ContactsTable({
                           </p>
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell">
+                      {contact.phone ? (
+                        <a
+                          href={`tel:${contact.phone}`}
+                          onClick={(e) => e.stopPropagation()}
+                          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-brand transition-colors"
+                        >
+                          <Phone className="size-3.5" />
+                          {contact.phone}
+                        </a>
+                      ) : (
+                        <span className="text-sm text-muted-foreground/50">—</span>
+                      )}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {contact.organization ? (

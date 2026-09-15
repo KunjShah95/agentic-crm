@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { LoaderCircle, Pencil, Plus } from "lucide-react"
+import { ChevronDown, ChevronUp, LoaderCircle, Pencil, Plus } from "lucide-react"
 
 import { createDealAction, updateDealAction } from "@/lib/actions/deals"
 import { Button } from "@/components/ui/button"
@@ -84,6 +84,7 @@ export function DealFormDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [showAdvanced, setShowAdvanced] = useState(!!deal)
 
   function toDateInput(d: Date | null | undefined) {
     return d ? new Date(d).toISOString().slice(0, 10) : ""
@@ -116,12 +117,13 @@ export function DealFormDialog({
       }
       toast.success(deal ? "Deal updated" : "Deal created")
       setOpen(false)
+      setShowAdvanced(!!deal)
       router.refresh()
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) setShowAdvanced(!!deal) }}>
       <DialogTrigger
         render={
           trigger ?? (
@@ -134,8 +136,10 @@ export function DealFormDialog({
       />
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>{deal ? "Edit deal" : "Create a deal"}</DialogTitle>
-          <DialogDescription>Add an opportunity to the pipeline.</DialogDescription>
+          <DialogTitle>{deal ? "Edit deal" : "Add a new deal"}</DialogTitle>
+          <DialogDescription>
+            {deal ? "Update deal details below." : "Give it a name, pick a stage, and add a value. You can fill in more details later."}
+          </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <FieldGroup>
@@ -144,7 +148,7 @@ export function DealFormDialog({
               <Input
                 id="title"
                 name="title"
-                placeholder="Skyline Residences — 3BHK A-1204"
+                placeholder="e.g. Skyline Residences — 3BHK A-1204"
                 defaultValue={deal?.title}
                 required
               />
@@ -177,96 +181,9 @@ export function DealFormDialog({
                   type="number"
                   min={0}
                   step="any"
-                  placeholder="12000"
+                  placeholder="e.g. 12000000"
                   defaultValue={deal?.value?.toString() ?? ""}
                 />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field>
-                <FieldLabel>Currency</FieldLabel>
-                <Select name="currency" defaultValue={deal?.currency ?? "INR"}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {CURRENCIES.map((c) => (
-                      <SelectItem key={c} value={c}>
-                        {c}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="probability">Probability (%)</FieldLabel>
-                <Input
-                  id="probability"
-                  name="probability"
-                  type="number"
-                  min={0}
-                  max={100}
-                  defaultValue={deal?.probability?.toString() ?? ""}
-                />
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field>
-                <FieldLabel htmlFor="expectedCloseDate">Expected close</FieldLabel>
-                <Input
-                  id="expectedCloseDate"
-                  name="expectedCloseDate"
-                  type="date"
-                  defaultValue={toDateInput(deal?.expectedCloseDate)}
-                />
-              </Field>
-              <Field>
-                <FieldLabel>Owner</FieldLabel>
-                <Select name="ownerId" defaultValue={deal?.ownerId ?? ""}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="You" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {members.map((m) => (
-                      <SelectItem key={m.user.id} value={m.user.id}>
-                        {m.user.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field>
-                <FieldLabel>Deal type</FieldLabel>
-                <Select name="dealType" defaultValue={deal?.dealType ?? ""}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Auto (from unit)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">Auto (from unit)</SelectItem>
-                    {DEAL_TYPE_OPTIONS.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-              <Field>
-                <FieldLabel>Selling urgency</FieldLabel>
-                <Select name="urgency" defaultValue={deal?.urgency ?? "NORMAL"}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {URGENCY_OPTIONS.map((u) => (
-                      <SelectItem key={u.value} value={u.value}>
-                        {u.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </Field>
             </div>
             <div className="grid grid-cols-2 gap-3">
@@ -274,7 +191,7 @@ export function DealFormDialog({
                 <FieldLabel>Contact</FieldLabel>
                 <Select name="contactId" defaultValue={deal?.contactId ?? ""}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="No contact" />
+                    <SelectValue placeholder="Select contact" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No contact</SelectItem>
@@ -293,7 +210,7 @@ export function DealFormDialog({
                   defaultValue={deal?.organizationId ?? ""}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder="No company" />
+                    <SelectValue placeholder="Select company" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">No company</SelectItem>
@@ -306,6 +223,112 @@ export function DealFormDialog({
                 </Select>
               </Field>
             </div>
+
+            {/* Advanced section toggle */}
+            {!deal && (
+              <button
+                type="button"
+                onClick={() => setShowAdvanced((s) => !s)}
+                className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors mt-1"
+              >
+                {showAdvanced ? <ChevronUp className="size-4" /> : <ChevronDown className="size-4" />}
+                {showAdvanced ? "Less options" : "More options"}
+              </button>
+            )}
+
+            {/* Advanced fields - shown when expanded or when editing */}
+            {showAdvanced && (
+              <div className="flex flex-col gap-3 pt-2 border-t border-border/50">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    <FieldLabel>Currency</FieldLabel>
+                    <Select name="currency" defaultValue={deal?.currency ?? "INR"}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {CURRENCIES.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor="probability">Win chance (%)</FieldLabel>
+                    <Input
+                      id="probability"
+                      name="probability"
+                      type="number"
+                      min={0}
+                      max={100}
+                      placeholder="e.g. 75"
+                      defaultValue={deal?.probability?.toString() ?? ""}
+                    />
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    <FieldLabel htmlFor="expectedCloseDate">Expected close</FieldLabel>
+                    <Input
+                      id="expectedCloseDate"
+                      name="expectedCloseDate"
+                      type="date"
+                      defaultValue={toDateInput(deal?.expectedCloseDate)}
+                    />
+                  </Field>
+                  <Field>
+                    <FieldLabel>Owner</FieldLabel>
+                    <Select name="ownerId" defaultValue={deal?.ownerId ?? ""}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="You" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {members.map((m) => (
+                          <SelectItem key={m.user.id} value={m.user.id}>
+                            {m.user.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Field>
+                    <FieldLabel>Deal type</FieldLabel>
+                    <Select name="dealType" defaultValue={deal?.dealType ?? ""}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Auto (from unit)" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Auto (from unit)</SelectItem>
+                        {DEAL_TYPE_OPTIONS.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                  <Field>
+                    <FieldLabel>Urgency</FieldLabel>
+                    <Select name="urgency" defaultValue={deal?.urgency ?? "NORMAL"}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {URGENCY_OPTIONS.map((u) => (
+                          <SelectItem key={u.value} value={u.value}>
+                            {u.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </Field>
+                </div>
+              </div>
+            )}
           </FieldGroup>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>

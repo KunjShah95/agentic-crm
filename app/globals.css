@@ -92,7 +92,7 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.75rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.58 0.16 68);
@@ -170,6 +170,39 @@
   .tabular-nums, table, td, th {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: oklch(0.70 0.004 70);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.58 0.006 60);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: oklch(0.35 0.004 60);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: oklch(0.45 0.006 60);
+}
+
+/* Focus-visible ring for interactive elements */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+[role="button"]:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 /* TypeUI Premium: motion is transform/opacity, ≤250ms, and earns its place.

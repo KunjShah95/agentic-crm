@@ -10,12 +10,10 @@ import {
   CheckSquare,
   ChevronsLeft,
   ChevronsRight,
-  // FileText, // re-enable with the Documents nav item
   Handshake,
   KanbanSquare,
   KeyRound,
   LayoutDashboard,
-  // MessageSquare, // re-enable with the Inbox nav item
   Settings,
   Share2,
   Sparkles,
@@ -29,13 +27,11 @@ const NAV = [
   { href: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "contacts", label: "Contacts", icon: Users },
   { href: "deals", label: "Deals", icon: KanbanSquare },
-  { href: "organizations", label: "Organizations", icon: Building2 },
   { href: "projects", label: "Projects", icon: Building2 },
   { href: "bookings", label: "Bookings", icon: KeyRound },
   { href: "site-visits", label: "Site Visits", icon: CalendarCheck },
+  { href: "organizations", label: "Organizations", icon: Building2 },
   { href: "channel-partners", label: "Brokers", icon: Handshake },
-  // { href: "documents", label: "Documents", icon: FileText },
-  // { href: "inbox", label: "Inbox", icon: MessageSquare }, // Inbox removed (WhatsApp integration parked)
   { href: "tasks", label: "Tasks", icon: CheckSquare },
   { href: "reports", label: "Reports", icon: BarChart3 },
   { href: "ai", label: "AI", icon: Sparkles },
@@ -129,7 +125,6 @@ export function Sidebar({
                 {workspace.name.slice(0, 2).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1 truncate text-xs font-medium">{workspace.name}</span>
-              <span className="rounded-full bg-emerald-500/10 px-1.5 py-0.5 font-mono text-[10px] text-emerald-700 dark:text-emerald-300">LIVE</span>
             </div>
           </>
         )}
@@ -158,25 +153,6 @@ export function Sidebar({
         })}
 
         <div className="mt-auto flex shrink-0 flex-col gap-1 pt-3 border-t border-sidebar-border/60">
-          {/*
-            <Link
-              href={`/${workspace.slug}/settings/social`}
-              title={collapsed ? "WhatsApp" : undefined}
-              className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
-                collapsed && "justify-center px-0",
-                pathname.includes("/settings/social") &&
-                  "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-xs border-l-2 border-brand",
-                pathname.includes("/settings/social") && !collapsed && "pl-2"
-              )}
-            >
-              <Share2 className={cn("size-4 shrink-0 transition-colors", pathname.includes("/settings/social") ? "text-brand" : "text-muted-foreground")} />
-              {!collapsed && <span>WhatsApp</span>}
-            </Link>
-          */}
-          {/* WhatsApp settings is reachable from Settings → Integrations; re-enable
-              the item above (and the Share2 import if it goes stale) to surface it
-              in the sidebar again. */}
           <Link
             href={`/${workspace.slug}/settings`}
             title={collapsed ? "Settings" : undefined}

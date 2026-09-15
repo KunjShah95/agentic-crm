@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Fragment } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { KanbanSquare, Table as TableIcon } from "lucide-react"
+import { KanbanSquare, Search, Table as TableIcon } from "lucide-react"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
@@ -87,7 +87,7 @@ export default async function DealsPage({
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-[22px] font-semibold tracking-tight">Deals</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{pipeline.stages.length} stages · {pipeline.deals.length} deals · every drag is logged as activity</p>
+            <p className="mt-1 text-sm text-muted-foreground">{pipeline.deals.length} deal{pipeline.deals.length !== 1 ? "s" : ""} across {pipeline.stages.length} stage{pipeline.stages.length !== 1 ? "s" : ""} · drag to update status</p>
           </div>
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded-full border bg-muted/40 p-0.5">
@@ -131,7 +131,7 @@ export default async function DealsPage({
             <Fragment key={stat.label}>
               <Card className="bg-muted/30 border-dashed">
                 <CardContent className="flex flex-col gap-0.5 py-3">
-                  <span className="text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">{stat.label}</span>
+                  <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
                   <span className="text-lg font-semibold tracking-tight">
                     {stat.value}
                   </span>

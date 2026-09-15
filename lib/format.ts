@@ -36,6 +36,18 @@ export function formatMoney(value: number | null | undefined, currency = "INR") 
   }
 }
 
+export function formatMoneyShort(value: number | null | undefined, currency = "INR") {
+  if (value == null) return "—"
+  if (currency === "INR") {
+    if (value >= 10_00_00_000) return `₹${(value / 10_00_00_000).toFixed(1).replace(/\.0$/, "")} Cr`
+    if (value >= 1_00_000) return `₹${(value / 1_00_000).toFixed(1).replace(/\.0$/, "")} L`
+    return formatMoney(value, currency)
+  }
+  if (value >= 1_000_000) return `${CURRENCY_SYMBOLS[currency] ?? ""}${(value / 1_000_000).toFixed(1).replace(/\.0$/, "")}M`
+  if (value >= 1_000) return `${CURRENCY_SYMBOLS[currency] ?? ""}${(value / 1_000).toFixed(1).replace(/\.0$/, "")}K`
+  return formatMoney(value, currency)
+}
+
 export function formatDate(date: Date | string | null | undefined) {
   if (!date) return "—"
   const d = typeof date === "string" ? new Date(date) : date

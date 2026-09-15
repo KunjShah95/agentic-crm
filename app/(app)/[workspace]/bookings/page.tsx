@@ -35,7 +35,7 @@ export default async function BookingsPage({ params }: { params: Promise<{ works
         </div>
         <div className="relative">
           <h1 className="text-[22px] font-semibold tracking-tight">Bookings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Hold → Booking → CLP milestones → demand letter. {deals.length} deals across the RE pipeline · no Excel.</p>
+          <p className="mt-1 text-sm text-muted-foreground">{deals.length} deal{deals.length !== 1 ? "s" : ""} in the booking pipeline · track from hold to payment collection</p>
         </div>
       </div>
       <BookingBoard workspaceId={workspace.id} deals={deals} units={units} plans={plans} />

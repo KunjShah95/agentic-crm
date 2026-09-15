@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import Link from "next/link"
-import { Users, KanbanSquare, Building2, CalendarCheck, ArrowRight } from "lucide-react"
+import { Users, KanbanSquare, Building2, CalendarCheck, ArrowRight, CheckSquare } from "lucide-react"
 
 import { db } from "@/lib/db"
 import { formatMoney, initials } from "@/lib/format"
@@ -72,13 +72,9 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <div>
           <h1 className="flex items-center gap-2.5 text-2xl font-display font-semibold tracking-tight">
             Dashboard
-            <span className="inline-flex items-center gap-1.5 rounded-full border bg-muted/40 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Active
-            </span>
             <Badge variant="secondary" className="rounded-md font-mono text-xs">{ws.name}</Badge>
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">A live overview of contacts, deals, projects, and site visits for this workspace.</p>
+          <p className="mt-1 text-sm text-muted-foreground">Your workspace at a glance — contacts, deals, projects, and activity.</p>
         </div>
         <div className="flex gap-2">
           <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
@@ -96,7 +92,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
             <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <s.icon className="size-4" />
-                <span className="font-mono text-[11px] tracking-[0.12em]">{s.label.toUpperCase()}</span>
+                <span className="text-xs font-medium">{s.label}</span>
               </div>
               <div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{s.value}</div>
             </div>
@@ -121,11 +117,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           </Link>
         </div>
         {topDeals.length === 0 ? (
-          <p className="px-4 py-8 text-center text-sm text-muted-foreground">No deals yet.</p>
+          <div className="px-4 py-12 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
+            <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
+            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
+            <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
+              Go to deals <ArrowRight className="size-3.5" />
+            </Button>
+          </div>
         ) : (
           <>
             <Table>
-              <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
+              <TableHeader className="[&_th]:h-9 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
                 <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                   <TableHead>Deal</TableHead>
                   <TableHead>Stage</TableHead>
@@ -203,7 +206,10 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         </div>
         <div className="space-y-2 p-4">
           {recentActivities.length === 0 && (
-            <p className="text-sm text-muted-foreground">No activity yet.</p>
+            <div className="px-4 py-8 text-center">
+              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
+              <p className="mt-2 text-sm text-muted-foreground">No activity yet. Start by adding contacts or creating deals.</p>
+            </div>
           )}
           {recentActivities.map((a) => (
             <div
