@@ -43,7 +43,7 @@ export default async function ProjectDetailPage({
         stats={
           <>
             <Stat label="Units" value={units.length} sub={`${avail} available · ${hold} hold`} icon={<Layers className="size-3" />} />
-            <Stat label="Project" value={project.name.slice(0, 18)} sub={project.city} icon={<Building2 className="size-3" />} />
+            <Stat label="Project" value={<span className="block truncate">{project.name.slice(0, 18)}</span>} sub={project.city} icon={<Building2 className="size-3" />} />
           </>
         }
       />

@@ -19,6 +19,12 @@ describe("status tokens", () => {
   })
 
   it("uses no raw palette color in app code", () => {
+    // The shade range is deliberately 400–700. Lighter/darker companions
+    // (-200/-300/-800/-900, e.g. border-red-200/dark:border-red-800 pairs in
+    // follow-up-nudge.tsx) are a conscious deferral, not an oversight:
+    // "stale"/orange has no status-token equivalent, and migrating the border
+    // without the fill would fork the visual language. If a sixth pair is ever
+    // added, extend the alternation below and migrate those pairs with it.
     const v = scan(PALETTE)
     expectNoViolations(v, "raw palette color")
   })

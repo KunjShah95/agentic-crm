@@ -16,15 +16,27 @@ function componentDirs(): string[] {
     .sort()
 }
 
-export const APP_DIRS = [
-  "app/(app)",
-  "app/(auth)",
-  "app/buyer",
-  "app/invite",
-  "app/not-found.tsx",
-] as const
+/**
+ * App route trees are auto-discovered, mirroring componentDirs() below, so a
+ * new app/* route cannot silently escape conformance. Entries that resolve to
+ * a file (e.g. app/not-found.tsx) are listed explicitly; walk() handles both.
+ */
+const APP_EXCLUDES = new Set(["(marketing)", "(public)", "api"])
 
-export const SCOPE: readonly string[] = [...APP_DIRS, ...componentDirs()]
+function appDirs(): string[] {
+  const root = path.join(REPO_ROOT, "app")
+  if (!fs.existsSync(root)) return []
+  const dirs = fs
+    .readdirSync(root, { withFileTypes: true })
+    .filter((e) => e.isDirectory() && !APP_EXCLUDES.has(e.name))
+    .map((e) => `app/${e.name}`)
+    .sort()
+  // Single-file route entry that readdir cannot discover.
+  dirs.push("app/not-found.tsx")
+  return dirs
+}
+
+export const SCOPE: readonly string[] = [...appDirs(), ...componentDirs()]
 
 export const EXCLUDED = [
   "components/ui (vendored shadcn)",
