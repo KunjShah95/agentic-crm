@@ -33,19 +33,15 @@ export const acceptInviteSchema = z.object({
 })
 
 // ── Contacts ──────────────────────────────────────────────────────────────
-export const contactSchema = z
-  .object({
-    firstName: z.string().trim().min(1, "First name is required").max(80),
-    lastName: z.string().trim().max(80).optional().default(""),
-    email: emailSchema.optional().or(z.literal("")),
-    phone: z.string().trim().max(40).optional().or(z.literal("")),
-    linkedinUrl: z.string().trim().url("Enter a valid URL").optional().or(z.literal("")),
-    jobTitle: z.string().trim().max(120).optional().or(z.literal("")),
-    organizationId: z.string().optional().or(z.literal("")),
-  })
-  .refine((data) => data.email || data.phone, {
-    message: "Provide at least an email or phone number",
-  })
+export const contactSchema = z.object({
+  firstName: z.string().trim().min(1, "First name is required").max(80),
+  lastName: z.string().trim().max(80).optional().default(""),
+  email: emailSchema.optional().or(z.literal("")),
+  phone: z.string().trim().max(40).optional().or(z.literal("")),
+  linkedinUrl: z.string().trim().url("Enter a valid URL").optional().or(z.literal("")),
+  jobTitle: z.string().trim().max(120).optional().or(z.literal("")),
+  organizationId: z.string().optional().or(z.literal("")),
+})
 
 // ── Organizations ─────────────────────────────────────────────────────────
 export const organizationSchema = z.object({
