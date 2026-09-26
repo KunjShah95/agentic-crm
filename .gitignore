@@ -48,3 +48,4 @@ test-results/
 .agents/
 # Superpowers brainstorm scratch (visual companion mockups)
 .superpowers/
+.playwright-mcp/

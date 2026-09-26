@@ -162,3 +162,80 @@ export async function removeDealTagAction(
     return { ok: true }
   })
 }
+
+export async function updateTagAction(
+  workspaceId: string,
+  tagId: string,
+  input: unknown
+): Promise<Result<{ ok: true }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    await requireWorkspaceTag(workspaceId, tagId)
+
+    const parsed = tagSchema.partial().safeParse(input)
+    if (!parsed.success) {
+      throw new AppError("VALIDATION", parsed.error.issues[0]?.message ?? "Check the tag.")
+    }
+
+    const data: { name?: string; color?: string } = {}
+    if (parsed.data.name !== undefined) data.name = parsed.data.name
+    if (parsed.data.color !== undefined) data.color = parsed.data.color
+
+    if (data.name) {
+      const existing = await db.tag.findFirst({
+        where: { workspaceId, name: data.name, id: { not: tagId } },
+        select: { id: true },
+      })
+      if (existing) throw new AppError("VALIDATION", "A tag with that name already exists.")
+    }
+
+    await db.tag.update({ where: { id: tagId }, data })
+    return { ok: true }
+  })
+}
+
+export async function deleteTagAction(
+  workspaceId: string,
+  tagId: string
+): Promise<Result<{ ok: true }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    await requireWorkspaceTag(workspaceId, tagId)
+
+    // Remove all associations first
+    await db.$transaction([
+      db.contactTag.deleteMany({ where: { tagId } }),
+      db.dealTag.deleteMany({ where: { tagId } }),
+      db.tag.delete({ where: { id: tagId } }),
+    ])
+    return { ok: true }
+  })
+}
+
+export async function listTagsAction(
+  workspaceId: string
+): Promise<Result<{ id: string; name: string; color: string; _count: { contacts: number; deals: number } }[]>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    const tags = await db.tag.findMany({
+      where: { workspaceId },
+      orderBy: { name: "asc" },
+      select: {
+        id: true,
+        name: true,
+        color: true,
+        _count: { select: { contacts: true, deals: true } },
+      },
+    })
+    return tags
+  })
+}

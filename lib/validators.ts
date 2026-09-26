@@ -33,15 +33,19 @@ export const acceptInviteSchema = z.object({
 })
 
 // ── Contacts ──────────────────────────────────────────────────────────────
-export const contactSchema = z.object({
-  firstName: z.string().trim().min(1, "First name is required").max(80),
-  lastName: z.string().trim().max(80).optional().default(""),
-  email: emailSchema.optional().or(z.literal("")),
-  phone: z.string().trim().max(40).optional().or(z.literal("")),
-  linkedinUrl: z.string().trim().url("Enter a valid URL").optional().or(z.literal("")),
-  jobTitle: z.string().trim().max(120).optional().or(z.literal("")),
-  organizationId: z.string().optional().or(z.literal("")),
-})
+export const contactSchema = z
+  .object({
+    firstName: z.string().trim().min(1, "First name is required").max(80),
+    lastName: z.string().trim().max(80).optional().default(""),
+    email: emailSchema.optional().or(z.literal("")),
+    phone: z.string().trim().max(40).optional().or(z.literal("")),
+    linkedinUrl: z.string().trim().url("Enter a valid URL").optional().or(z.literal("")),
+    jobTitle: z.string().trim().max(120).optional().or(z.literal("")),
+    organizationId: z.string().optional().or(z.literal("")),
+  })
+  .refine((data) => data.email || data.phone, {
+    message: "Provide at least an email or phone number",
+  })
 
 // ── Organizations ─────────────────────────────────────────────────────────
 export const organizationSchema = z.object({
@@ -118,6 +122,21 @@ export const bulkTagSchema = z.object({
 export const bulkAssignSchema = z.object({
   contactIds: z.array(z.string().min(1)).min(1),
   ownerId: z.string().min(1),
+})
+
+export const bulkMoveDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  stageId: z.string().min(1),
+})
+
+export const bulkAssignDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  ownerId: z.string().min(1),
+})
+
+export const bulkTagDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  tagIds: z.array(z.string().min(1)).min(1),
 })
 
 // ── Workspace ─────────────────────────────────────────────────────────────

@@ -15,12 +15,14 @@ import { db } from "@/lib/db"
 import { formatDate, fullName } from "@/lib/format"
 import { getContactDetail, listWorkspaceMembers } from "@/modules/contacts/queries"
 import { formatMoney } from "@/lib/format"
+import { contactCompleteness } from "@/lib/completeness"
 import { ContactDetailActions } from "@/components/contacts/contact-detail-actions"
 import { ActivityComposer } from "@/components/activities/activity-composer"
 import { Timeline } from "@/components/activities/timeline"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CompletenessBadge } from "@/components/ui/completeness-badge"
 import { WhatsAppContactCard } from "@/components/contacts/whatsapp-contact-card"
 import { whatsappEnabled } from "@/modules/whatsapp/config"
 import {
@@ -89,6 +91,7 @@ export default async function ContactDetailPage({
   const users = new Map(members.map((m) => [m.user.id, { name: m.user.name }]))
   const name = fullName(contact.firstName, contact.lastName)
   const totalValue = contact.deals.reduce((sum, d) => sum + (d.value ?? 0), 0)
+  const completeness = contactCompleteness(contact)
 
   return (
     <div className="flex flex-col gap-5">
@@ -200,6 +203,12 @@ export default async function ContactDetailPage({
               <InfoRow label="Updated">
                 <span>{formatDate(contact.updatedAt)}</span>
               </InfoRow>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <CompletenessBadge data={completeness} />
             </CardContent>
           </Card>
 

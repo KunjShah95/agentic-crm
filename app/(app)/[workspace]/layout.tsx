@@ -5,6 +5,8 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { Sidebar } from "@/components/shell/sidebar"
 import { Topbar } from "@/components/shell/topbar"
+import { BottomNav } from "@/components/shell/bottom-nav"
+import { ErrorBoundary } from "@/components/ui/error-boundary"
 
 // Auth-walled app routes: never index any /[workspace]/* page.
 export const metadata: Metadata = { robots: { index: false, follow: false } }
@@ -52,6 +54,12 @@ export default async function WorkspaceLayout({
 
   return (
     <div className="flex h-dvh overflow-hidden">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-lg focus:bg-background focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-ring"
+      >
+        Skip to content
+      </a>
       <Sidebar
         workspace={workspaceLite}
         role={membership.role}
@@ -64,12 +72,15 @@ export default async function WorkspaceLayout({
       />
       <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-muted/20 via-background to-background">
         <Topbar workspace={workspaceLite} />
-        <main className="relative flex-1 overflow-y-auto">
+        <main id="main-content" className="relative flex-1 overflow-y-auto pb-16 md:pb-0" tabIndex={-1}>
           <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-0 hidden md:block">
             <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_85%_0%,oklch(0.58_0.16_68/0.05),transparent_60%)]" />
           </div>
-          <div className="relative z-10 mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">{children}</div>
+          <div className="relative z-10 mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">
+            <ErrorBoundary>{children}</ErrorBoundary>
+          </div>
         </main>
+        <BottomNav workspaceSlug={workspace.slug} />
       </div>
     </div>
   )

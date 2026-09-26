@@ -10,6 +10,7 @@ import {
   Key,
   BellRing,
   ShieldAlert,
+  Tag,
   Users,
   CreditCard,
   Check,
@@ -73,6 +74,9 @@ export function ExtendedSettingsTabs({
         </TabsTrigger>
         <TabsTrigger value="api" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Key className="mr-1.5 size-3.5" /> API & Webhooks
+        </TabsTrigger>
+        <TabsTrigger value="tags" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+          <Tag className="mr-1.5 size-3.5" /> Tags
         </TabsTrigger>
       </TabsList>
 
@@ -273,6 +277,23 @@ export function ExtendedSettingsTabs({
               />
               <p className="text-xs text-muted-foreground">POST JSON lead payloads to this URL to trigger instant lead creation and AI qualification.</p>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Tags */}
+      <TabsContent value="tags" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-lg">Tags</CardTitle>
+            <CardDescription>
+              Create and manage tags to organize your contacts and deals.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Go to the <a href={`/${slug}/settings/tags`} className="text-primary underline">tag management page</a> to create, edit, and delete tags.
+            </p>
           </CardContent>
         </Card>
       </TabsContent>

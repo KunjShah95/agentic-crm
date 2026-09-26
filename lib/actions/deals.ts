@@ -5,7 +5,7 @@ import { db } from "@/lib/db"
 import { handleAction, type Result } from "@/lib/actions"
 import { AppError } from "@/lib/errors"
 import { canManageData, requireWorkspaceMember } from "@/lib/permissions"
-import { dealSchema, pipelineStageSchema, reorderStagesSchema } from "@/lib/validators"
+import { dealSchema, pipelineStageSchema, reorderStagesSchema, bulkMoveDealsSchema, bulkAssignDealsSchema, bulkTagDealsSchema } from "@/lib/validators"
 
 function clean(input: Record<string, unknown>) {
   const data: Record<string, unknown> = {}
@@ -58,6 +58,95 @@ export async function createDealAction(
       },
     })
     return { id: deal.id }
+  })
+}
+
+// ── Bulk actions ─────────────────────────────────────────────────────────
+
+export async function bulkMoveDealsAction(
+  workspaceId: string,
+  input: unknown
+): Promise<Result<{ ok: true; moved: number }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    const parsed = bulkMoveDealsSchema.safeParse(input)
+    if (!parsed.success) throw new AppError("VALIDATION", "Select deals and a target stage.")
+
+    const target = await db.pipelineStage.findFirst({
+      where: { id: parsed.data.stageId, workspaceId },
+      select: { id: true, name: true },
+    })
+    if (!target) throw new AppError("NOT_FOUND", "Stage not found.", 404)
+
+    const deals = await db.deal.findMany({
+      where: { id: { in: parsed.data.dealIds }, workspaceId },
+      select: { id: true, stage: { select: { name: true } } },
+    })
+
+    await db.$transaction([
+      db.deal.updateMany({
+        where: { id: { in: parsed.data.dealIds }, workspaceId },
+        data: { stageId: parsed.data.stageId },
+      }),
+      ...deals.map((d) =>
+        db.activity.create({
+          data: {
+            workspaceId,
+            type: "NOTE",
+            dealId: d.id,
+            body: `Moved deal from "${d.stage.name}" to "${target.name}" (bulk)`,
+            createdBy: userId,
+            source: "manual",
+          },
+        })
+      ),
+    ])
+    return { ok: true, moved: deals.length }
+  })
+}
+
+export async function bulkAssignDealsAction(
+  workspaceId: string,
+  input: unknown
+): Promise<Result<{ ok: true; assigned: number }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    const parsed = bulkAssignDealsSchema.safeParse(input)
+    if (!parsed.success) throw new AppError("VALIDATION", "Select deals and an owner.")
+
+    const result = await db.deal.updateMany({
+      where: { id: { in: parsed.data.dealIds }, workspaceId },
+      data: { ownerId: parsed.data.ownerId },
+    })
+    return { ok: true, assigned: result.count }
+  })
+}
+
+export async function bulkTagDealsAction(
+  workspaceId: string,
+  input: unknown
+): Promise<Result<{ ok: true }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    const parsed = bulkTagDealsSchema.safeParse(input)
+    if (!parsed.success) throw new AppError("VALIDATION", "Select deals and tags.")
+
+    await db.dealTag.createMany({
+      data: parsed.data.dealIds.flatMap((dealId) =>
+        parsed.data.tagIds.map((tagId) => ({ dealId, tagId }))
+      ),
+      skipDuplicates: true,
+    })
+    return { ok: true }
   })
 }
 
@@ -123,6 +212,58 @@ export async function deleteDealAction(
 
     await db.deal.delete({ where: { id: dealId } })
     return { ok: true }
+  })
+}
+
+export async function exportDealsCsvAction(
+  workspaceId: string,
+  dealIds?: string[]
+): Promise<Result<{ content: string; filename: string }>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId)
+
+    const where = {
+      workspaceId,
+      ...(dealIds && dealIds.length > 0 ? { id: { in: dealIds } } : {}),
+    }
+
+    const deals = await db.deal.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      include: {
+        stage: { select: { name: true } },
+        owner: { select: { name: true, email: true } },
+        contact: { select: { firstName: true, lastName: true, email: true } },
+        tags: { include: { tag: { select: { name: true } } } },
+      },
+    })
+
+    const header = "Title,Stage,Value,Currency,Probability,Owner,Contact,Tags,Created"
+    const rows = deals.map((d) => {
+      const owner = d.owner ? `${d.owner.name}` : ""
+      const contact = d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : ""
+      const tags = d.tags.map((t) => t.tag.name).join("; ")
+      const created = d.createdAt.toISOString().slice(0, 10)
+      return [
+        `"${d.title.replace(/"/g, '""')}"`,
+        `"${d.stage.name}"`,
+        d.value ?? "",
+        d.currency,
+        d.probability ?? "",
+        `"${owner}"`,
+        `"${contact}"`,
+        `"${tags}"`,
+        created,
+      ].join(",")
+    })
+
+    const content = [header, ...rows].join("\n")
+    return {
+      content,
+      filename: `deals-${new Date().toISOString().slice(0, 10)}.csv`,
+    }
   })
 }
 

@@ -106,12 +106,107 @@ export async function getReportsSnapshot(
   workspaceId: string,
   opts: { projectId?: string; role?: Role; brokerId?: string | null } = {},
 ) {
-  const [funnelRows, inv, coll, roi, team] = await Promise.all([
+  const [funnelRows, inv, coll, roi, team, pipelineByStage, dealsByOwner, winRateByType] = await Promise.all([
     getFunnel(workspaceId, opts.role, opts.brokerId),
     getInventoryHealth(workspaceId, { projectId: opts.projectId, role: opts.role, brokerId: opts.brokerId }),
     getCollections(workspaceId, opts.role, opts.brokerId),
     getSourceROI(workspaceId, opts.role, opts.brokerId),
     getTeamVsTarget(workspaceId, opts.role, opts.brokerId),
+    getPipelineByStage(workspaceId),
+    getDealsByOwner(workspaceId),
+    getWinRateByDealType(workspaceId),
   ])
-  return { funnel: funnelRows, inventory: inv, collections: coll, sourceROI: roi, teamVsTarget: team }
+  return { funnel: funnelRows, inventory: inv, collections: coll, sourceROI: roi, teamVsTarget: team, pipelineByStage, dealsByOwner, winRateByType }
+}
+
+export async function getPipelineByStage(workspaceId: string) {
+  const stages = await db.pipelineStage.findMany({
+    where: { workspaceId },
+    orderBy: { order: "asc" },
+    select: { id: true, name: true, color: true },
+  })
+
+  const deals = await db.deal.findMany({
+    where: { workspaceId },
+    select: { stageId: true, value: true },
+  })
+
+  const stageValues = new Map<string, { count: number; value: number }>()
+  for (const stage of stages) {
+    stageValues.set(stage.id, { count: 0, value: 0 })
+  }
+  for (const deal of deals) {
+    const existing = stageValues.get(deal.stageId)
+    if (existing) {
+      existing.count++
+      existing.value += deal.value ?? 0
+    }
+  }
+
+  return stages.map((stage) => ({
+    stageId: stage.id,
+    name: stage.name,
+    color: stage.color,
+    count: stageValues.get(stage.id)?.count ?? 0,
+    value: stageValues.get(stage.id)?.value ?? 0,
+  }))
+}
+
+export async function getDealsByOwner(workspaceId: string) {
+  const members = await db.workspaceMember.findMany({
+    where: { workspaceId },
+    include: { user: { select: { id: true, name: true } } },
+  })
+
+  const deals = await db.deal.findMany({
+    where: { workspaceId },
+    select: { ownerId: true, value: true },
+  })
+
+  const ownerCounts = new Map<string, { count: number; value: number }>()
+  for (const member of members) {
+    ownerCounts.set(member.user.id, { count: 0, value: 0 })
+  }
+  for (const deal of deals) {
+    const owner = deal.ownerId ?? "unassigned"
+    const existing = ownerCounts.get(owner) ?? { count: 0, value: 0 }
+    existing.count++
+    existing.value += deal.value ?? 0
+    ownerCounts.set(owner, existing)
+  }
+
+  const colors = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316", "#84cc16"]
+
+  return members.map((m, i) => ({
+    ownerId: m.user.id,
+    name: m.user.name,
+    count: ownerCounts.get(m.user.id)?.count ?? 0,
+    value: ownerCounts.get(m.user.id)?.value ?? 0,
+    color: colors[i % colors.length],
+  }))
+}
+
+export async function getWinRateByDealType(workspaceId: string) {
+  const deals = await db.deal.findMany({
+    where: { workspaceId },
+    select: { dealType: true, stage: { select: { name: true } } },
+  })
+
+  const byType = new Map<string, { total: number; won: number }>()
+  for (const deal of deals) {
+    const type = deal.dealType ?? "UNCLASSIFIED"
+    const existing = byType.get(type) ?? { total: 0, won: 0 }
+    existing.total++
+    if (deal.stage.name === "Won") existing.won++
+    byType.set(type, existing)
+  }
+
+  return Array.from(byType.entries())
+    .map(([type, data]) => ({
+      type,
+      total: data.total,
+      won: data.won,
+      winRate: data.total > 0 ? Math.round((data.won / data.total) * 100) : 0,
+    }))
+    .sort((a, b) => b.total - a.total)
 }

@@ -10,6 +10,8 @@ import { AppError } from "@/lib/errors"
 import { slugify } from "@/lib/format"
 import { acceptInviteSchema, loginSchema, signupSchema } from "@/lib/validators"
 import type { Role } from "@/lib/generated/prisma/client"
+import { hitRateLimit, RateLimitedError } from "@/modules/web-contact/rate-limit"
+import { headers } from "next/headers"
 
 const DEFAULT_STAGES = [
   { name: "Lead", color: "#64748b" },
@@ -34,6 +36,18 @@ export async function loginAction(
   input: unknown
 ): Promise<Result<{ ok: true; redirectTo: string }>> {
   return handleAction(async () => {
+    // Rate limit: 5 login attempts per minute per IP
+    const h = await headers()
+    const fwd = h.get("x-forwarded-for")
+    const ip = fwd?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown"
+    const rl = await hitRateLimit(`login:${ip}`, { windowMs: 60_000, max: 5 })
+    if (!rl.ok) {
+      throw new RateLimitedError(
+        `Too many login attempts. Try again in ${rl.retryAfterSec}s.`,
+        rl.retryAfterSec
+      )
+    }
+
     const parsed = loginSchema.safeParse(input)
     if (!parsed.success) {
       throw new AppError("VALIDATION", "Enter a valid email and password.")
@@ -75,6 +89,18 @@ export async function signupAction(
   input: unknown
 ): Promise<Result<{ ok: true; redirectTo: string }>> {
   return handleAction(async () => {
+    // Rate limit: 3 signups per 5 minutes per IP
+    const h = await headers()
+    const fwd = h.get("x-forwarded-for")
+    const ip = fwd?.split(",")[0]?.trim() ?? h.get("x-real-ip") ?? "unknown"
+    const rl = await hitRateLimit(`signup:${ip}`, { windowMs: 300_000, max: 3 })
+    if (!rl.ok) {
+      throw new RateLimitedError(
+        `Too many signup attempts. Try again in ${rl.retryAfterSec}s.`,
+        rl.retryAfterSec
+      )
+    }
+
     const parsed = signupSchema.safeParse(input)
     if (!parsed.success) {
       const first = parsed.error.issues[0]

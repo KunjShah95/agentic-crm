@@ -11,6 +11,7 @@ import {
   Phone,
   Search,
   Tag as TagIcon,
+  Upload,
   UserRound,
   Users,
 } from "lucide-react"
@@ -23,9 +24,11 @@ import {
 } from "@/lib/actions/contacts"
 import { fullName, formatDate, initials } from "@/lib/format"
 import { ContactFormDialog } from "@/components/contacts/contact-form-dialog"
+import { ImportContactsDialog } from "@/components/contacts/import-contacts-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { MobileCard, MobileCardRow } from "@/components/ui/responsive-table"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -143,6 +146,7 @@ export function ContactsTable({
   const [selectedTagIds, setSelectedTagIds] = React.useState<string[]>([])
   const [assignOwnerId, setAssignOwnerId] = React.useState<string>("")
   const [filtersOpen, setFiltersOpen] = React.useState(false)
+  const [importDialogOpen, setImportDialogOpen] = React.useState(false)
 
   // Debounced search → URL
   React.useEffect(() => {
@@ -347,6 +351,11 @@ export function ContactsTable({
               </SelectContent>
             </Select>
           </div>
+
+          <Button variant="outline" size="icon" onClick={() => setImportDialogOpen(true)}>
+            <Upload />
+            <span className="sr-only">Import CSV</span>
+          </Button>
 
           <Button variant="outline" size="icon" onClick={() => runExport()} disabled={exporting}>
             <Download />
@@ -561,6 +570,42 @@ export function ContactsTable({
         </div>
       )}
 
+      {/* Mobile card list */}
+      {data.items.length > 0 && (
+        <div className="sm:hidden space-y-2">
+          {data.items.map((contact) => (
+            <MobileCardRow
+              key={contact.id}
+              href={`/${workspaceSlug}/contacts/${contact.id}`}
+              primary={
+                <div className="flex items-center gap-2">
+                  <Avatar className="size-7">
+                    <AvatarFallback className="text-[10px]">
+                      {initials(fullName(contact.firstName, contact.lastName))}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span>{fullName(contact.firstName, contact.lastName)}</span>
+                </div>
+              }
+              secondary={contact.phone ?? contact.email ?? contact.organization?.name ?? "No details"}
+              meta={
+                <>
+                  {contact.tags.slice(0, 2).map(({ tag }) => (
+                    <span
+                      key={tag.id}
+                      className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"
+                    >
+                      <span className="size-1.5 rounded-full" style={{ backgroundColor: tag.color }} />
+                      {tag.name}
+                    </span>
+                  ))}
+                </>
+              }
+            />
+          ))}
+        </div>
+      )}
+
       {/* Pagination */}
       {data.totalPages > 1 && (
         <Pagination>
@@ -702,6 +747,14 @@ export function ContactsTable({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Import dialog */}
+      <ImportContactsDialog
+        open={importDialogOpen}
+        onOpenChange={setImportDialogOpen}
+        workspaceId={workspaceId}
+        onImported={() => router.refresh()}
+      />
     </div>
   )
 }

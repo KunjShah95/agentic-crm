@@ -14,11 +14,13 @@ import { db } from "@/lib/db"
 import { formatDate, formatMoney } from "@/lib/format"
 import { getDealDetail } from "@/modules/deals/queries"
 import { listWorkspaceMembers } from "@/modules/contacts/queries"
+import { dealCompleteness } from "@/lib/completeness"
 import { ActivityComposer } from "@/components/activities/activity-composer"
 import { Timeline } from "@/components/activities/timeline"
 import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { CompletenessBadge } from "@/components/ui/completeness-badge"
 import {
   Card,
   CardContent,
@@ -76,6 +78,7 @@ export default async function DealDetailPage({
 
   const users = new Map(members.map((m) => [m.user.id, { name: m.user.name }]))
   const owner = users.get(deal.ownerId)
+  const completeness = dealCompleteness(deal)
 
   return (
     <div className="flex flex-col gap-5">
@@ -149,6 +152,12 @@ export default async function DealDetailPage({
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <div className="flex flex-col gap-5">
+          <Card>
+            <CardContent className="pt-6">
+              <CompletenessBadge data={completeness} />
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Deal summary</CardTitle>

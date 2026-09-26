@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Separator } from "@/components/ui/separator"
-import { TrendingUp, Building2, Wallet, Users, Target } from "lucide-react"
+import { TrendingUp, Building2, Wallet, Users, Target, BarChart3, PieChart, Trophy } from "lucide-react"
 
 export const metadata: Metadata = { title: "Reports" }
 
@@ -161,6 +161,112 @@ export default async function ReportsPage({
                 <div className="mt-1 flex items-center gap-2"><Progress value={Math.min(100, r.attainmentPct)} className="h-1.5 flex-1" /><span className="font-mono text-xs tabular-nums text-muted-foreground">{r.bookings}/{r.target}</span></div>
               </div>
             ))}
+          </CardContent>
+        </Card>
+
+        {/* Pipeline by Stage */}
+        <Card className="lg:col-span-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base font-display"><BarChart3 className="size-4 text-blue-600 dark:text-blue-400" /> Pipeline by Stage</CardTitle>
+            <CardDescription>Deal count and value across pipeline stages.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {snapshot.pipelineByStage.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No stages configured.</p>
+            ) : (
+              <div className="space-y-3">
+                {snapshot.pipelineByStage.map((r) => {
+                  const maxValue = Math.max(1, ...snapshot.pipelineByStage.map((s) => s.value))
+                  return (
+                    <div key={r.stageId} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="size-2 rounded-full" style={{ backgroundColor: r.color }} />
+                          {r.name}
+                        </span>
+                        <span className="font-mono text-xs tabular-nums text-muted-foreground">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                        <div
+                          className="h-full rounded-full transition-all"
+                          style={{ width: `${maxValue > 0 ? (r.value / maxValue) * 100 : 0}%`, backgroundColor: r.color }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Deals by Owner */}
+        <Card className="lg:col-span-6">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base font-display"><PieChart className="size-4 text-emerald-600 dark:text-emerald-400" /> Deals by Owner</CardTitle>
+            <CardDescription>Distribution of deals across team members.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {snapshot.dealsByOwner.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No team members.</p>
+            ) : (
+              <div className="space-y-2">
+                {snapshot.dealsByOwner.map((r) => {
+                  const totalDeals = snapshot.dealsByOwner.reduce((sum, o) => sum + o.count, 0)
+                  const pct = totalDeals > 0 ? Math.round((r.count / totalDeals) * 100) : 0
+                  return (
+                    <div key={r.ownerId} className="flex items-center gap-3 rounded-lg border px-3 py-2">
+                      <span className="size-3 rounded-full" style={{ backgroundColor: r.color }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">{r.name}</div>
+                        <div className="text-xs text-muted-foreground font-mono tabular-nums">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</div>
+                      </div>
+                      <Badge variant="secondary" className="font-mono text-xs tabular-nums">{pct}%</Badge>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Win Rate by Deal Type */}
+        <Card className="lg:col-span-12">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base font-display"><Trophy className="size-4 text-amber-600 dark:text-amber-400" /> Win Rate by Deal Type</CardTitle>
+            <CardDescription>Conversion rate across different property types.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {snapshot.winRateByType.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No deals yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-xs font-medium text-muted-foreground">
+                      <th className="pb-2 pr-4">Type</th>
+                      <th className="pb-2 pr-4 text-right">Total</th>
+                      <th className="pb-2 pr-4 text-right">Won</th>
+                      <th className="pb-2 text-right">Win Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {snapshot.winRateByType.map((r) => (
+                      <tr key={r.type} className="border-b last:border-0">
+                        <td className="py-2.5 pr-4 font-medium">{r.type === "UNCLASSIFIED" ? "Unclassified" : r.type}</td>
+                        <td className="py-2.5 pr-4 text-right font-mono tabular-nums">{r.total}</td>
+                        <td className="py-2.5 pr-4 text-right font-mono tabular-nums">{r.won}</td>
+                        <td className="py-2.5 text-right">
+                          <Badge variant={r.winRate >= 50 ? "default" : "secondary"} className="font-mono text-xs tabular-nums">
+                            {r.winRate}%
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -177,8 +177,8 @@ export function KanbanBoard({
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        {/* Desktop: horizontal scroll */}
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6">
+        {/* Desktop: horizontal scroll with snap on mobile */}
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6 md:snap-none">
           {stages.map((stage) => {
             const stageDeals = byStage.get(stage.id) ?? []
             const total = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0)
@@ -186,7 +186,7 @@ export function KanbanBoard({
             return (
               <div
                 key={stage.id}
-                className={`flex w-72 shrink-0 flex-col ${!isVisible ? "hidden md:flex" : ""}`}
+                className={`flex w-72 shrink-0 snap-start flex-col ${!isVisible ? "hidden md:flex" : ""}`}
               >
                 <div className="mb-2 flex items-center gap-2 px-1">
                   <span

@@ -51,7 +51,7 @@ export default async function DealsPage({
 
   const view = sp.view === "table" ? "table" : "kanban"
 
-  const [pipeline, tableDeals, members, contacts, orgs, stats] =
+  const [pipeline, tableDeals, members, contacts, orgs, stats, tags] =
     await Promise.all([
       getPipeline(workspace.id),
       view === "table" ? listDealsForTable(workspace.id) : null,
@@ -67,6 +67,11 @@ export default async function DealsPage({
         select: { id: true, name: true },
       }),
       pipelineStats(workspace.id),
+      db.tag.findMany({
+        where: { workspaceId: workspace.id },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true, color: true },
+      }),
     ])
 
   const users = new Map(members.map((m) => [m.user.id, { name: m.user.name }]))
@@ -160,6 +165,7 @@ export default async function DealsPage({
           contacts={contacts}
           organizations={orgs}
           members={members}
+          tags={tags}
         />
       )}
     </div>

@@ -17,6 +17,8 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
+import { FollowUpNudge } from "@/components/dashboard/follow-up-nudge"
+import { DataHealthCard } from "@/components/dashboard/data-health-card"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -100,103 +102,114 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         ))}
       </div>
 
-      {/* Pipeline — reference-style data table */}
-      <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
-              by value
-            </span>
-          </div>
-          <Link
-            href={`/${slug}/deals?view=table`}
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            View all deals <ArrowRight className="size-3.5" />
-          </Link>
+      {/* Follow-up nudges */}
+      <FollowUpNudge workspaceId={ws.id} workspaceSlug={slug} />
+
+      <div className="grid gap-4 lg:grid-cols-4">
+        <div className="lg:col-span-3">
+          {/* Pipeline — reference-style data table */}
+          <section className="overflow-hidden rounded-xl border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                  by value
+                </span>
+              </div>
+              <Link
+                href={`/${slug}/deals?view=table`}
+                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                View all deals <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+            {topDeals.length === 0 ? (
+              <div className="px-4 py-12 text-center">
+                <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
+                <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
+                <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
+                <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
+                  Go to deals <ArrowRight className="size-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader className="[&_th]:h-9 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
+                    <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                      <TableHead>Deal</TableHead>
+                      <TableHead>Stage</TableHead>
+                      <TableHead className="hidden lg:table-cell">Owner</TableHead>
+                      <TableHead className="hidden md:table-cell">Pipeline value</TableHead>
+                      <TableHead className="hidden md:table-cell">Win probability</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topDeals.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell>
+                          <Link
+                            href={`/${slug}/deals/${d.id}`}
+                            className="text-sm font-medium hover:underline"
+                          >
+                            {d.title}
+                          </Link>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {d.organization?.name ??
+                              (d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "—")}
+                          </p>
+                          <TagPills tags={d.tags} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <span
+                              className="size-2 rounded-full"
+                              style={{ backgroundColor: d.stage.color }}
+                            />
+                            {d.stage.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {d.owner ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Avatar className="size-5">
+                                <AvatarFallback className="text-[9px]">
+                                  {initials(d.owner.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              {d.owner.name}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden font-medium tabular-nums md:table-cell">
+                          {formatMoney(d.value, d.currency)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <WinBar value={d.probability} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <TableTotalsBar>
+                  <span className="font-medium">
+                    <span className="tabular-nums">{topDeals.length}</span>{" "}
+                    <span className="text-muted-foreground">deals in view</span>
+                  </span>
+                  <Metric label="Sum of pipeline" value={formatMoney(sumPipeline)} />
+                  <Metric label="Avg win probability" value={avgProb == null ? "—" : `${avgProb}%`} />
+                </TableTotalsBar>
+              </>
+            )}
+          </section>
         </div>
-        {topDeals.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
-            <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
-            <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
-              Go to deals <ArrowRight className="size-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader className="[&_th]:h-9 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
-                <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Deal</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead className="hidden lg:table-cell">Owner</TableHead>
-                  <TableHead className="hidden md:table-cell">Pipeline value</TableHead>
-                  <TableHead className="hidden md:table-cell">Win probability</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topDeals.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <Link
-                        href={`/${slug}/deals/${d.id}`}
-                        className="text-sm font-medium hover:underline"
-                      >
-                        {d.title}
-                      </Link>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {d.organization?.name ??
-                          (d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "—")}
-                      </p>
-                      <TagPills tags={d.tags} />
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 text-sm">
-                        <span
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: d.stage.color }}
-                        />
-                        {d.stage.name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {d.owner ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Avatar className="size-5">
-                            <AvatarFallback className="text-[9px]">
-                              {initials(d.owner.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {d.owner.name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground/50">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden font-medium tabular-nums md:table-cell">
-                      {formatMoney(d.value, d.currency)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <WinBar value={d.probability} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TableTotalsBar>
-              <span className="font-medium">
-                <span className="tabular-nums">{topDeals.length}</span>{" "}
-                <span className="text-muted-foreground">deals in view</span>
-              </span>
-              <Metric label="Sum of pipeline" value={formatMoney(sumPipeline)} />
-              <Metric label="Avg win probability" value={avgProb == null ? "—" : `${avgProb}%`} />
-            </TableTotalsBar>
-          </>
-        )}
-      </section>
+
+        <div className="lg:col-span-1">
+          <DataHealthCard workspaceId={ws.id} />
+        </div>
+      </div>
 
       {/* Recent activity */}
       <section className="overflow-hidden rounded-xl border bg-card">
