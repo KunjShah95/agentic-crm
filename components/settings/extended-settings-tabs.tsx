@@ -10,6 +10,7 @@ import {
   Key,
   BellRing,
   ShieldAlert,
+  Tag,
   Users,
   CreditCard,
   Check,
@@ -58,21 +59,24 @@ export function ExtendedSettingsTabs({
 
   return (
     <Tabs defaultValue="general" className="w-full space-y-6">
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border bg-muted/50 p-1">
-        <TabsTrigger value="general" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
+        <TabsTrigger value="general" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Building2 className="mr-1.5 size-3.5" /> General
         </TabsTrigger>
-        <TabsTrigger value="pipeline" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="pipeline" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Sliders className="mr-1.5 size-3.5" /> Pipeline & RERA
         </TabsTrigger>
-        <TabsTrigger value="localization" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="localization" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Globe className="mr-1.5 size-3.5" /> Localization
         </TabsTrigger>
-        <TabsTrigger value="integrations" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="integrations" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <BellRing className="mr-1.5 size-3.5" /> Integrations
         </TabsTrigger>
-        <TabsTrigger value="api" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="api" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Key className="mr-1.5 size-3.5" /> API & Webhooks
+        </TabsTrigger>
+        <TabsTrigger value="tags" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+          <Tag className="mr-1.5 size-3.5" /> Tags
         </TabsTrigger>
       </TabsList>
 
@@ -144,12 +148,12 @@ export function ExtendedSettingsTabs({
                 type="number"
                 value={holdDays}
                 onChange={(e) => setHoldDays(e.target.value)}
-                className="max-w-xs focus-visible:ring-brand font-mono tabular-nums"
+                className="max-w-xs focus-visible:ring-brand tabular-nums"
               />
               <p className="text-xs text-muted-foreground">Automatic expiration timeframe for temporary HOLD stage before releasing inventory back to pool.</p>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-3.5">
+            <div className="flex items-center justify-between rounded-md border p-3.5">
               <div>
                 <Label className="text-sm font-medium">Construction Linked Payment (CLP) Automation</Label>
                 <p className="text-xs text-muted-foreground">Auto-generate milestone demand letters upon milestone completion updates.</p>
@@ -157,7 +161,7 @@ export function ExtendedSettingsTabs({
               <Switch checked={clpEnabled} onCheckedChange={setClpEnabled} />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-3.5">
+            <div className="flex items-center justify-between rounded-md border p-3.5">
               <div>
                 <Label className="text-sm font-medium">Auto-assign Inbound Site Visit Leads</Label>
                 <p className="text-xs text-muted-foreground">Distribute unassigned inbound web/QR leads round-robin to active sales managers.</p>
@@ -182,18 +186,18 @@ export function ExtendedSettingsTabs({
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Primary Currency</Label>
-              <Input value="INR (₹) — Indian Rupee" disabled className="max-w-md bg-muted font-mono text-xs" />
+              <Input value="INR (₹) — Indian Rupee" disabled className="max-w-md bg-muted text-xs" />
             </div>
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Default Timezone</Label>
-              <Input value="Asia/Kolkata (IST — UTC +05:30)" disabled className="max-w-md bg-muted font-mono text-xs" />
+              <Input value="Asia/Kolkata (IST — UTC +05:30)" disabled className="max-w-md bg-muted text-xs" />
             </div>
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Supported Languages</Label>
               <div className="flex gap-2">
-                <Badge variant="secondary" className="font-mono text-xs">English (EN)</Badge>
-                <Badge variant="secondary" className="font-mono text-xs">Gujarati (GU)</Badge>
-                <Badge variant="secondary" className="font-mono text-xs">Hindi (HI)</Badge>
+                <Badge variant="secondary" className="text-xs">English (EN)</Badge>
+                <Badge variant="secondary" className="text-xs">Gujarati (GU)</Badge>
+                <Badge variant="secondary" className="text-xs">Hindi (HI)</Badge>
               </div>
             </div>
           </CardContent>
@@ -213,9 +217,9 @@ export function ExtendedSettingsTabs({
           </CardHeader>
           <CardContent className="space-y-4">
             {whatsappEnabled && (
-              <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="flex items-center justify-between rounded-md border p-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="flex size-10 items-center justify-center rounded-sm bg-status-positive-bg text-status-positive-fg">
                     <Radio className="size-5" />
                   </span>
                   <div>
@@ -229,9 +233,9 @@ export function ExtendedSettingsTabs({
               </div>
             )}
 
-            <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center justify-between rounded-md border p-4">
               <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="flex size-10 items-center justify-center rounded-sm bg-status-info-bg text-status-info-fg">
                   <Share2 className="size-5" />
                 </span>
                 <div>
@@ -255,13 +259,13 @@ export function ExtendedSettingsTabs({
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Secret Workspace API Key</Label>
               <div className="flex max-w-md items-center gap-2">
-                <Input value={apiKey} readOnly className="font-mono text-xs focus-visible:ring-brand" />
+                <Input value={apiKey} readOnly data-mono="secret" className="font-mono text-xs focus-visible:ring-brand" />
                 <Button variant="outline" size="sm" onClick={copyApiKey}>
-                  {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                  {copied ? <Check className="size-3.5 text-status-positive-fg" /> : <Copy className="size-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Keep this key confidential. Use in <code className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">Authorization: Bearer</code> header.</p>
+              <p className="text-xs text-muted-foreground">Keep this key confidential. Use in <code data-mono="secret" className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">Authorization: Bearer</code> header.</p>
             </div>
 
             <div className="grid gap-2 border-t pt-4">
@@ -269,10 +273,27 @@ export function ExtendedSettingsTabs({
               <Input
                 value={`https://${slug}.estate360.vercel.com/api/webhooks/leads`}
                 readOnly
-                className="max-w-md bg-muted font-mono text-xs"
+                className="max-w-md bg-muted font-mono text-xs" data-mono="url"
               />
               <p className="text-xs text-muted-foreground">POST JSON lead payloads to this URL to trigger instant lead creation and AI qualification.</p>
             </div>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      {/* Tags */}
+      <TabsContent value="tags" className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle className="font-display text-lg">Tags</CardTitle>
+            <CardDescription>
+              Create and manage tags to organize your contacts and deals.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">
+              Go to the <a href={`/${slug}/settings/tags`} className="text-primary underline">tag management page</a> to create, edit, and delete tags.
+            </p>
           </CardContent>
         </Card>
       </TabsContent>

@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { listContacts, type ContactFilters } from "@/modules/contacts/queries"
 import { ContactsTable } from "@/components/contacts/contacts-table"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Contacts" }
 
@@ -68,22 +69,16 @@ export default async function ContactsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
-        </div>
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">Contacts</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{data.total} contact{data.total !== 1 ? "s" : ""} · find, filter, and manage your leads</p>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
-            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1"><span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> {orgs.length} orgs</span>
+      <PageHeader
+        title="Contacts"
+        description={<>{data.total} contact{data.total !== 1 ? "s" : ""} · find, filter, and manage your leads</>}
+        actions={
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1"><span className="size-2 rounded-full bg-status-positive-fg" /> {orgs.length} orgs</span>
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1">{members.length} members</span>
           </div>
-        </div>
-      </div>
+        }
+      />
 
       <ContactsTable
         workspaceSlug={slug}

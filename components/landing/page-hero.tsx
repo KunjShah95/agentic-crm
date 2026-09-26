@@ -28,7 +28,7 @@ export function PageHero({ eyebrow, title, description, primaryCta, secondaryCta
 
       <div className="relative mx-auto max-w-[880px] px-6 pb-14 pt-14 text-center lg:pb-20 lg:pt-20">
         {eyebrow ? (
-          <span className="inline-flex animate-in fade-in slide-in-from-bottom-2 duration-500 items-center gap-2 rounded-full border bg-card/80 px-3.5 py-1.5 font-mono text-[11px] tracking-[0.12em] text-muted-foreground backdrop-blur">
+          <span className="inline-flex animate-in fade-in slide-in-from-bottom-2 duration-500 items-center gap-2 rounded-full border bg-card/80 px-3.5 py-1.5 text-[11px] tracking-[0.12em] text-muted-foreground backdrop-blur">
             <span className="size-1.5 rounded-full bg-brand" aria-hidden />
             {eyebrow}
           </span>

@@ -60,7 +60,7 @@ export function BookingBoard({
           </div>
           <div className="flex flex-col gap-2">
             {byStage(stage).map((d) => (
-              <div key={d.id} className="rounded-lg border bg-card p-3 text-sm shadow-sm">
+              <div key={d.id} className="rounded-md border bg-card p-3 text-sm shadow-sm">
                 <div className="font-medium">{d.title}</div>
                 <div className="text-xs text-muted-foreground">
                   {d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "No contact"}

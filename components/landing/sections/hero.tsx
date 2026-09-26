@@ -66,19 +66,22 @@ export function HeroSection({
               </span>
             </div>
             <div className="mt-8 flex items-center gap-2.5 text-[12px] text-muted-foreground">
-              <kbd className="flex items-center gap-1 rounded-md border bg-background px-1.5 py-1 font-mono">⌘ K</kbd>
+              <kbd className="flex items-center gap-1 rounded-xs border bg-background px-1.5 py-1">⌘ K</kbd>
               <span>Type "what should I do now?" to try the command bar.</span>
             </div>
           </div>
                     {/* ── RIGHT: the "Today" command center — hero LCP image ── */}
           <div className="relative lg:pl-2">
-            <div className="relative overflow-hidden rounded-[20px] border bg-card shadow-e3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300 [animation-fill-mode:both]">
+            <div className="relative overflow-hidden rounded-md border bg-card shadow-e3 animate-in fade-in slide-in-from-bottom-2 duration-500 delay-300 [animation-fill-mode:both]">
               <div className="flex items-center gap-2 border-b bg-muted/50 px-4 py-2.5">
-                <span className="size-3 rounded-full bg-red-400" aria-hidden />
-                <span className="size-3 rounded-full bg-amber-400" aria-hidden />
-                <span className="size-3 rounded-full bg-green-400" aria-hidden />
-                <span className="ml-2 font-mono text-[11px] text-muted-foreground">today.estate360.app</span>
-                <span className="ml-auto font-mono text-[11px] text-muted-foreground">Today</span>
+                {/* macOS traffic lights — illustrative product-screenshot chrome,
+                    not live status, so these stay raw rather than borrowing the
+                    status palette. Waived via data-token-raw. */}
+                <span className="size-3 rounded-full bg-red-400" aria-hidden data-token-raw="mock-ui" />
+                <span className="size-3 rounded-full bg-amber-400" aria-hidden data-token-raw="mock-ui" />
+                <span className="size-3 rounded-full bg-green-400" aria-hidden data-token-raw="mock-ui" />
+                <span className="ml-2 text-[11px] text-muted-foreground">today.estate360.app</span>
+                <span className="ml-auto text-[11px] text-muted-foreground">Today</span>
               </div>
               <div className="p-4 pb-3">
                 <div className="flex items-start justify-between">

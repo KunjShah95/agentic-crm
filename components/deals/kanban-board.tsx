@@ -177,8 +177,8 @@ export function KanbanBoard({
       </div>
 
       <DragDropContext onDragEnd={onDragEnd}>
-        {/* Desktop: horizontal scroll */}
-        <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6">
+        {/* Desktop: horizontal scroll with snap on mobile */}
+        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:-mx-6 md:px-6 md:snap-none">
           {stages.map((stage) => {
             const stageDeals = byStage.get(stage.id) ?? []
             const total = stageDeals.reduce((sum, d) => sum + (d.value ?? 0), 0)
@@ -186,7 +186,7 @@ export function KanbanBoard({
             return (
               <div
                 key={stage.id}
-                className={`flex w-72 shrink-0 flex-col ${!isVisible ? "hidden md:flex" : ""}`}
+                className={`flex w-72 shrink-0 snap-start flex-col ${!isVisible ? "hidden md:flex" : ""}`}
               >
                 <div className="mb-2 flex items-center gap-2 px-1">
                   <span
@@ -197,7 +197,7 @@ export function KanbanBoard({
                   <span className="text-xs text-muted-foreground">
                     {stageDeals.length}
                   </span>
-                  <span className="ml-auto text-xs font-mono font-medium tabular-nums text-muted-foreground">
+                  <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
                     {formatMoney(total)}
                   </span>
                 </div>
@@ -206,14 +206,14 @@ export function KanbanBoard({
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`flex min-h-24 flex-col gap-2 rounded-xl border bg-muted/40 p-2 transition-colors ${
+                      className={`flex min-h-24 flex-col gap-2 rounded-md border bg-muted/40 p-2 transition-colors ${
                         snapshot.isDraggingOver
                           ? "border-brand/40 bg-brand/5"
                           : ""
                       }`}
                     >
                       {stageDeals.length === 0 && !snapshot.isDraggingOver && (
-                        <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                        <p className="rounded-md border border-dashed px-2 py-4 text-center text-xs text-muted-foreground">
                           No deals in this stage yet
                         </p>
                       )}
@@ -224,7 +224,7 @@ export function KanbanBoard({
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`rounded-lg border bg-card p-3 shadow-xs transition-all ${
+                              className={`rounded-md border bg-card p-3 shadow-xs transition-all ${
                                 dragSnapshot.isDragging
                                   ? "shadow-md ring-2 ring-brand/40"
                                   : "hover:border-border/80 hover:shadow-xs"
@@ -248,11 +248,11 @@ export function KanbanBoard({
                               </p>
 
                               <div className="mt-2.5 flex items-center justify-between">
-                                <span className="text-sm font-semibold font-mono tabular-nums">
+                                <span className="text-[15px] font-semibold tabular-nums">
                                   {formatMoney(deal.value, deal.currency)}
                                 </span>
                                 {deal.probability != null && (
-                                  <Badge variant="secondary" className="text-[10px]">
+                                  <Badge variant="secondary" className="px-1.5 py-px text-[10px]">
                                     {deal.probability}%
                                   </Badge>
                                 )}
@@ -263,7 +263,7 @@ export function KanbanBoard({
                                   {deal.tags.slice(0, 3).map(({ tag }) => (
                                     <span
                                       key={tag.id}
-                                      className="size-2 rounded-full"
+                                      className="size-1.5 rounded-full"
                                       style={{ backgroundColor: tag.color }}
                                       title={tag.name}
                                     />

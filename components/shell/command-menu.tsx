@@ -297,7 +297,7 @@ export function CommandMenu({
       >
         <Search className="size-4" />
         <span className="flex-1 text-left">Search or jump…</span>
-        <kbd className="pointer-events-none inline-flex h-5 items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium text-muted-foreground">
+        <kbd className="pointer-events-none inline-flex h-5 items-center gap-0.5 rounded border bg-muted px-1.5 text-[10px] font-medium text-muted-foreground">
           <Command className="size-3" />
           K
         </kbd>

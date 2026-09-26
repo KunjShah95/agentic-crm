@@ -67,7 +67,7 @@ export function TaskList({
 
   if (tasks.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-10 text-center">
         <ListTodo className="size-8 text-muted-foreground/50" />
         <p className="text-sm font-medium">{emptyMessage}</p>
       </div>
@@ -81,7 +81,7 @@ export function TaskList({
         return (
           <div
             key={task.id}
-            className="flex items-start gap-3 rounded-lg border bg-card px-3.5 py-3"
+            className="flex items-start gap-3 rounded-md border bg-card px-3.5 py-3"
           >
             <Checkbox
               checked={done}

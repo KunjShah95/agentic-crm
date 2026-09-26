@@ -25,10 +25,75 @@ function clean(input: Record<string, unknown>) {
   return data
 }
 
+async function checkContactDuplicatesInternal(
+  workspaceId: string,
+  email?: string,
+  phone?: string,
+  excludeId?: string
+): Promise<DuplicateContact[]> {
+  const conditions: unknown[] = []
+  if (email && email.trim()) {
+    conditions.push({ email: { equals: email.trim().toLowerCase(), mode: "insensitive" } })
+  }
+  if (phone && phone.trim()) {
+    conditions.push({ phone: { equals: phone.trim() } })
+  }
+  if (conditions.length === 0) return []
+
+  const where: Record<string, unknown> = { workspaceId, OR: conditions }
+  if (excludeId) where.id = { not: excludeId }
+
+  return db.contact.findMany({
+    where: where as never,
+    select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+    take: 10,
+  })
+}
+
+export type DuplicateContact = {
+  id: string
+  firstName: string
+  lastName: string
+  email: string | null
+  phone: string | null
+}
+
+export async function checkContactDuplicatesAction(
+  workspaceId: string,
+  email?: string,
+  phone?: string,
+  excludeId?: string
+): Promise<Result<DuplicateContact[]>> {
+  return handleAction(async () => {
+    const session = await auth()
+    if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
+    await requireWorkspaceMember(workspaceId, session.user.id)
+
+    const conditions: unknown[] = []
+    if (email && email.trim()) {
+      conditions.push({ email: { equals: email.trim().toLowerCase(), mode: "insensitive" } })
+    }
+    if (phone && phone.trim()) {
+      conditions.push({ phone: { equals: phone.trim() } })
+    }
+    if (conditions.length === 0) return []
+
+    const where: Record<string, unknown> = { workspaceId, OR: conditions }
+    if (excludeId) where.id = { not: excludeId }
+
+    const duplicates = await db.contact.findMany({
+      where: where as never,
+      select: { id: true, firstName: true, lastName: true, email: true, phone: true },
+      take: 10,
+    })
+    return duplicates
+  })
+}
+
 export async function createContactAction(
   workspaceId: string,
   input: unknown
-): Promise<Result<{ id: string }>> {
+): Promise<Result<{ id: string; duplicates: DuplicateContact[] }>> {
   return handleAction(async () => {
     const session = await auth()
     if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
@@ -39,6 +104,12 @@ export async function createContactAction(
       throw new AppError("VALIDATION", parsed.error.issues[0]?.message ?? "Check the form.")
     }
     const data = clean(parsed.data as unknown as Record<string, unknown>)
+
+    // Check for duplicates before creating
+    const email = (data.email as string) || undefined
+    const phone = (data.phone as string) || undefined
+    const duplicates = await checkContactDuplicatesInternal(workspaceId, email, phone)
+
     await requireQuota(workspaceId, "contacts")
     const contact = await db.contact.create({
       data: {
@@ -54,7 +125,7 @@ export async function createContactAction(
         createdBy: session.user.id,
       },
     })
-    return { id: contact.id }
+    return { id: contact.id, duplicates }
   })
 }
 
@@ -62,7 +133,7 @@ export async function updateContactAction(
   workspaceId: string,
   contactId: string,
   input: unknown
-): Promise<Result<{ ok: true }>> {
+): Promise<Result<{ ok: true; duplicates: DuplicateContact[] }>> {
   return handleAction(async () => {
     const session = await auth()
     if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
@@ -80,6 +151,11 @@ export async function updateContactAction(
     })
     if (!exists) throw new AppError("NOT_FOUND", "Contact not found.", 404)
 
+    // Check for duplicates (excluding this contact)
+    const email = (data.email as string) || undefined
+    const phone = (data.phone as string) || undefined
+    const duplicates = await checkContactDuplicatesInternal(workspaceId, email, phone, contactId)
+
     await db.contact.update({
       where: { id: contactId },
       data: {
@@ -92,7 +168,7 @@ export async function updateContactAction(
         organizationId: data.organizationId as string | null,
       },
     })
-    return { ok: true }
+    return { ok: true, duplicates }
   })
 }
 
@@ -152,9 +228,29 @@ export async function bulkTagContactsAction(
     const parsed = bulkTagSchema.safeParse(input)
     if (!parsed.success) throw new AppError("VALIDATION", "Select contacts and tags.")
 
+    // Verify all contacts belong to this workspace
+    const validContacts = await db.contact.findMany({
+      where: { id: { in: parsed.data.contactIds }, workspaceId },
+      select: { id: true },
+    })
+    const validIds = new Set(validContacts.map((c) => c.id))
+    const safeContactIds = parsed.data.contactIds.filter((id) => validIds.has(id))
+
+    // Verify all tags belong to this workspace
+    const validTags = await db.tag.findMany({
+      where: { id: { in: parsed.data.tagIds }, workspaceId },
+      select: { id: true },
+    })
+    const validTagIds = new Set(validTags.map((t) => t.id))
+    const safeTagIds = parsed.data.tagIds.filter((id) => validTagIds.has(id))
+
+    if (safeContactIds.length === 0 || safeTagIds.length === 0) {
+      throw new AppError("VALIDATION", "No valid contacts or tags found.")
+    }
+
     await db.contactTag.createMany({
-      data: parsed.data.contactIds.flatMap((contactId) =>
-        parsed.data.tagIds.map((tagId) => ({ contactId, tagId }))
+      data: safeContactIds.flatMap((contactId) =>
+        safeTagIds.map((tagId) => ({ contactId, tagId }))
       ),
       skipDuplicates: true,
     })

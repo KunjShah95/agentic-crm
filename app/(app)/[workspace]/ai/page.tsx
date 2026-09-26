@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { askPipeline } from "@/modules/ai/ask"
+import { PageHeader } from "@/components/shell/page-header"
 import { Sparkles, TrendingUp, Wallet, Bot } from "lucide-react"
 
 export default async function AIPage({
@@ -37,12 +38,10 @@ export default async function AIPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-2">
-          <Bot className="size-6 text-brand" /> Intelligence
-        </h1>
-        <p className="text-sm text-muted-foreground">Revenue and collections forecasts, next-best-actions, and a read-only assistant for your pipeline.</p>
-      </div>
+      <PageHeader
+        title={<><Bot className="size-6 text-brand" /> Intelligence</>}
+        description="Revenue and collections forecasts, next-best-actions, and a read-only assistant for your pipeline."
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
@@ -51,8 +50,8 @@ export default async function AIPage({
             <CardDescription>Weighted by stage probability</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold font-mono tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
-            <div className="text-xs text-muted-foreground font-mono tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
+            <div className="font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
+            <div className="text-xs text-muted-foreground tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
           </CardContent>
         </Card>
         <Card>
@@ -61,8 +60,8 @@ export default async function AIPage({
             <CardDescription>Due in 30d vs overdue</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold font-mono tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
-            <div className="text-xs text-muted-foreground font-mono tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
+            <div className="font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
+            <div className="text-xs text-muted-foreground tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
           </CardContent>
         </Card>
         <Card>
@@ -73,7 +72,7 @@ export default async function AIPage({
           <CardContent className="text-sm">
             <div className="flex flex-wrap gap-1">
               {snapshot.funnel.slice(0, 4).map((r) => (
-                <Badge key={r.stage} variant="secondary" className="font-mono text-xs tabular-nums">{r.stage}: {r.count}</Badge>
+                <Badge key={r.stage} variant="secondary" className="text-xs tabular-nums">{r.stage}: {r.count}</Badge>
               ))}
             </div>
           </CardContent>
@@ -88,13 +87,13 @@ export default async function AIPage({
         <CardContent className="space-y-4">
           <form className="flex gap-2">
             <Input name="q" defaultValue={q ?? ""} placeholder="Ask — e.g. overdue payments" className="flex-1 focus-visible:ring-brand" />
-            <Button type="submit" className="rounded-lg bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
+            <Button type="submit" className="rounded-sm bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
           </form>
           {askResult ? (
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+            <div className="rounded-md border bg-muted/30 p-4 space-y-2">
               <div className="text-sm font-medium">{askResult.answer}</div>
               {askResult.rows && askResult.rows.length > 0 ? (
-                <div className="text-xs font-mono bg-card rounded-lg border p-3 overflow-auto max-h-64">
+                <div className="text-xs bg-card rounded-md border p-3 overflow-auto max-h-64">
                   <pre>{JSON.stringify(askResult.rows.slice(0, 20), null, 2)}</pre>
                 </div>
               ) : null}

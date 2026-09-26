@@ -132,7 +132,7 @@ export function WhatsAppPanel({
           ) : null}
 
           {status === "needs_reauth" ? (
-            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+            <p className="rounded-md border border-status-caution-fg/40 bg-status-caution-bg px-3 py-2 text-xs text-status-caution-fg">
               Meta no longer accepts the stored token. Reconnect to resume delivery.
             </p>
           ) : null}
@@ -144,7 +144,7 @@ export function WhatsAppPanel({
               </p>
               <p className="mt-1 text-muted-foreground">
                 Set these environment variables, then reload:{" "}
-                <code className="font-mono">{readiness.missing.join(", ") || "WHATSAPP_*"}</code>
+                <code className="font-mono" data-mono="secret">{readiness.missing.join(", ") || "WHATSAPP_*"}</code>
               </p>
             </div>
           ) : null}
@@ -204,7 +204,7 @@ export function WhatsAppPanel({
           <div>
             <p className="text-xs font-medium text-muted-foreground">Callback URL</p>
             <div className="mt-1 flex items-center gap-2">
-              <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1 font-mono text-xs">{webhookUrl}</code>
+              <code className="min-w-0 flex-1 truncate rounded-md bg-muted px-2 py-1 font-mono text-xs" data-mono="url">{webhookUrl}</code>
               <Button
                 size="sm"
                 variant="ghost"
@@ -214,7 +214,7 @@ export function WhatsAppPanel({
                   setTimeout(() => setCopied(false), 1500)
                 }}
               >
-                {copied ? <BadgeCheck className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+                {copied ? <BadgeCheck className="size-4 text-status-positive-fg" /> : <Copy className="size-4" />}
               </Button>
             </div>
           </div>
@@ -222,16 +222,16 @@ export function WhatsAppPanel({
             <li>Meta app dashboard → WhatsApp → Configuration.</li>
             <li>
               Set <strong>Callback URL</strong> to the value above and <strong>Verify token</strong> to your{" "}
-              <code className="font-mono">WHATSAPP_VERIFY_TOKEN</code>
+              <code className="font-mono" data-mono="secret">WHATSAPP_VERIFY_TOKEN</code>
               {verifyTokenConfigured ? "" : " (not set yet — inbound verification will fail until it is)"}.
             </li>
             <li>
-              Click <strong>Verify and save</strong>, then subscribe the <code className="font-mono">messages</code> field
+              Click <strong>Verify and save</strong>, then subscribe the <code>messages</code> field
               (use “Re-subscribe webhooks” above, or add it in Webhooks → App fields).
             </li>
             <li>
               Test by sending a WhatsApp message to the linked number — it appears in the inbox within seconds. Graph{" "}
-              <code className="font-mono">{graphVersion}</code>.
+              <code>{graphVersion}</code>.
             </li>
           </ol>
           <p className="rounded-md border px-3 py-2 text-xs text-muted-foreground">

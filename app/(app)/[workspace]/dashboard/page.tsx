@@ -17,6 +17,10 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { FollowUpNudge } from "@/components/dashboard/follow-up-nudge"
+import { DataHealthCard } from "@/components/dashboard/data-health-card"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -68,138 +72,147 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-display font-semibold tracking-tight">
-            Dashboard
-            <Badge variant="secondary" className="rounded-md font-mono text-xs">{ws.name}</Badge>
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your workspace at a glance — contacts, deals, projects, and activity.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
-            Go to contacts <ArrowRight className="size-3.5" />
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full" render={<Link href={`/${slug}/reports`} />}>
-            Reports
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Your workspace at a glance — contacts, deals, projects, and activity."
+        badge={<Badge variant="secondary" className="rounded-md text-xs">{ws.name}</Badge>}
+        actions={
+          <>
+            <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
+              Go to contacts <ArrowRight className="size-3.5" />
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-full" render={<Link href={`/${slug}/reports`} />}>
+              Reports
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
           <Link key={s.label} href={s.href}>
-            <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20">
+            <div className="group rounded-md border bg-card p-4 transition-colors hover:border-foreground/20">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <s.icon className="size-4" />
                 <span className="text-xs font-medium">{s.label}</span>
               </div>
-              <div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{s.value}</div>
+              <div className="mt-3 font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums">{s.value}</div>
             </div>
           </Link>
         ))}
       </div>
 
-      {/* Pipeline — reference-style data table */}
-      <section className="overflow-hidden rounded-xl border bg-card">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
-            <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
-              by value
-            </span>
-          </div>
-          <Link
-            href={`/${slug}/deals?view=table`}
-            className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-          >
-            View all deals <ArrowRight className="size-3.5" />
-          </Link>
+      {/* Follow-up nudges */}
+      <FollowUpNudge workspaceId={ws.id} workspaceSlug={slug} />
+
+      <div className="grid gap-4 lg:grid-cols-4">
+        <div className="lg:col-span-3">
+          {/* Pipeline — reference-style data table */}
+          <section className="overflow-hidden rounded-md border bg-card">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                  by value
+                </span>
+              </div>
+              <Link
+                href={`/${slug}/deals?view=table`}
+                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+              >
+                View all deals <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+            {topDeals.length === 0 ? (
+              <Empty>
+                <EmptyMedia variant="icon"><KanbanSquare /></EmptyMedia>
+                <EmptyTitle>No deals in your pipeline yet</EmptyTitle>
+                <EmptyDescription>Create your first deal to start tracking opportunities and closing sales.</EmptyDescription>
+                <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
+                  Go to deals <ArrowRight className="size-3.5" />
+                </Button>
+              </Empty>
+            ) : (
+              <>
+                <Table>
+                  <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
+                    <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+                      <TableHead>Deal</TableHead>
+                      <TableHead>Stage</TableHead>
+                      <TableHead className="hidden lg:table-cell">Owner</TableHead>
+                      <TableHead className="hidden md:table-cell">Pipeline value</TableHead>
+                      <TableHead className="hidden md:table-cell">Win probability</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {topDeals.map((d) => (
+                      <TableRow key={d.id}>
+                        <TableCell>
+                          <Link
+                            href={`/${slug}/deals/${d.id}`}
+                            className="text-sm font-medium hover:underline"
+                          >
+                            {d.title}
+                          </Link>
+                          <p className="truncate text-xs text-muted-foreground">
+                            {d.organization?.name ??
+                              (d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "—")}
+                          </p>
+                          <TagPills tags={d.tags} />
+                        </TableCell>
+                        <TableCell>
+                          <span className="inline-flex items-center gap-1.5 text-sm">
+                            <span
+                              className="size-2 rounded-full"
+                              style={{ backgroundColor: d.stage.color }}
+                            />
+                            {d.stage.name}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden lg:table-cell">
+                          {d.owner ? (
+                            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
+                              <Avatar className="size-5">
+                                <AvatarFallback className="text-[9px]">
+                                  {initials(d.owner.name)}
+                                </AvatarFallback>
+                              </Avatar>
+                              {d.owner.name}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="hidden font-medium tabular-nums md:table-cell">
+                          {formatMoney(d.value, d.currency)}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          <WinBar value={d.probability} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <TableTotalsBar>
+                  <span className="font-medium">
+                    <span className="tabular-nums">{topDeals.length}</span>{" "}
+                    <span className="text-muted-foreground">deals in view</span>
+                  </span>
+                  <Metric label="Sum of pipeline" value={formatMoney(sumPipeline)} />
+                  <Metric label="Avg win probability" value={avgProb == null ? "—" : `${avgProb}%`} />
+                </TableTotalsBar>
+              </>
+            )}
+          </section>
         </div>
-        {topDeals.length === 0 ? (
-          <div className="px-4 py-12 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
-            <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
-            <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
-              Go to deals <ArrowRight className="size-3.5" />
-            </Button>
-          </div>
-        ) : (
-          <>
-            <Table>
-              <TableHeader className="[&_th]:h-9 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
-                <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                  <TableHead>Deal</TableHead>
-                  <TableHead>Stage</TableHead>
-                  <TableHead className="hidden lg:table-cell">Owner</TableHead>
-                  <TableHead className="hidden md:table-cell">Pipeline value</TableHead>
-                  <TableHead className="hidden md:table-cell">Win probability</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {topDeals.map((d) => (
-                  <TableRow key={d.id}>
-                    <TableCell>
-                      <Link
-                        href={`/${slug}/deals/${d.id}`}
-                        className="text-sm font-medium hover:underline"
-                      >
-                        {d.title}
-                      </Link>
-                      <p className="truncate text-xs text-muted-foreground">
-                        {d.organization?.name ??
-                          (d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "—")}
-                      </p>
-                      <TagPills tags={d.tags} />
-                    </TableCell>
-                    <TableCell>
-                      <span className="inline-flex items-center gap-1.5 text-sm">
-                        <span
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: d.stage.color }}
-                        />
-                        {d.stage.name}
-                      </span>
-                    </TableCell>
-                    <TableCell className="hidden lg:table-cell">
-                      {d.owner ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Avatar className="size-5">
-                            <AvatarFallback className="text-[9px]">
-                              {initials(d.owner.name)}
-                            </AvatarFallback>
-                          </Avatar>
-                          {d.owner.name}
-                        </span>
-                      ) : (
-                        <span className="text-sm text-muted-foreground/50">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="hidden font-medium tabular-nums md:table-cell">
-                      {formatMoney(d.value, d.currency)}
-                    </TableCell>
-                    <TableCell className="hidden md:table-cell">
-                      <WinBar value={d.probability} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <TableTotalsBar>
-              <span className="font-medium">
-                <span className="tabular-nums">{topDeals.length}</span>{" "}
-                <span className="text-muted-foreground">deals in view</span>
-              </span>
-              <Metric label="Sum of pipeline" value={formatMoney(sumPipeline)} />
-              <Metric label="Avg win probability" value={avgProb == null ? "—" : `${avgProb}%`} />
-            </TableTotalsBar>
-          </>
-        )}
-      </section>
+
+        <div className="lg:col-span-1">
+          <DataHealthCard workspaceId={ws.id} />
+        </div>
+      </div>
 
       {/* Recent activity */}
-      <section className="overflow-hidden rounded-xl border bg-card">
+      <section className="overflow-hidden rounded-md border bg-card">
         <div className="border-b px-4 py-3">
           <h2 className="text-sm font-semibold tracking-tight">Recent activity</h2>
           <p className="text-xs text-muted-foreground">Across contacts and deals.</p>
@@ -207,16 +220,16 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <div className="space-y-2 p-4">
           {recentActivities.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
+              <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
               <p className="mt-2 text-sm text-muted-foreground">No activity yet. Start by adding contacts or creating deals.</p>
             </div>
           )}
           {recentActivities.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-3 rounded-xl border bg-muted/40 px-3 py-2.5"
+              className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2.5"
             >
-              <Badge variant="outline" className="rounded-full font-mono text-[10px] shrink-0">
+              <Badge variant="outline" className="rounded-full text-[10px] shrink-0">
                 {a.type}
               </Badge>
               <span className="text-xs text-muted-foreground truncate">{a.body || a.type}</span>

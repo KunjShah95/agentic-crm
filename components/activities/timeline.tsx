@@ -192,7 +192,7 @@ export function Timeline({
 
   if (activities.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed px-4 py-10 text-center">
+      <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-10 text-center">
         <Users className="size-8 text-muted-foreground/50" />
         <p className="text-sm font-medium">No activity yet</p>
         <p className="text-sm text-muted-foreground">
@@ -207,7 +207,7 @@ export function Timeline({
   return (
     <div>
       {sourceEntries.length > 1 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 px-3 py-2">
           <span className="text-xs font-medium text-muted-foreground">Show:</span>
           <SourceFilterBar
             sources={sourceEntries.map((s) => ({
@@ -253,7 +253,7 @@ export function Timeline({
               />
             </span>
 
-            <div className="min-w-0 flex-1 rounded-lg border bg-card px-3.5 py-2.5">
+            <div className="min-w-0 flex-1 rounded-md border bg-card px-3.5 py-2.5">
               <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">
                   {author?.name ?? "Unknown"}

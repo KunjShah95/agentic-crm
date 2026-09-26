@@ -15,7 +15,7 @@ export function StaffSection() {
       <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8 lg:py-16">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
-            <span className="inline-flex items-center gap-1.5 font-mono text-[11px] tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</span>
+            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.12em] text-muted-foreground"><Users className="size-3" /> STAFF · ONE LOOP, EVERY ROLE</span>
             <h2 className="mt-3 text-[30px] font-bold leading-[0.95] tracking-[-0.025em] sm:text-[38px]">Built for how Ahmedabad builds.</h2>
                         <p className="mt-3 max-w-[560px] text-[14px] leading-6 text-muted-foreground">One screen per role. Owners see revenue, collections and at-risk bookings. Sales see their leads, follow-ups, and today&apos;s visits. Brokers see only their allocation. Site verifies with GPS, Accounts sends RERA demands — same workspace, one loop. Gujarati + Hindi where the buyer reads it.</p>
           </div>
@@ -25,15 +25,15 @@ export function StaffSection() {
             <Card key={r.role} className="group transition-transform duration-300 hover:-translate-y-0.5 overflow-hidden">
               <div className="h-px bg-border" />
               <CardHeader className="pb-2">
-                <span className="inline-flex size-8 items-center justify-center rounded-lg bg-foreground text-background"><r.icon className="size-4" /></span>
+                <span className="inline-flex size-8 items-center justify-center rounded-sm bg-foreground text-background"><r.icon className="size-4" /></span>
                 <CardTitle className="text-[13px] leading-tight tracking-tight">{r.role}</CardTitle>
-                <span className="w-fit font-mono text-[11px] text-muted-foreground">{r.kpi}</span>
+                <span className="w-fit text-[11px] text-muted-foreground">{r.kpi}</span>
               </CardHeader>
               <CardContent><p className="text-xs leading-5 text-muted-foreground">{r.desc}</p></CardContent>
             </Card>
           ))}
         </div>
-        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs font-mono text-muted-foreground">
+        <div className="mt-6 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
           <span>gu/hi templates</span><span>·</span><span>Slug-routed · workspaceId on every query</span>
         </div>
       </div>

@@ -83,12 +83,12 @@ export function WhatsAppContactCard({
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="size-4 text-green-600" />
+          <MessageSquare className="size-4 text-status-positive-fg" />
           WhatsApp
           <span
             className={
               "rounded-full px-2 py-0.5 text-[10px] font-medium " +
-              (active ? "bg-emerald-500/10 text-emerald-600" : "bg-muted text-muted-foreground")
+              (active ? "bg-status-positive-bg text-status-positive-fg" : "bg-muted text-muted-foreground")
             }
           >
             {active ? "Connected" : "Needs reconnect"}

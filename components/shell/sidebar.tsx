@@ -100,7 +100,7 @@ export function Sidebar({
             onClick={toggle}
             aria-label="Expand sidebar"
             title="Expand sidebar"
-            className="mx-auto flex size-9 items-center justify-center rounded-lg text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            className="mx-auto flex size-9 items-center justify-center rounded-sm text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           >
             <ChevronsRight className="size-4" />
           </button>
@@ -115,13 +115,13 @@ export function Sidebar({
                 onClick={toggle}
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
-                className="flex size-8 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                className="flex size-8 shrink-0 items-center justify-center rounded-sm text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 <ChevronsLeft className="size-4" />
               </button>
             </div>
-            <div className="mt-3 hidden items-center gap-2 rounded-lg border bg-card px-2.5 py-2 md:flex">
-              <span className="flex size-6 items-center justify-center rounded-md bg-foreground text-[10px] font-bold text-background">
+            <div className="mt-3 hidden items-center gap-2 rounded-md border bg-card px-2.5 py-2 md:flex">
+              <span className="flex size-6 items-center justify-center rounded-xs bg-foreground text-[10px] font-bold text-background">
                 {workspace.name.slice(0, 2).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1 truncate text-xs font-medium">{workspace.name}</span>
@@ -139,7 +139,7 @@ export function Sidebar({
               href={`/${workspace.slug}/${item.href}`}
               title={collapsed ? item.label : undefined}
               className={cn(
-                "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
+                "flex items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
                 collapsed && "justify-center px-0",
                 isItemActive &&
                   "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-xs border-l-2 border-brand",
@@ -157,7 +157,7 @@ export function Sidebar({
             href={`/${workspace.slug}/settings`}
             title={collapsed ? "Settings" : undefined}
             className={cn(
-              "flex items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
+              "flex items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-sm font-medium text-sidebar-foreground/75 transition-all duration-150 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:scale-[0.98]",
               collapsed && "justify-center px-0",
               isActive("settings") && !pathname.includes("/settings/billing") && !pathname.includes("/settings/members") &&
                 "bg-sidebar-accent text-sidebar-accent-foreground font-semibold shadow-xs border-l-2 border-brand",

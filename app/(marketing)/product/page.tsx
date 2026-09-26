@@ -89,7 +89,7 @@ export default async function ProductPage() {
       <section className="mx-auto max-w-[1280px] px-6 py-14 lg:px-8">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
-            <span className="font-mono text-[11px] tracking-[0.12em] text-muted-foreground">
+            <span className="text-[11px] tracking-[0.12em] text-muted-foreground">
               LIVE SPECIMEN
             </span>
             <h2 className="mt-3 text-[28px] font-semibold tracking-[-0.02em] sm:text-[34px]">
@@ -100,7 +100,7 @@ export default async function ProductPage() {
               Every query is workspace-isolated, and brokers only see their allocated inventory.
             </p>
           </div>
-          <div className="relative overflow-hidden rounded-[20px] border bg-card shadow-[0_24px_60px_-16px_rgba(23,18,10,0.18)]">
+          <div className="relative overflow-hidden rounded-md border bg-card shadow-[0_24px_60px_-16px_rgba(23,18,10,0.18)]">
             {/* eslint-disable-next-line @next/next/no-img-element -- compressed SVG asset */}
             <img
               src="/images/product-pipeline.svg"
@@ -117,7 +117,7 @@ export default async function ProductPage() {
           {CAPABILITIES.map((c) => (
             <Card key={c.title} className="border-border/60 transition-transform hover:-translate-y-0.5">
               <CardHeader className="pb-2">
-                <span className="inline-flex size-8 items-center justify-center rounded-lg bg-foreground text-background">
+                <span className="inline-flex size-8 items-center justify-center rounded-sm bg-foreground text-background">
                   <c.icon className="size-4" aria-hidden />
                 </span>
                 <CardTitle className="text-[14px] tracking-tight">{c.title}</CardTitle>

@@ -50,15 +50,15 @@ export function WinsSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; wo
           <Card className="bento-depth border-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2">
             <CardHeader className="pb-2">
               <CardTitle className="text-[16px] tracking-tight flex items-center gap-1.5">
-                <span className="flex size-6 items-center justify-center rounded-lg bg-brand/10 text-brand">📋</span> Your 9:00 AM Brief
+                <span className="flex size-6 items-center justify-center rounded-xs bg-brand/10 text-brand">📋</span> Your 9:00 AM Brief
               </CardTitle>
               <CardDescription>Everything you need to see before the first call.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 {MORNING.map((m) => (
-                  <div key={m.label} className="rounded-xl border bg-muted/30 p-3">
-                    <div className="font-mono text-[11px] text-muted-foreground">{m.label}</div>
+                  <div key={m.label} className="rounded-md border bg-muted/30 p-3">
+                    <div className="text-[11px] text-muted-foreground">{m.label}</div>
                     <div className="mt-0.5 text-[20px] font-semibold tabular-nums">{m.value}</div>
                   </div>
                 ))}
@@ -73,7 +73,7 @@ export function WinsSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; wo
           <Card className="bento-depth border-border/60 transition-all duration-300 hover:-translate-y-1 hover:shadow-e2">
             <CardHeader className="pb-2">
               <CardTitle className="text-[16px] tracking-tight flex items-center gap-1.5">
-                <span className="flex size-6 items-center justify-center rounded-lg bg-success/10 text-success">🎉</span> Today&apos;s Wins
+                <span className="flex size-6 items-center justify-center rounded-xs bg-success/10 text-success">🎉</span> Today&apos;s Wins
               </CardTitle>
               <CardDescription>7 / 10 important actions completed.</CardDescription>
             </CardHeader>

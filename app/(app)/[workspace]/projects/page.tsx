@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
 import { listProjects } from "@/modules/property/queries"
 import { PageHeader, Stat } from "@/components/shell/page-header"
-import { Card, CardContent } from "@/components/ui/card"
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Badge } from "@/components/ui/badge"
 import { Building2, MapPin, Layers, Sparkles, ArrowRight } from "lucide-react"
 
@@ -36,27 +36,25 @@ export default async function ProjectsPage({
       />
 
       {projects.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><Building2 className="size-6 text-muted-foreground" /></div>
-            <div className="mt-3 text-sm font-medium">No projects yet</div>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add your first project, then add towers and units to start managing inventory and payments.</p>
-          </CardContent>
-        </Card>
+        <Empty>
+          <EmptyMedia variant="icon"><Building2 /></EmptyMedia>
+          <EmptyTitle>No projects yet</EmptyTitle>
+          <EmptyDescription>Add your first project, then add towers and units to start managing inventory and payments.</EmptyDescription>
+        </Empty>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (
             <Link
               key={p.id}
               href={`/${slug}/projects/${p.id}`}
-              className="group relative overflow-hidden rounded-[16px] border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
+              className="group relative overflow-hidden rounded-md border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
             >
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,oklch(0.58_0.16_68/0.08),transparent_70%)]" />
               <div className="relative flex items-start justify-between gap-3">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-foreground text-background text-xs font-bold">
+                <span className="flex size-9 items-center justify-center rounded-sm bg-foreground text-background text-xs font-bold">
                   {p.name.slice(0, 2).toUpperCase()}
                 </span>
-                <Badge variant="outline" className="rounded-full font-mono text-[11px]">{p.city}</Badge>
+                <Badge variant="outline" className="rounded-full text-[11px]">{p.city}</Badge>
               </div>
               <div className="relative mt-3 font-medium tracking-tight">{p.name}</div>
               <div className="relative mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">

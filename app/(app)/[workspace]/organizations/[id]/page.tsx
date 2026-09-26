@@ -83,7 +83,7 @@ export default async function OrganizationDetailPage({
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex items-center gap-4">
-          <span className="flex size-14 items-center justify-center rounded-xl bg-muted">
+          <span className="flex size-14 items-center justify-center rounded-md bg-muted">
             <Building2 className="size-7 text-muted-foreground" />
           </span>
           <div>

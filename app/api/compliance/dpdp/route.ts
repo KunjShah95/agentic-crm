@@ -11,6 +11,13 @@ export async function GET(req: Request) {
   if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+
+  // Verify the user is a member of this workspace
+  const membership = await db.workspaceMember.findUnique({
+    where: { workspaceId_userId: { workspaceId: ws.id, userId: session.user.id } },
+  })
+  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+
   const csv = await dpdpExport(ws.id)
   return new Response(csv, { headers: { "content-type": "text/csv", "content-disposition": `attachment; filename="dpdp-${slug}.csv"` } })
 }

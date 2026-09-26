@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { TaskList } from "@/components/activities/task-list"
 import { NewTaskDialog } from "@/components/activities/new-task-dialog"
+import { PageHeader } from "@/components/shell/page-header"
 import {
   Card,
   CardContent,
@@ -57,27 +58,19 @@ export default async function TasksPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-brand/25 to-transparent" />
-        </div>
-        <div className="relative flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · assigned to you</p>
-          </div>
-          <NewTaskDialog workspaceId={workspace.id} />
-        </div>
-      </div>
+      <PageHeader
+        title="My Tasks"
+        description={<>{open.length} open · {completed.length} completed · assigned to you</>}
+        actions={<NewTaskDialog workspaceId={workspace.id} />}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card className="overflow-hidden">
           <div className="h-1 bg-brand" />
           <CardHeader className="flex-row items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-brand/10 text-brand"><Circle className="size-4" /></span>
+            <span className="flex size-8 items-center justify-center rounded-sm bg-brand/10 text-brand"><Circle className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 font-mono text-[11px] text-white">{open.length}</span></CardTitle>
+              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[11px] text-white">{open.length}</span></CardTitle>
               <CardDescription>To-dos assigned to you</CardDescription>
             </div>
           </CardHeader>
@@ -92,11 +85,11 @@ export default async function TasksPage({
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="h-1 bg-emerald-500" />
+          <div className="h-1 bg-status-positive-fg" />
           <CardHeader className="flex-row items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-4" /></span>
+            <span className="flex size-8 items-center justify-center rounded-sm bg-status-positive-bg text-status-positive-fg"><CheckCircle2 className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 font-mono text-[11px] text-white">{completed.length}</span></CardTitle>
+              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-status-positive-bg px-1.5 py-0.5 text-[11px] text-status-positive-fg">{completed.length}</span></CardTitle>
               <CardDescription>Recently finished tasks</CardDescription>
             </div>
           </CardHeader>

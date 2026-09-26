@@ -69,7 +69,7 @@ export function CompanyTakeCard({ take }: { take: Take }) {
                     {deal.assigned ? " · assigned" : " · projected"})
                   </span>
                 </span>
-                <span className="shrink-0 font-mono tabular-nums">
+                <span className="shrink-0 font-mono tabular-nums" data-mono="money">
                   {formatMoney(deal.take)}
                 </span>
               </li>

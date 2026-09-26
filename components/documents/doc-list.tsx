@@ -31,7 +31,7 @@ export function GeneratedDocList({ slug, docs }: { slug: string; docs: Doc[] }) 
 
 function DocCard({ slug, doc }: { slug: string; doc: Doc }) {
   return (
-    <div className="rounded-lg border bg-card p-4">
+    <div className="rounded-md border bg-card p-4">
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm font-medium">{doc.template?.name ?? "Document"}</div>

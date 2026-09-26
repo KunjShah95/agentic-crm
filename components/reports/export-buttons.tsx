@@ -24,7 +24,7 @@ export function ExportButtons({ slug, projectId }: { slug: string; projectId?: s
             href={href(r.id, "csv")}
             download
             title={`Download ${r.label} CSV`}
-            className="inline-flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
+            className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
           >
             <Download className="size-3" /> {r.label} CSV
           </a>
@@ -35,7 +35,7 @@ export function ExportButtons({ slug, projectId }: { slug: string; projectId?: s
           href={href("all", "pdf")}
           download
           title="Download full report pack as PDF"
-          className="inline-flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
+          className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
         >
           <Download className="size-3" /> PDF
         </a>
@@ -43,7 +43,7 @@ export function ExportButtons({ slug, projectId }: { slug: string; projectId?: s
           href={href("all", "xlsx")}
           download
           title="Download full report pack as Excel"
-          className="inline-flex items-center gap-1 rounded-lg border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
+          className="inline-flex items-center gap-1 rounded-sm border bg-card px-2 py-1.5 text-xs font-medium hover:bg-muted"
         >
           <Download className="size-3" /> Excel
         </a>

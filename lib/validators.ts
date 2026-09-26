@@ -120,6 +120,21 @@ export const bulkAssignSchema = z.object({
   ownerId: z.string().min(1),
 })
 
+export const bulkMoveDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  stageId: z.string().min(1),
+})
+
+export const bulkAssignDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  ownerId: z.string().min(1),
+})
+
+export const bulkTagDealsSchema = z.object({
+  dealIds: z.array(z.string().min(1)).min(1),
+  tagIds: z.array(z.string().min(1)).min(1),
+})
+
 // ── Workspace ─────────────────────────────────────────────────────────────
 export const workspaceSchema = z.object({
   name: z.string().trim().min(1, "Workspace name is required").max(80),

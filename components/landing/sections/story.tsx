@@ -87,7 +87,7 @@ function BeatItem({ beat }: { beat: Beat }) {
   return (
     <div className="relative pl-[70px]">
       <span aria-hidden className="pointer-events-none absolute left-[26px] top-0 bottom-4 w-px bg-border" />
-      <div className="absolute left-[14px] top-0 flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted/50 font-mono text-[10px] font-medium text-muted-foreground">
+      <div className="absolute left-[14px] top-0 flex size-7 items-center justify-center rounded-full border-2 border-background bg-muted/50 text-[10px] font-medium text-muted-foreground">
         {beat.time}
       </div>
       <div className="space-y-1">

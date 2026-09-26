@@ -3,11 +3,12 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { LoaderCircle, Pencil, Plus } from "lucide-react"
+import { AlertTriangle, LoaderCircle, Pencil, Plus, X } from "lucide-react"
 
 import {
   createContactAction,
   updateContactAction,
+  type DuplicateContact,
 } from "@/lib/actions/contacts"
 import { Button } from "@/components/ui/button"
 import {
@@ -66,6 +67,8 @@ export function ContactFormDialog({
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [isPending, startTransition] = useTransition()
+  const [duplicates, setDuplicates] = useState<DuplicateContact[]>([])
+  const [pendingValues, setPendingValues] = useState<Record<string, string> | null>(null)
 
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -88,14 +91,41 @@ export function ContactFormDialog({
         toast.error(result.error.message)
         return
       }
+      // Check for duplicates in result
+      const dupes = result.data?.duplicates
+      if (dupes && dupes.length > 0) {
+        setDuplicates(dupes)
+        setPendingValues(values)
+        return
+      }
       toast.success(contact ? "Contact updated" : "Contact created")
       setOpen(false)
+      setDuplicates([])
+      setPendingValues(null)
+      router.refresh()
+    })
+  }
+
+  function forceSubmit() {
+    if (!pendingValues) return
+    startTransition(async () => {
+      const result = contact
+        ? await updateContactAction(workspaceId, contact.id, pendingValues)
+        : await createContactAction(workspaceId, pendingValues)
+      if (result.error) {
+        toast.error(result.error.message)
+        return
+      }
+      toast.success(contact ? "Contact updated" : "Contact created")
+      setOpen(false)
+      setDuplicates([])
+      setPendingValues(null)
       router.refresh()
     })
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setDuplicates([]); setPendingValues(null) } }}>
       <DialogTrigger
         render={
           trigger ?? (
@@ -115,6 +145,52 @@ export function ContactFormDialog({
               : "Create a new contact in this workspace."}
           </DialogDescription>
         </DialogHeader>
+
+        {/* Duplicate warning */}
+        {duplicates.length > 0 && (
+          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/50">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-caution-fg" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                  {duplicates.length} potential duplicate{duplicates.length > 1 ? "s" : ""} found
+                </p>
+                <div className="mt-2 space-y-1">
+                  {duplicates.map((d) => (
+                    <div key={d.id} className="flex items-center gap-2 text-xs text-status-caution-fg">
+                      <span className="font-medium">{d.firstName} {d.lastName}</span>
+                      {d.email && <span className="text-status-caution-fg/70">({d.email})</span>}
+                      {d.phone && <span className="text-status-caution-fg/70">({d.phone})</span>}
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => { setDuplicates([]); setPendingValues(null) }}
+                    className="h-7 text-xs"
+                  >
+                    <X data-icon="inline-start" className="size-3" />
+                    Edit fields
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={forceSubmit}
+                    disabled={isPending}
+                    className="h-7 text-xs"
+                  >
+                    {isPending && <LoaderCircle data-icon="inline-start" className="size-3 animate-spin" />}
+                    Create anyway
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={onSubmit} className="flex flex-col gap-4">
           <FieldGroup>
             <div className="grid grid-cols-2 gap-3">

@@ -30,6 +30,20 @@
   --color-brand-soft: var(--brand-soft);
   --color-input: var(--input);
   --color-border: var(--border);
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-raised: var(--surface-raised);
+  --color-surface-sunken: var(--surface-sunken);
+  --color-hairline: var(--hairline);
+  --color-status-positive-bg: var(--status-positive-bg);
+  --color-status-positive-fg: var(--status-positive-fg);
+  --color-status-caution-bg: var(--status-caution-bg);
+  --color-status-caution-fg: var(--status-caution-fg);
+  --color-status-critical-bg: var(--status-critical-bg);
+  --color-status-critical-fg: var(--status-critical-fg);
+  --color-status-info-bg: var(--status-info-bg);
+  --color-status-info-fg: var(--status-info-fg);
+  --color-status-neutral-bg: var(--status-neutral-bg);
+  --color-status-neutral-fg: var(--status-neutral-fg);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
@@ -43,13 +57,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   /* Section rhythm tokens */
@@ -85,6 +95,20 @@
   --success: oklch(0.58 0.11 155);
   --success-foreground: oklch(0.99 0.02 155);
   --border: oklch(0.90 0.004 70);
+  --surface-canvas: oklch(0.988 0.004 82);
+  --surface-raised: oklch(0.997 0.002 85);
+  --surface-sunken: oklch(0.978 0.005 80);
+  --hairline: oklch(0.900 0.006 70);
+  --status-positive-bg: oklch(0.955 0.025 155);
+  --status-positive-fg: oklch(0.52 0.11 155);
+  --status-caution-bg: oklch(0.960 0.030 78);
+  --status-caution-fg: oklch(0.55 0.13 68);
+  --status-critical-bg: oklch(0.955 0.022 27);
+  --status-critical-fg: oklch(0.55 0.19 27);
+  --status-info-bg: oklch(0.955 0.020 245);
+  --status-info-fg: oklch(0.52 0.12 245);
+  --status-neutral-bg: oklch(0.965 0.004 78);
+  --status-neutral-fg: oklch(0.48 0.006 60);
   --input: oklch(0.90 0.004 70);
   --ring: oklch(0.58 0.16 68);
   --chart-1: oklch(0.58 0.16 68);
@@ -92,7 +116,15 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
+  /* Base radius retained. Vendored shadcn (components/ui — never hand-edited)
+     reads it in four places, so deleting it breaks them at computed-value time:
+       input-group.tsx:26  rounded-[calc(var(--radius)-5px)]  -> kbd 5px
+       input-group.tsx:73  rounded-[calc(var(--radius)-3px)]  -> xs control 7px
+       input-group.tsx:76  rounded-[calc(var(--radius)-3px)]  -> size-6 control 7px
+       sonner.tsx:36       --border-radius: var(--radius)     -> toast 10px (direct,
+                          no calc() — so grepping calc(var(--radius) is NOT enough)
+     Keep in sync with --radius-md. */
+  --radius: 10px;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.58 0.16 68);
@@ -130,6 +162,20 @@
   --success: oklch(0.70 0.12 155);
   --success-foreground: oklch(0.16 0.02 155);
   --border: oklch(1 0 0 / 8%);
+  --surface-canvas: oklch(0.145 0.005 62);
+  --surface-raised: oklch(0.185 0.004 62);
+  --surface-sunken: oklch(0.165 0.004 62);
+  --hairline: oklch(1 0 0 / 9%);
+  --status-positive-bg: oklch(0.24 0.030 155);
+  --status-positive-fg: oklch(0.76 0.11 155);
+  --status-caution-bg: oklch(0.25 0.032 78);
+  --status-caution-fg: oklch(0.78 0.12 68);
+  --status-critical-bg: oklch(0.25 0.038 27);
+  --status-critical-fg: oklch(0.74 0.15 27);
+  --status-info-bg: oklch(0.24 0.030 245);
+  --status-info-fg: oklch(0.75 0.11 245);
+  --status-neutral-bg: oklch(0.25 0.005 62);
+  --status-neutral-fg: oklch(0.70 0.006 60);
   --input: oklch(1 0 0 / 12%);
   --ring: oklch(0.68 0.16 68);
   --chart-1: oklch(0.68 0.16 68);
@@ -156,15 +202,14 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply text-foreground;
+    background-color: var(--surface-canvas);
   }
   html {
     @apply font-sans;
   }
   /* TypeUI Premium: display headings carry the brand, tabular data figures */
-  h1, h2, h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.025em;
+  .text-balance {
     text-wrap: balance;
   }
   .tabular-nums, table, td, th {

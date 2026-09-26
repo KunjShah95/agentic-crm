@@ -43,12 +43,12 @@ export default async function ProjectDetailPage({
         stats={
           <>
             <Stat label="Units" value={units.length} sub={`${avail} available · ${hold} hold`} icon={<Layers className="size-3" />} />
-            <Stat label="Project" value={project.name.slice(0, 18)} sub={project.city} icon={<Building2 className="size-3" />} />
+            <Stat label="Project" value={<span className="block truncate">{project.name.slice(0, 18)}</span>} sub={project.city} icon={<Building2 className="size-3" />} />
           </>
         }
       />
       {units.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-card py-10 text-center text-sm text-muted-foreground">No units yet — import CSV or create manually.</div>
+        <div className="rounded-md border border-dashed bg-card py-10 text-center text-sm text-muted-foreground">No units yet — import CSV or create manually.</div>
       ) : (
         <InventoryWithDrawer units={units as unknown as never[]} />
       )}
