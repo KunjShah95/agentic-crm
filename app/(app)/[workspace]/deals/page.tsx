@@ -19,7 +19,7 @@ import { DealsTable } from "@/components/deals/deals-table"
 import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { CompanyTakeCard } from "@/components/deals/company-take-card"
 import { StageManager } from "@/components/deals/stage-manager"
-import { Card, CardContent } from "@/components/ui/card"
+import { PageHeader, Stat } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Deals" }
 
@@ -84,13 +84,11 @@ export default async function DealsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6">
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">Deals</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{pipeline.deals.length} deal{pipeline.deals.length !== 1 ? "s" : ""} across {pipeline.stages.length} stage{pipeline.stages.length !== 1 ? "s" : ""} · drag to update status</p>
-          </div>
-          <div className="flex items-center gap-2">
+      <PageHeader
+        title="Deals"
+        description={<>{pipeline.deals.length} deal{pipeline.deals.length !== 1 ? "s" : ""} across {pipeline.stages.length} stage{pipeline.stages.length !== 1 ? "s" : ""} · drag to update status</>}
+        actions={
+          <>
             <div className="flex items-center rounded-full border bg-muted/40 p-0.5">
               <Link
                 href={`/${slug}/deals`}
@@ -125,24 +123,19 @@ export default async function DealsPage({
               organizations={orgs}
               members={members}
             />
-          </div>
-        </div>
-        <div className="relative mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
-          {statCards.map((stat) => (
-            <Fragment key={stat.label}>
-              <Card className="bg-muted/30 border-dashed">
-                <CardContent className="flex flex-col gap-0.5 py-3">
-                  <span className="text-xs font-medium text-muted-foreground">{stat.label}</span>
-                  <span className="text-lg font-semibold tracking-tight">
-                    {stat.value}
-                  </span>
-                </CardContent>
-              </Card>
-              {stat.label === "Won" && <CompanyTakeCard take={stats.take} />}
-            </Fragment>
-          ))}
-        </div>
-      </div>
+          </>
+        }
+        stats={
+          <>
+            {statCards.map((stat) => (
+              <Fragment key={stat.label}>
+                <Stat label={stat.label} value={stat.value} />
+                {stat.label === "Won" && <CompanyTakeCard take={stats.take} />}
+              </Fragment>
+            ))}
+          </>
+        }
+      />
 
       {view === "kanban" ? (
         <KanbanBoard
