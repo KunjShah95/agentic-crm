@@ -52,11 +52,11 @@ export function SiteFooter({}: { isAuthed: boolean; workspaceSlug?: string | nul
           {/* brand + contact */}
           <div>
             <div className="flex items-center gap-2.5">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-brand text-brand-foreground">
+              <span className="flex size-8 items-center justify-center rounded-sm bg-brand text-brand-foreground">
                 <Layers className="size-4" aria-hidden />
               </span>
               <span className="font-display text-xl font-semibold tracking-[-0.02em]">Estate360</span>
-              <span className="font-mono text-[11px] uppercase tracking-[0.2em] text-[#E9EDF5]/50">CRM</span>
+              <span className="text-[11px] uppercase tracking-[0.2em] text-[#E9EDF5]/50">CRM</span>
             </div>
             <p className="mt-4 max-w-[340px] text-[14px] leading-6 text-[#E9EDF5]/60">
               Real Estate CRM for Ahmedabad builders — inventory, bookings, GPS visits, RERA, WhatsApp.
@@ -87,7 +87,7 @@ export function SiteFooter({}: { isAuthed: boolean; workspaceSlug?: string | nul
 
           {/* product */}
           <nav aria-label="Product">
-            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#E9EDF5]/40">Product</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-[#E9EDF5]/40">Product</div>
             <ul className="mt-4 space-y-2.5 text-[14px] text-[#E9EDF5]/70">
               {FOOTER_PRODUCT_LINKS.map((link) => (
                 <li key={link.href}>
@@ -101,7 +101,7 @@ export function SiteFooter({}: { isAuthed: boolean; workspaceSlug?: string | nul
 
           {/* legal */}
           <nav aria-label="Legal">
-            <div className="font-mono text-[11px] uppercase tracking-[0.16em] text-[#E9EDF5]/40">Legal</div>
+            <div className="text-[11px] uppercase tracking-[0.16em] text-[#E9EDF5]/40">Legal</div>
             <ul className="mt-4 space-y-2.5 text-[14px] text-[#E9EDF5]/70">
               <li>
                 <Link href="/privacy" className="transition-colors hover:text-white">

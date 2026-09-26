@@ -107,7 +107,7 @@ function WorkflowCard({ workflow }: { workflow: Workflow }) {
       <CardHeader className="pb-2">
         <div
           className={cn(
-            "inline-flex size-9 items-center justify-center rounded-xl",
+            "inline-flex size-9 items-center justify-center rounded-sm",
             workflow.accent
               ? "bg-brand text-brand-foreground"
               : "bg-foreground text-background"

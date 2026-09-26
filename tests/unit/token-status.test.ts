@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest"
-import { scan, css, expectNoViolations } from "../helpers/source-scan"
+import { scan, css, expectNoViolations, TOKEN_EXEMPT } from "../helpers/source-scan"
 
 const sheet = css()
 const PALETTE =
@@ -26,6 +26,14 @@ describe("status tokens", () => {
     // without the fill would fork the visual language. If a sixth pair is ever
     // added, extend the alternation below and migrate those pairs with it.
     const v = scan(PALETTE)
-    expectNoViolations(v, "raw palette color")
+    // Illustrative colour may waive the rule on the element itself with
+    // data-token-raw="<reason>" (see TOKEN_EXEMPT). The only waiver in the
+    // codebase is the macOS traffic-light dots in the marketing hero's mock
+    // browser chrome — they depict a product screenshot, so they are not live
+    // status and must not borrow the status palette.
+    expectNoViolations(
+      v.filter((x) => !TOKEN_EXEMPT.test(x.source)),
+      "raw palette color"
+    )
   })
 })

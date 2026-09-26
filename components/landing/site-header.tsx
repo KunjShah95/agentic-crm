@@ -25,7 +25,7 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
       <div className={cn("relative mx-auto flex h-[64px] w-full max-w-[1280px] items-center justify-between px-6 lg:px-8", compact && "h-14")}>
         <Link href="/" className="group flex items-center gap-2.5" aria-label="Estate360 home">
           {/* Amber logo mark — brand-colored, not generic black */}
-          <span className="flex size-8 items-center justify-center rounded-lg bg-brand shadow-sm transition-shadow group-hover:shadow-md">
+          <span className="flex size-8 items-center justify-center rounded-sm bg-brand shadow-sm transition-shadow group-hover:shadow-md">
             <Layers className="size-4 text-brand-foreground" aria-hidden />
           </span>
           <span className="text-[13px] font-semibold tracking-[0.18em]">ESTATE360</span>
@@ -92,7 +92,7 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
                 key={link.href}
                 href={link.href}
                 onClick={() => setMobileOpen(false)}
-                className="rounded-lg px-2 py-2.5 hover:bg-muted"
+                className="rounded-sm px-2 py-2.5 hover:bg-muted"
               >
                 {link.label}
               </Link>

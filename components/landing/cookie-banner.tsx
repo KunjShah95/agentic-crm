@@ -40,7 +40,7 @@ export function CookieBanner() {
       role="dialog"
       aria-labelledby="cookie-banner-title"
       aria-describedby="cookie-banner-desc"
-      className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-lg rounded-2xl border bg-card p-4 shadow-e3 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:left-auto md:bottom-6"
+      className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-[70] mx-auto max-w-lg rounded-md border bg-card p-4 shadow-e3 sm:inset-x-auto sm:right-4 sm:bottom-4 sm:left-auto md:bottom-6"
     >
       <h2 id="cookie-banner-title" className="text-sm font-semibold tracking-tight">
         Cookies for a smoother loop

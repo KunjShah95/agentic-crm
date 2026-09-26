@@ -3,8 +3,12 @@ import path from "node:path"
 
 export const REPO_ROOT = path.resolve(__dirname, "..", "..")
 
-/** Vendored shadcn and the Phase 4 marketing tree are deliberately excluded. */
-const COMPONENT_EXCLUDES = new Set(["ui", "landing"])
+/**
+ * Only vendored shadcn is excluded. components/landing joined the scope in
+ * Phase 4, when the marketing surface was brought under the same token
+ * conformance rules as the app.
+ */
+const COMPONENT_EXCLUDES = new Set(["ui"])
 
 function componentDirs(): string[] {
   const root = path.join(REPO_ROOT, "components")
@@ -20,8 +24,10 @@ function componentDirs(): string[] {
  * App route trees are auto-discovered, mirroring componentDirs() below, so a
  * new app/* route cannot silently escape conformance. Entries that resolve to
  * a file (e.g. app/not-found.tsx) are listed explicitly; walk() handles both.
+ * app/(marketing) joined the scope in Phase 4; (public) and api stay out
+ * because they are not app UI.
  */
-const APP_EXCLUDES = new Set(["(marketing)", "(public)", "api"])
+const APP_EXCLUDES = new Set(["(public)", "api"])
 
 function appDirs(): string[] {
   const root = path.join(REPO_ROOT, "app")
@@ -38,10 +44,14 @@ function appDirs(): string[] {
 
 export const SCOPE: readonly string[] = [...appDirs(), ...componentDirs()]
 
+/**
+ * The only exclusions. Marketing is covered: app/(marketing) and
+ * components/landing are in SCOPE as of Phase 4. Marketing opts out of the
+ * decorative-blur rule in token-surfaces.test.ts via its own root filter —
+ * that is a per-rule exclusion, not a scope exclusion.
+ */
 export const EXCLUDED = [
   "components/ui (vendored shadcn)",
-  "components/landing (Phase 4)",
-  "app/(marketing) (Phase 4)",
   "app/(public)",
   "app/api",
 ] as const
@@ -71,7 +81,28 @@ function walk(entry: string, out: string[] = []): string[] {
   return out
 }
 
-export type Violation = { file: string; line: number; match: string; text: string }
+export type Violation = {
+  file: string
+  line: number
+  match: string
+  text: string
+  /** The full, untruncated source line. Use this, not text, when matching
+   *  against something that may sit anywhere on the line. */
+  source: string
+}
+
+/**
+ * A colour rule may be waived on a single element by declaring a reason:
+ * `data-token-raw="<reason>"`. The reason is required so every waiver is
+ * self-documenting at the call site and greppable from the repo root.
+ *
+ * Deliberately narrow: only the palette rule in token-status.test.ts honours
+ * it, for genuinely illustrative colour (e.g. the macOS traffic-light dots in
+ * the marketing hero's mock browser chrome, which depict a product screenshot
+ * rather than live status). It is not a general escape hatch — radius, type,
+ * and blur have no waiver.
+ */
+export const TOKEN_EXEMPT = /data-token-raw="[a-z][a-z-]*"/
 
 export type ScanOptions = {
   roots?: readonly string[]
@@ -112,6 +143,7 @@ export function scan(
             line: i + 1,
             match: m[0],
             text: excerpt(line, m.index),
+            source: line,
           })
         })
     }

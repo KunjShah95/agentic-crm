@@ -48,7 +48,7 @@ export function CommandBarSection() {
               <CardTitle className="text-[15px] font-medium">What should I do now?</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2.5 text-[13px] text-muted-foreground focus-within:border-brand">
+              <div className="flex items-center gap-2 rounded-sm border border-border bg-background px-3 py-2.5 text-[13px] text-muted-foreground focus-within:border-brand">
                 <Search className="size-3.5 text-muted-foreground/60" aria-hidden />
                 <input
                   type="text"
@@ -67,7 +67,7 @@ export function CommandBarSection() {
             </CardContent>
           </Card>
           <CardDescription className="mt-4 text-center text-[12px] text-muted-foreground">
-            Press <kbd className="inline-flex items-center gap-0.5 rounded border bg-background px-1.5 py-0.5 font-mono">⌘ K</kbd> from anywhere — even mid-WhatsApp reply.
+            Press <kbd className="inline-flex items-center gap-0.5 rounded border bg-background px-1.5 py-0.5">⌘ K</kbd> from anywhere — even mid-WhatsApp reply.
           </CardDescription>
         </div>
       </div>

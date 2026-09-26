@@ -16,10 +16,10 @@ export function PricingSection({ isAuthed, workspaceSlug }: { isAuthed: boolean;
       <div className="mt-10 grid items-start gap-4 overflow-visible pt-4 pb-3 lg:grid-cols-3">
         {PLANS.map((p) => (
           <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-transform duration-300 ${p.featured ? "border-foreground bg-foreground text-background lg:-translate-y-2 hover:-translate-y-3" : "hover:-translate-y-1 border-border/60"}`}>
-            {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-background text-foreground font-mono text-[11px] tracking-[0.14em] px-3 py-1 border">MOST CHOSEN</span>}
+            {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-background text-foreground text-[11px] tracking-[0.14em] px-3 py-1 border">MOST CHOSEN</span>}
             <CardHeader className="relative">
-              <div className={`font-mono text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 font-mono text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>
+              <div className={`text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>
               <div className={`mt-3 border-l-2 pl-3 text-[12px] leading-5 ${p.featured ? "border-background/40 text-background/70" : "border-border text-muted-foreground"}`}>{p.receipt}</div>
             </CardHeader>
             <CardContent className="flex-1 relative">
@@ -27,7 +27,7 @@ export function PricingSection({ isAuthed, workspaceSlug }: { isAuthed: boolean;
             </CardContent>
             <div className="p-6 pt-0 space-y-3 relative">
               <Button className={`w-full rounded-full gap-1.5 ${p.featured ? "bg-background text-foreground hover:bg-background/90" : ""}`} render={<Link href={cta} />}>{p.cta} <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" /></Button>
-              <div className={`text-center font-mono text-[11px] ${p.featured ? "text-background/50" : "text-muted-foreground"}`}>14-day free · cancel anytime</div>
+              <div className={`text-center text-[11px] ${p.featured ? "text-background/50" : "text-muted-foreground"}`}>14-day free · cancel anytime</div>
             </div>
           </Card>
         ))}
@@ -35,9 +35,9 @@ export function PricingSection({ isAuthed, workspaceSlug }: { isAuthed: boolean;
       <Card className="mt-8 overflow-hidden border-border/70">
         <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-foreground text-background"><CreditCard className="size-4" /></span>
+            <span className="flex size-10 items-center justify-center rounded-sm bg-foreground text-background"><CreditCard className="size-4" /></span>
             <div>
-              <div className="flex items-center gap-1.5 font-mono text-[11px] tracking-[0.14em] text-muted-foreground"><ReceiptText className="size-3" /> CHECKOUT, WITHOUT SURPRISES</div>
+              <div className="flex items-center gap-1.5 text-[11px] tracking-[0.14em] text-muted-foreground"><ReceiptText className="size-3" /> CHECKOUT, WITHOUT SURPRISES</div>
               <div className="text-sm font-medium">₹0 today · billing starts after your 14-day trial</div>
             </div>
           </div>

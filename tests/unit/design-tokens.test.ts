@@ -41,9 +41,14 @@ describe("conformance scope integrity", () => {
     expect(SCOPE).toContain("app/(auth)")
     expect(SCOPE).toContain("app/buyer")
     expect(SCOPE).toContain("app/invite")
+    // Marketing joined the scope in Phase 4 — the brand must not drift into a
+    // second system. Only vendored shadcn and the non-UI routes stay out.
+    expect(SCOPE).toContain("components/landing")
+    expect(SCOPE).toContain("app/(marketing)")
     expect(SCOPE.length, "scope shrank — a component tree may have been renamed").toBeGreaterThanOrEqual(20)
     expect(SCOPE).not.toContain("components/ui")
-    expect(SCOPE).not.toContain("components/landing")
+    expect(SCOPE).not.toContain("app/(public)")
+    expect(SCOPE).not.toContain("app/api")
   })
 
   it("resolves every conformance scope entry to at least one file", () => {

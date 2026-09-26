@@ -43,7 +43,7 @@ export default async function ContactPage() {
                 className="object-cover"
               />
               <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-foreground/85 via-foreground/30 to-transparent" />
-              <div className="absolute bottom-4 left-5 font-mono text-[11px] tracking-[0.16em] text-background/80">
+              <div className="absolute bottom-4 left-5 text-[11px] tracking-[0.16em] text-background/80">
                 SG HIGHWAY → SOUTH BOPAL
               </div>
             </div>
@@ -84,7 +84,7 @@ export default async function ContactPage() {
           </p>
         </div>
 
-        <div id="contact-form" className="scroll-mt-24 rounded-[20px] border bg-card p-6 shadow-sm sm:p-8">
+        <div id="contact-form" className="scroll-mt-24 rounded-md border bg-card p-6 shadow-sm sm:p-8">
           <h2 className="text-lg font-semibold tracking-tight">Book a demo or ask a question</h2>
           <p className="mt-1 text-sm text-muted-foreground">All fields marked * are required. We never sell your leads.</p>
           <div className="mt-6">
