@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { askPipeline } from "@/modules/ai/ask"
+import { PageHeader } from "@/components/shell/page-header"
 import { Sparkles, TrendingUp, Wallet, Bot } from "lucide-react"
 
 export default async function AIPage({
@@ -37,12 +38,10 @@ export default async function AIPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight flex items-center gap-2">
-          <Bot className="size-6 text-brand" /> Intelligence
-        </h1>
-        <p className="text-sm text-muted-foreground">Revenue and collections forecasts, next-best-actions, and a read-only assistant for your pipeline.</p>
-      </div>
+      <PageHeader
+        title={<><Bot className="size-6 text-brand" /> Intelligence</>}
+        description="Revenue and collections forecasts, next-best-actions, and a read-only assistant for your pipeline."
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>

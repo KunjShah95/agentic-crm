@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
 import { getReportsSnapshot } from "@/modules/reports/queries"
 import { ExportButtons } from "@/components/reports/export-buttons"
+import { PageHeader } from "@/components/shell/page-header"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
@@ -43,15 +44,11 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6 relative overflow-hidden">
-        <div className="relative flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-display font-semibold tracking-tight">Reports</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Funnel, inventory health, collections, source ROI, and team targets — filter by project.</p>
-          </div>
-          <ExportButtons slug={slug} projectId={projectId} />
-        </div>
-      </div>
+      <PageHeader
+        title="Reports"
+        description="Funnel, inventory health, collections, source ROI, and team targets — filter by project."
+        actions={<ExportButtons slug={slug} projectId={projectId} />}
+      />
 
       {projects.length > 0 ? (
         <div className="flex flex-wrap gap-2 items-center text-sm">

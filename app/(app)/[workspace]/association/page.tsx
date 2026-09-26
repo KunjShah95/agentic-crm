@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Building2, Users, Handshake, Share2 } from "lucide-react"
+import { PageHeader } from "@/components/shell/page-header"
 import Link from "next/link"
 
 export default async function AssociationPage({ params }: { params: Promise<{ workspace: string }> }) {
@@ -53,15 +54,12 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-            {association.name} <Badge className="rounded-full">{association.slug}</Badge>
-          </h1>
-          <p className="text-sm text-muted-foreground">Member directory · Shared lead pool · Inventory exchange · Referral ledger — all association-scoped. Network effects: the moat.</p>
-        </div>
-        <Badge variant="secondary" className="rounded-full gap-1.5"><Users className="size-3" /> {members.length} members</Badge>
-      </div>
+      <PageHeader
+        title={association.name}
+        description="Member directory · Shared lead pool · Inventory exchange · Referral ledger — all association-scoped. Network effects: the moat."
+        badge={<Badge className="rounded-full">{association.slug}</Badge>}
+        actions={<Badge variant="secondary" className="rounded-full gap-1.5"><Users className="size-3" /> {members.length} members</Badge>}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>

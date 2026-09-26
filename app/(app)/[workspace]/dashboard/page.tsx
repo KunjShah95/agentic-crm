@@ -19,6 +19,7 @@ import {
 import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
 import { FollowUpNudge } from "@/components/dashboard/follow-up-nudge"
 import { DataHealthCard } from "@/components/dashboard/data-health-card"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -70,23 +71,21 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="flex items-center gap-2.5 text-2xl font-display font-semibold tracking-tight">
-            Dashboard
-            <Badge variant="secondary" className="rounded-md text-xs">{ws.name}</Badge>
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">Your workspace at a glance — contacts, deals, projects, and activity.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
-            Go to contacts <ArrowRight className="size-3.5" />
-          </Button>
-          <Button variant="outline" size="sm" className="rounded-full" render={<Link href={`/${slug}/reports`} />}>
-            Reports
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Dashboard"
+        description="Your workspace at a glance — contacts, deals, projects, and activity."
+        badge={<Badge variant="secondary" className="rounded-md text-xs">{ws.name}</Badge>}
+        actions={
+          <>
+            <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
+              Go to contacts <ArrowRight className="size-3.5" />
+            </Button>
+            <Button variant="outline" size="sm" className="rounded-full" render={<Link href={`/${slug}/reports`} />}>
+              Reports
+            </Button>
+          </>
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
