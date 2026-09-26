@@ -234,30 +234,43 @@ git commit -m "feat(design-system): collapse radius scale to 4 steps, add confor
 
 ### Task 2: Migrate off-scale radius steps
 
-Clears the remaining `rounded-lg` / `rounded-xl` / `rounded-2xl` on card, table, and dialog containers in app code.
+Clears the 110 off-scale radius violations across 42 files, reported by the failing test in Task 1.
 
 **Files:**
-- Modify: the app-code files reported by the failing test from Task 1 Step 9
+- Modify: the 42 files reported by the failing test from Task 1
 
 - [ ] **Step 1: List the exact violations**
 
 Run: `npx vitest run tests/unit/token-radius.test.ts`
-Expected: FAIL with a list of `file:line` pairs. Copy that list — it is the work list.
+Expected: FAIL with 110 violations across 42 files, shown as a strided sample spanning the whole scope. Copy the list — it is the work list.
 
-- [ ] **Step 2: Migrate each violation to the sanctioned step**
+- [ ] **Step 2: Migrate each violation using the size→step table**
 
-Apply this mapping at each reported location:
+**The rule is a strict ban** — the design system's value is exactly one radius scale with no exceptions. There is no allowlist. What varies is the migration *target*, chosen by the element's rendered size:
 
-| Was | Becomes | Used for |
+| Element size | Use | Typical elements in the 110 |
 |---|---|---|
-| `rounded-lg` | `rounded-md` | cards, tables, sections, dialogs |
-| `rounded-xl` | `rounded-md` | cards, tables, stat tiles |
-| `rounded-2xl` | `rounded-md` | page header containers |
-| `rounded-full` | *leave* | avatars, pills, badges |
-| `rounded-sm` | *leave* | buttons, inputs, selects |
-| `rounded-xs` | *leave* | dot indicators, tags |
+| ≤ 24px | `rounded-xs` (4px) | tiny dots, kbd, 6–8px status chips |
+| 25–40px | `rounded-sm` (6px) | buttons, inputs, selects, nav items, icon tiles, tab triggers, avatar buttons |
+| > 40px | `rounded-md` (10px) | cards, tables, panels, dialogs, page header containers, list rows |
+| circular | `rounded-full` (leave) | avatars, pills, badges, status dots |
 
-Do **not** change `rounded-full`, `rounded-sm`, or `rounded-xs` — they are sanctioned.
+**Worked examples from the actual violation list:**
+
+```
+app/(app)/[workspace]/ai/page.tsx:91              rounded-lg on a <Button>        -> rounded-sm
+app/(app)/[workspace]/dashboard/page.tsx:94      rounded-xl on a stat card       -> rounded-md
+app/(app)/[workspace]/dashboard/page.tsx:128     rounded-xl on a size-12 icon    -> rounded-sm
+app/(app)/[workspace]/contacts/loading.tsx:31    rounded-xl on a table wrapper  -> rounded-md
+app/(app)/[workspace]/reports/page.tsx:101       rounded-lg on a callout row     -> rounded-md
+app/(app)/[workspace]/site-visits/page.tsx:44    rounded-xl on a table wrapper  -> rounded-md
+app/not-found.tsx:18                             rounded-lg on a size-9 button   -> rounded-sm
+components/dashboard/follow-up-nudge.tsx:82       rounded-xl on a notice card     -> rounded-md
+components/shell/sidebar.tsx:103                  rounded-lg on a size-9 nav item -> rounded-sm
+components/settings/extended-settings-tabs.tsx:66 rounded-lg on a TabsTrigger     -> rounded-sm
+```
+
+Judgement call: if a `size-12` (48px) icon tile is a *square* icon container rather than a circular avatar, `rounded-md` is correct. Use the table as the default, not a blind substitution.
 
 - [ ] **Step 3: Run the test to verify it passes**
 
@@ -274,7 +287,7 @@ Expected: clean, except the known pre-existing
 
 ```powershell
 git add -A
-git commit -m "refactor(design-system): migrate off-scale radii to sanctioned steps"
+git commit -m "refactor(design-system): migrate 110 off-scale radii to sanctioned steps"
 ```
 
 ---
@@ -815,7 +828,18 @@ Check: dashboard, contacts, deals, projects, bookings, settings.
 
 Toggle via the theme switcher. Confirm the dark canvas reads as warm charcoal, not neutral grey.
 
-- [ ] **Step 4: Make the canvas call**
+- [ ] **Step 4: Inspect vendored shadcn surfaces — a known, untested delta**
+
+Task 1 removed the app-level `--radius-lg` / `--radius-xl` overrides, so 27 vendored call sites in `components/ui/**` now fall back to Tailwind's stock values. Nothing breaks, but the radii changed:
+
+| Utility | Was | Now | Affected |
+|---|---|---|---|
+| `rounded-lg` | 0.75rem (12px) | 0.5rem (8px) | `card`, `dialog`, `dropdown-menu` ×2, `select` ×2, `popover`, `tabs`, `command` ×4, `alert`, `badge` |
+| `rounded-xl` | 1.05rem (16.8px) | 0.75rem (12px) | `button` ×5, and others |
+
+Check every dialog, popover, dropdown, card, button and input. Confirm 4–7px less radius still reads as intentional and harmonizes with the new 10px app-level cards. If it reads too tight or too inconsistent, the fix is a scoped override in `app/globals.css` re-pinning the vendored steps — do **not** edit `components/ui/**`.
+
+- [ ] **Step 5: Make the canvas call**
 
 The question: does `#FBF9F5` read as **paper** or as **beige**?
 
@@ -828,7 +852,7 @@ The question: does `#FBF9F5` read as **paper** or as **beige**?
 
 and the matching `.dark` value to `oklch(0.145 0 0)`. Warm borders and status tokens stay. Re-run `npx vitest run tests/unit/token-surfaces.test.ts` to confirm the token test still passes (it checks definition, not value).
 
-- [ ] **Step 5: Stop the dev server**
+- [ ] **Step 6: Stop the dev server**
 
 Press `Ctrl+C`.
 
