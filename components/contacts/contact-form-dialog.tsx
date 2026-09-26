@@ -150,17 +150,17 @@ export function ContactFormDialog({
         {duplicates.length > 0 && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/50">
             <div className="flex items-start gap-2">
-              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <AlertTriangle className="mt-0.5 size-4 shrink-0 text-status-caution-fg" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                   {duplicates.length} potential duplicate{duplicates.length > 1 ? "s" : ""} found
                 </p>
                 <div className="mt-2 space-y-1">
                   {duplicates.map((d) => (
-                    <div key={d.id} className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300">
+                    <div key={d.id} className="flex items-center gap-2 text-xs text-status-caution-fg">
                       <span className="font-medium">{d.firstName} {d.lastName}</span>
-                      {d.email && <span className="text-amber-600/70">({d.email})</span>}
-                      {d.phone && <span className="text-amber-600/70">({d.phone})</span>}
+                      {d.email && <span className="text-status-caution-fg/70">({d.email})</span>}
+                      {d.phone && <span className="text-status-caution-fg/70">({d.phone})</span>}
                     </div>
                   ))}
                 </div>

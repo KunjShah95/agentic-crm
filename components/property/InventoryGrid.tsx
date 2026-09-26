@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 
 export const STATUS_COLOR: Record<string, string> = {
-  AVAILABLE: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  HOLD: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  BOOKED: "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400",
-  SOLD: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  AVAILABLE: "bg-status-positive-bg text-status-positive-fg",
+  HOLD: "bg-status-caution-bg text-status-caution-fg",
+  BOOKED: "bg-status-info-bg text-status-info-fg",
+  SOLD: "bg-status-critical-bg text-status-critical-fg",
 }
 
 const STATUS_FILTERS = ["ALL", "AVAILABLE", "HOLD", "BOOKED", "SOLD"] as const
@@ -103,7 +103,7 @@ export function InventoryGrid({
               {unit.config} · {formatMoneyShort(unit.price)}
             </span>
             <span
-              className={`inline-flex w-fit rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_COLOR[unit.status] ?? "bg-gray-100 text-gray-700"}`}
+              className={`inline-flex w-fit rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_COLOR[unit.status] ?? "bg-status-neutral-bg text-status-neutral-fg"}`}
             >
               {unit.status}
             </span>

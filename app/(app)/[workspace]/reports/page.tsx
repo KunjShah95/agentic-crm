@@ -92,15 +92,15 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-5">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Building2 className="size-4 text-emerald-600 dark:text-emerald-400" /> Inventory Health</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-display"><Building2 className="size-4 text-status-positive-fg" /> Inventory Health</CardTitle>
             <CardDescription>Units available, on hold, booked, and sold across projects.</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2 text-center">
               <div className="rounded-md border bg-card p-2.5"><div className="text-xs text-muted-foreground">Avail</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.available}</div></div>
-              <div className="rounded-md border bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.hold}</div></div>
-              <div className="rounded-md border bg-blue-500/10 text-blue-700 dark:text-blue-300 p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.booked}</div></div>
-              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.sold}</div></div>
+              <div className="rounded-md border bg-status-caution-bg text-status-caution-fg p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.hold}</div></div>
+              <div className="rounded-md border bg-status-info-bg text-status-info-fg p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.booked}</div></div>
+              <div className="rounded-md border bg-status-positive-bg text-status-positive-fg p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.sold}</div></div>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <Progress value={snapshot.inventory.soldPct} className="h-2 flex-1" />
@@ -118,7 +118,7 @@ export default async function ReportsPage({
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center">
               <div className="rounded-md border p-2.5"><div className="text-xs text-muted-foreground">Due</div><div className="font-semibold tabular-nums">₹{snapshot.collections.due.toLocaleString("en-IN")}</div></div>
-              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border bg-status-positive-bg text-status-positive-fg p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
               <div className="rounded-md border bg-destructive/10 text-destructive p-2.5"><div className="text-xs opacity-80">Overdue</div><div className="font-semibold tabular-nums">₹{snapshot.collections.overdue.toLocaleString("en-IN")}</div></div>
             </div>
             <div className="flex items-center gap-2">
@@ -130,7 +130,7 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-4">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Users className="size-4 text-blue-600 dark:text-blue-400" /> Source ROI</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-display"><Users className="size-4 text-status-info-fg" /> Source ROI</CardTitle>
             <CardDescription>Leads, bookings, and revenue by where they came from.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -167,7 +167,7 @@ export default async function ReportsPage({
         {/* Pipeline by Stage */}
         <Card className="lg:col-span-6">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><BarChart3 className="size-4 text-blue-600 dark:text-blue-400" /> Pipeline by Stage</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-display"><BarChart3 className="size-4 text-status-info-fg" /> Pipeline by Stage</CardTitle>
             <CardDescription>Deal count and value across pipeline stages.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -203,7 +203,7 @@ export default async function ReportsPage({
         {/* Deals by Owner */}
         <Card className="lg:col-span-6">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><PieChart className="size-4 text-emerald-600 dark:text-emerald-400" /> Deals by Owner</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-display"><PieChart className="size-4 text-status-positive-fg" /> Deals by Owner</CardTitle>
             <CardDescription>Distribution of deals across team members.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -233,7 +233,7 @@ export default async function ReportsPage({
         {/* Win Rate by Deal Type */}
         <Card className="lg:col-span-12">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Trophy className="size-4 text-amber-600 dark:text-amber-400" /> Win Rate by Deal Type</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base font-display"><Trophy className="size-4 text-status-caution-fg" /> Win Rate by Deal Type</CardTitle>
             <CardDescription>Conversion rate across different property types.</CardDescription>
           </CardHeader>
           <CardContent>

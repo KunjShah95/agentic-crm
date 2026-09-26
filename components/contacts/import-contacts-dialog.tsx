@@ -216,7 +216,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
                   "flex size-5 items-center justify-center rounded-full border text-[10px] font-medium",
                   step === s && "border-primary bg-primary text-primary-foreground",
                   ["upload", "map", "preview", "done"].indexOf(step) > i &&
-                    "border-emerald-500 bg-emerald-500 text-white"
+                    "border-status-positive-fg bg-status-positive-bg text-status-positive-fg"
                 )}
               >
                 {["upload", "map", "preview", "done"].indexOf(step) > i ? (
@@ -307,8 +307,8 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
 
           {step === "done" && result && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-3 rounded-md border bg-emerald-500/5 p-3">
-                <CheckCircle2 className="size-5 text-emerald-500" />
+                <div className="flex items-center gap-3 rounded-md border bg-status-positive-bg p-3">
+                <CheckCircle2 className="size-5 text-status-positive-fg" />
                 <div>
                   <p className="text-sm font-medium">{result.imported} contacts imported</p>
                   {result.skipped > 0 && (

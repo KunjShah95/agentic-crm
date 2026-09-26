@@ -88,11 +88,11 @@ export default async function TasksPage({
         </Card>
 
         <Card className="overflow-hidden">
-          <div className="h-1 bg-emerald-500" />
+          <div className="h-1 bg-status-positive-fg" />
           <CardHeader className="flex-row items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-4" /></span>
+            <span className="flex size-8 items-center justify-center rounded-sm bg-status-positive-bg text-status-positive-fg"><CheckCircle2 className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[11px] text-white">{completed.length}</span></CardTitle>
+              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-status-positive-bg px-1.5 py-0.5 text-[11px] text-status-positive-fg">{completed.length}</span></CardTitle>
               <CardDescription>Recently finished tasks</CardDescription>
             </div>
           </CardHeader>

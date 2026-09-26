@@ -132,7 +132,7 @@ export function WhatsAppPanel({
           ) : null}
 
           {status === "needs_reauth" ? (
-            <p className="rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+            <p className="rounded-md border border-status-caution-fg/40 bg-status-caution-bg px-3 py-2 text-xs text-status-caution-fg">
               Meta no longer accepts the stored token. Reconnect to resume delivery.
             </p>
           ) : null}
@@ -214,7 +214,7 @@ export function WhatsAppPanel({
                   setTimeout(() => setCopied(false), 1500)
                 }}
               >
-                {copied ? <BadgeCheck className="size-4 text-emerald-600" /> : <Copy className="size-4" />}
+                {copied ? <BadgeCheck className="size-4 text-status-positive-fg" /> : <Copy className="size-4" />}
               </Button>
             </div>
           </div>

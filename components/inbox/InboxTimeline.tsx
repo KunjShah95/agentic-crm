@@ -43,7 +43,7 @@ function when(value: Date | string) {
 function DeliveryMark({ status }: { status?: string | null }) {
   if (!status) return null
   if (status === "mock") {
-    return <span className="ml-1 rounded bg-amber-500/20 px-1 text-[9px] font-medium">not sent (mock)</span>
+    return <span className="ml-1 rounded bg-status-caution-bg px-1 text-[9px] font-medium">not sent (mock)</span>
   }
   if (status === "failed") return <span className="ml-1 text-[10px] text-red-300">✕ failed</span>
   if (status === "sent") return <Check className="ml-1 inline size-3 opacity-70" />
@@ -162,7 +162,7 @@ export function InboxComposer({
     <div className="border-t bg-card/80 p-3">
       {blocked ? (
         <p className="mb-2 flex items-start gap-1.5 text-xs text-muted-foreground">
-          <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-amber-600" />
+          <ShieldAlert className="mt-0.5 size-3.5 shrink-0 text-status-caution-fg" />
           <span>{blockers[0]}</span>
         </p>
       ) : (

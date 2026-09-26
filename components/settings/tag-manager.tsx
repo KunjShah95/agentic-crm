@@ -193,7 +193,7 @@ export function TagManager({ workspaceId, initialTags }: Props) {
                         className="size-7"
                         onClick={() => handleUpdate(tag.id)}
                       >
-                        <Check className="size-3.5 text-emerald-600" />
+                        <Check className="size-3.5 text-status-positive-fg" />
                       </Button>
                       <Button
                         variant="ghost"

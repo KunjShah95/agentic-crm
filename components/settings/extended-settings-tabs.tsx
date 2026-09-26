@@ -219,7 +219,7 @@ export function ExtendedSettingsTabs({
             {whatsappEnabled && (
               <div className="flex items-center justify-between rounded-md border p-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="flex size-10 items-center justify-center rounded-sm bg-status-positive-bg text-status-positive-fg">
                     <Radio className="size-5" />
                   </span>
                   <div>
@@ -235,7 +235,7 @@ export function ExtendedSettingsTabs({
 
             <div className="flex items-center justify-between rounded-md border p-4">
               <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-sm bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="flex size-10 items-center justify-center rounded-sm bg-status-info-bg text-status-info-fg">
                   <Share2 className="size-5" />
                 </span>
                 <div>
@@ -261,7 +261,7 @@ export function ExtendedSettingsTabs({
               <div className="flex max-w-md items-center gap-2">
                 <Input value={apiKey} readOnly data-mono="secret" className="font-mono text-xs focus-visible:ring-brand" />
                 <Button variant="outline" size="sm" onClick={copyApiKey}>
-                  {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
+                  {copied ? <Check className="size-3.5 text-status-positive-fg" /> : <Copy className="size-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </Button>
               </div>

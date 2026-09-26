@@ -81,9 +81,9 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
       {overdueActivities.length > 0 && (
         <div className="rounded-md border border-red-200 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-950/30">
           <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="size-4 text-red-600 dark:text-red-400" />
+            <AlertTriangle className="size-4 text-status-critical-fg" />
             <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Overdue</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-red-200 text-red-600 text-[10px] dark:border-red-800 dark:text-red-400">
+            <Badge variant="outline" className="ml-auto rounded-full border-red-200 text-status-critical-fg text-[10px] dark:border-red-800">
               {overdueActivities.length}
             </Badge>
           </div>
@@ -111,9 +111,9 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
       {upcomingActivities.length > 0 && (
         <div className="rounded-md border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-center gap-2 mb-3">
-            <Clock className="size-4 text-amber-600 dark:text-amber-400" />
+            <Clock className="size-4 text-status-caution-fg" />
             <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Upcoming</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-amber-200 text-amber-600 text-[10px] dark:border-amber-800 dark:text-amber-400">
+            <Badge variant="outline" className="ml-auto rounded-full border-amber-200 text-status-caution-fg text-[10px] dark:border-amber-800">
               {upcomingActivities.length}
             </Badge>
           </div>
@@ -141,9 +141,9 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
       {staleDeals.length > 0 && (
         <div className="rounded-md border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
           <div className="flex items-center gap-2 mb-3">
-            <CheckCircle2 className="size-4 text-orange-600 dark:text-orange-400" />
+            <CheckCircle2 className="size-4 text-status-caution-fg" />
             <h3 className="text-sm font-semibold text-orange-800 dark:text-orange-200">Stale deals</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-orange-200 text-orange-600 text-[10px] dark:border-orange-800 dark:text-orange-400">
+            <Badge variant="outline" className="ml-auto rounded-full border-orange-200 text-status-caution-fg text-[10px] dark:border-orange-800">
               {staleDeals.length}
             </Badge>
           </div>
