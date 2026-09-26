@@ -19,7 +19,7 @@ export function PageHeader({
   className?: string
 }) {
   return (
-    <div className={cn("relative overflow-hidden rounded-[20px] border bg-card", className)}>
+    <div className={cn("relative overflow-hidden rounded-md border bg-card", className)}>
       {/* aurora accent */}
       <div aria-hidden className="pointer-events-none absolute inset-0">
         <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-violet-500/10 via-blue-500/10 to-cyan-500/10 blur-2xl" />

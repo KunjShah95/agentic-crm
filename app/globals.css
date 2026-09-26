@@ -43,13 +43,9 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   /* Section rhythm tokens */
@@ -92,7 +88,15 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.75rem;
+  /* Base radius retained. Vendored shadcn (components/ui — never hand-edited)
+     reads it in four places, so deleting it breaks them at computed-value time:
+       input-group.tsx:26  rounded-[calc(var(--radius)-5px)]  -> kbd 5px
+       input-group.tsx:73  rounded-[calc(var(--radius)-3px)]  -> xs control 7px
+       input-group.tsx:76  rounded-[calc(var(--radius)-3px)]  -> size-6 control 7px
+       sonner.tsx:36       --border-radius: var(--radius)     -> toast 10px (direct,
+                          no calc() — so grepping calc(var(--radius) is NOT enough)
+     Keep in sync with --radius-md. */
+  --radius: 10px;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.58 0.16 68);

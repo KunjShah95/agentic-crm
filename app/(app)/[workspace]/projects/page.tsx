@@ -49,7 +49,7 @@ export default async function ProjectsPage({
             <Link
               key={p.id}
               href={`/${slug}/projects/${p.id}`}
-              className="group relative overflow-hidden rounded-[16px] border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
+              className="group relative overflow-hidden rounded-md border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
             >
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,oklch(0.58_0.16_68/0.08),transparent_70%)]" />
               <div className="relative flex items-start justify-between gap-3">

@@ -89,7 +89,7 @@ export default function InboxPage() {
 //   const needsReplyCount = contacts.filter((c) => c.needsReply).length
 //
 //   return (
-//     <div className="flex h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-[16px] border bg-card md:h-[calc(100vh-4rem)] md:flex-row">
+//     <div className="flex h-[calc(100dvh-7rem)] flex-col overflow-hidden rounded-md border bg-card md:h-[calc(100vh-4rem)] md:flex-row">
 //       <aside
 //         className={`w-full shrink-0 overflow-y-auto border-b bg-muted/20 md:block md:w-80 md:border-r md:border-b-0 ${
 //           selectedId ? "hidden" : "block"

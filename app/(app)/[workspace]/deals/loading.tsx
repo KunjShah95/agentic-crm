@@ -4,7 +4,7 @@ export default function DealsLoading() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="rounded-[20px] border bg-card p-5 md:p-6 relative overflow-hidden">
+      <div className="rounded-md border bg-card p-5 md:p-6 relative overflow-hidden">
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div className="space-y-2">
             <Skeleton className="h-7 w-28" />
