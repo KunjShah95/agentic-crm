@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { TaskList } from "@/components/activities/task-list"
 import { NewTaskDialog } from "@/components/activities/new-task-dialog"
+import { PageHeader } from "@/components/shell/page-header"
 import {
   Card,
   CardContent,
@@ -57,15 +58,11 @@ export default async function TasksPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6">
-        <div className="relative flex items-start justify-between gap-4">
-          <div>
-            <h1 className="text-[22px] font-semibold tracking-tight">My Tasks</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{open.length} open · {completed.length} completed · assigned to you</p>
-          </div>
-          <NewTaskDialog workspaceId={workspace.id} />
-        </div>
-      </div>
+      <PageHeader
+        title="My Tasks"
+        description={<>{open.length} open · {completed.length} completed · assigned to you</>}
+        actions={<NewTaskDialog workspaceId={workspace.id} />}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Card className="overflow-hidden">

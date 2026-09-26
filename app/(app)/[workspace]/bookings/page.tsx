@@ -5,6 +5,7 @@ import { db } from "@/lib/db"
 import { listBookings, listBookableUnits, listPaymentPlans } from "@/modules/booking/queries"
 import { resolveBrokerId } from "@/modules/brokers/queries"
 import { BookingBoard } from "@/components/booking/booking-board"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Bookings" }
 
@@ -28,12 +29,10 @@ export default async function BookingsPage({ params }: { params: Promise<{ works
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6">
-        <div className="relative">
-          <h1 className="text-[22px] font-semibold tracking-tight">Bookings</h1>
-          <p className="mt-1 text-sm text-muted-foreground">{deals.length} deal{deals.length !== 1 ? "s" : ""} in the booking pipeline · track from hold to payment collection</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Bookings"
+        description={<>{deals.length} deal{deals.length !== 1 ? "s" : ""} in the booking pipeline · track from hold to payment collection</>}
+      />
       <BookingBoard workspaceId={workspace.id} deals={deals} units={units} plans={plans} />
     </div>
   )

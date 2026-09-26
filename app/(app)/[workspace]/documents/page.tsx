@@ -4,6 +4,7 @@ import { db } from "@/lib/db"
 import { listTemplates, listGeneratedDocuments } from "@/modules/documents/queries"
 import { GeneratedDocList } from "@/components/documents/doc-list"
 import { Badge } from "@/components/ui/badge"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Documents" }
 
@@ -16,12 +17,10 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6">
-        <div className="relative">
-          <h1 className="text-[22px] font-semibold tracking-tight">Documents</h1>
-          <p className="mt-1 text-sm text-muted-foreground">RERA-aligned demand / allotment / receipt / possession letters with PDF download.</p>
-        </div>
-      </div>
+      <PageHeader
+        title="Documents"
+        description="RERA-aligned demand / allotment / receipt / possession letters with PDF download."
+      />
 
       <section className="rounded-md border bg-card p-4 space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-2">Templates <Badge variant="outline" className="rounded-full">{templates.length}</Badge></h2>
