@@ -213,7 +213,7 @@ export function KanbanBoard({
                       }`}
                     >
                       {stageDeals.length === 0 && !snapshot.isDraggingOver && (
-                        <p className="px-2 py-4 text-center text-xs text-muted-foreground">
+                        <p className="rounded-md border border-dashed px-2 py-4 text-center text-xs text-muted-foreground">
                           No deals in this stage yet
                         </p>
                       )}
@@ -248,11 +248,11 @@ export function KanbanBoard({
                               </p>
 
                               <div className="mt-2.5 flex items-center justify-between">
-                                <span className="text-sm font-semibold tabular-nums">
+                                <span className="text-[15px] font-semibold tabular-nums">
                                   {formatMoney(deal.value, deal.currency)}
                                 </span>
                                 {deal.probability != null && (
-                                  <Badge variant="secondary" className="text-[10px]">
+                                  <Badge variant="secondary" className="px-1.5 py-px text-[10px]">
                                     {deal.probability}%
                                   </Badge>
                                 )}
@@ -263,7 +263,7 @@ export function KanbanBoard({
                                   {deal.tags.slice(0, 3).map(({ tag }) => (
                                     <span
                                       key={tag.id}
-                                      className="size-2 rounded-full"
+                                      className="size-1.5 rounded-full"
                                       style={{ backgroundColor: tag.color }}
                                       title={tag.name}
                                     />

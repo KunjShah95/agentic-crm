@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
 import { listProjects } from "@/modules/property/queries"
 import { PageHeader, Stat } from "@/components/shell/page-header"
-import { Card, CardContent } from "@/components/ui/card"
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Badge } from "@/components/ui/badge"
 import { Building2, MapPin, Layers, Sparkles, ArrowRight } from "lucide-react"
 
@@ -36,13 +36,11 @@ export default async function ProjectsPage({
       />
 
       {projects.length === 0 ? (
-        <Card className="border-dashed">
-          <CardContent className="py-12 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-muted"><Building2 className="size-6 text-muted-foreground" /></div>
-            <div className="mt-3 text-sm font-medium">No projects yet</div>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add your first project, then add towers and units to start managing inventory and payments.</p>
-          </CardContent>
-        </Card>
+        <Empty>
+          <EmptyMedia variant="icon"><Building2 /></EmptyMedia>
+          <EmptyTitle>No projects yet</EmptyTitle>
+          <EmptyDescription>Add your first project, then add towers and units to start managing inventory and payments.</EmptyDescription>
+        </Empty>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {projects.map((p) => (

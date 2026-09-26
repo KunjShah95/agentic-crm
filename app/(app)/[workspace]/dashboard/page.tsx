@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
+import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { FollowUpNudge } from "@/components/dashboard/follow-up-nudge"
 import { DataHealthCard } from "@/components/dashboard/data-health-card"
 import { PageHeader } from "@/components/shell/page-header"
@@ -95,7 +96,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
                 <s.icon className="size-4" />
                 <span className="text-xs font-medium">{s.label}</span>
               </div>
-              <div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">{s.value}</div>
+              <div className="mt-3 font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums">{s.value}</div>
             </div>
           </Link>
         ))}
@@ -123,18 +124,18 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
               </Link>
             </div>
             {topDeals.length === 0 ? (
-              <div className="px-4 py-12 text-center">
-                <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
-                <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
-                <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
-                <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
+              <Empty>
+                <EmptyMedia variant="icon"><KanbanSquare /></EmptyMedia>
+                <EmptyTitle>No deals in your pipeline yet</EmptyTitle>
+                <EmptyDescription>Create your first deal to start tracking opportunities and closing sales.</EmptyDescription>
+                <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
                   Go to deals <ArrowRight className="size-3.5" />
                 </Button>
-              </div>
+              </Empty>
             ) : (
               <>
                 <Table>
-                  <TableHeader className="[&_th]:h-9 [&_th]:text-xs [&_th]:font-medium [&_th]:text-muted-foreground">
+                  <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
                     <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
                       <TableHead>Deal</TableHead>
                       <TableHead>Stage</TableHead>

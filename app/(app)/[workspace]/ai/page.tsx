@@ -50,7 +50,7 @@ export default async function AIPage({
             <CardDescription>Weighted by stage probability</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
+            <div className="font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
             <div className="text-xs text-muted-foreground tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
           </CardContent>
         </Card>
@@ -60,7 +60,7 @@ export default async function AIPage({
             <CardDescription>Due in 30d vs overdue</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
+            <div className="font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
             <div className="text-xs text-muted-foreground tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
           </CardContent>
         </Card>
