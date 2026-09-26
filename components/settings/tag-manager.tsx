@@ -160,7 +160,7 @@ export function TagManager({ workspaceId, initialTags }: Props) {
             {tags.map((tag) => (
               <div
                 key={tag.id}
-                className="flex items-center gap-3 rounded-lg border px-3 py-2 hover:bg-muted/50"
+                className="flex items-center gap-3 rounded-md border px-3 py-2 hover:bg-muted/50"
               >
                 {editingId === tag.id ? (
                   <>

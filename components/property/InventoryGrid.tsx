@@ -94,7 +94,7 @@ export function InventoryGrid({
             type="button"
             onClick={() => onSelect?.(unit)}
             className={cn(
-              "flex flex-col gap-1 rounded-lg border p-3 text-left transition-all",
+              "flex flex-col gap-1 rounded-md border p-3 text-left transition-all",
               onSelect ? "cursor-pointer hover:border-primary hover:shadow-sm" : "cursor-default"
             )}
           >

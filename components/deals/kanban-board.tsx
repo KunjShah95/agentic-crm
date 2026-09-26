@@ -206,7 +206,7 @@ export function KanbanBoard({
                     <div
                       ref={provided.innerRef}
                       {...provided.droppableProps}
-                      className={`flex min-h-24 flex-col gap-2 rounded-xl border bg-muted/40 p-2 transition-colors ${
+                      className={`flex min-h-24 flex-col gap-2 rounded-md border bg-muted/40 p-2 transition-colors ${
                         snapshot.isDraggingOver
                           ? "border-brand/40 bg-brand/5"
                           : ""
@@ -224,7 +224,7 @@ export function KanbanBoard({
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`rounded-lg border bg-card p-3 shadow-xs transition-all ${
+                              className={`rounded-md border bg-card p-3 shadow-xs transition-all ${
                                 dragSnapshot.isDragging
                                   ? "shadow-md ring-2 ring-brand/40"
                                   : "hover:border-border/80 hover:shadow-xs"

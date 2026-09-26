@@ -377,7 +377,7 @@ export function ContactsTable({
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-accent/50 px-3 py-2">
+        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/50 px-3 py-2">
           <span className="text-sm font-medium">
             {selected.size} selected
           </span>
@@ -420,7 +420,7 @@ export function ContactsTable({
           />
         </Empty>
       ) : (
-        <div className="overflow-hidden rounded-xl border bg-card">
+        <div className="overflow-hidden rounded-md border bg-card">
           <Table>
             <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
               <TableRow className="border-b bg-muted/40 hover:bg-muted/40">

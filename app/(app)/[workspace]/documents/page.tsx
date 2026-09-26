@@ -27,14 +27,14 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
         </div>
       </div>
 
-      <section className="rounded-xl border bg-card p-4 space-y-3">
+      <section className="rounded-md border bg-card p-4 space-y-3">
         <h2 className="text-sm font-semibold flex items-center gap-2">Templates <Badge variant="outline" className="rounded-full">{templates.length}</Badge></h2>
         {templates.length === 0 ? (
-          <p className="rounded-lg border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">No templates yet — create demand/allotment/receipt/possession with shortcodes.</p>
+          <p className="rounded-md border border-dashed bg-muted/20 px-4 py-6 text-center text-sm text-muted-foreground">No templates yet — create demand/allotment/receipt/possession with shortcodes.</p>
         ) : (
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((t) => (
-              <div key={t.id} className="group rounded-xl border bg-muted/20 px-3.5 py-3 hover:bg-card hover:shadow-sm hover:border-brand/30 transition-colors">
+              <div key={t.id} className="group rounded-md border bg-muted/20 px-3.5 py-3 hover:bg-card hover:shadow-sm hover:border-brand/30 transition-colors">
                 <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{t.name}</span><Badge variant="secondary" className="rounded-full font-mono text-[11px]">{t.kind}</Badge></div>
                 {t.reraAligned ? <Badge className="mt-2 rounded-full">RERA</Badge> : null}
               </div>
@@ -43,7 +43,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
         )}
       </section>
 
-      <section className="rounded-xl border bg-card p-4 space-y-3">
+      <section className="rounded-md border bg-card p-4 space-y-3">
         <h2 className="text-sm font-semibold">Generated documents <span className="text-muted-foreground font-normal">· {docs.length}</span></h2>
         <GeneratedDocList slug={slug} docs={docs} />
       </section>

@@ -95,7 +95,7 @@ export function MembersManager({
   return (
     <div className="flex flex-col gap-6">
       {/* Members */}
-      <div className="rounded-lg border">
+      <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent">
@@ -197,7 +197,7 @@ export function MembersManager({
           {invites.map((invite) => (
             <div
               key={invite.id}
-              className="flex items-center gap-3 rounded-lg border bg-card px-3.5 py-2.5"
+              className="flex items-center gap-3 rounded-md border bg-card px-3.5 py-2.5"
             >
               <MailIcon />
               <div className="min-w-0 flex-1">

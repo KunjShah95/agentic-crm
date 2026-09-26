@@ -47,7 +47,7 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
         </CardHeader>
         <CardContent>
           {docs.length===0 ? <p className="text-sm text-muted-foreground">No documents yet.</p> : docs.map((doc: { id: string; templateId: string; createdAt: Date }) => (
-            <div key={doc.id} className="rounded-lg border px-3 py-2 text-sm flex justify-between"><span>{doc.templateId}</span><span className="text-xs text-muted-foreground font-mono tabular-nums">{new Date(doc.createdAt).toLocaleDateString("en-IN")}</span></div>
+            <div key={doc.id} className="rounded-md border px-3 py-2 text-sm flex justify-between"><span>{doc.templateId}</span><span className="text-xs text-muted-foreground font-mono tabular-nums">{new Date(doc.createdAt).toLocaleDateString("en-IN")}</span></div>
           ))}
         </CardContent>
       </Card>

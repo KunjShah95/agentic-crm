@@ -22,7 +22,7 @@ export function CostSheetCard(props: CostSheetCardProps) {
   const fmt = (n: number) => n.toLocaleString("en-IN")
 
   return (
-    <div className="rounded-lg border p-4">
+    <div className="rounded-md border p-4">
       <div className="space-y-2 text-sm">
         <div className="flex justify-between">
           <span className="text-muted-foreground">Base Price</span>

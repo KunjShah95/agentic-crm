@@ -79,7 +79,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {/* Overdue */}
       {overdueActivities.length > 0 && (
-        <div className="rounded-xl border border-red-200 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-950/30">
+        <div className="rounded-md border border-red-200 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-950/30">
           <div className="flex items-center gap-2 mb-3">
             <AlertTriangle className="size-4 text-red-600 dark:text-red-400" />
             <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Overdue</h3>
@@ -92,7 +92,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
               <Link
                 key={a.id}
                 href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
-                className="block rounded-lg bg-white/60 p-2 text-xs hover:bg-white dark:bg-red-900/30 dark:hover:bg-red-900/50"
+                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-red-900/30 dark:hover:bg-red-900/50"
               >
                 <div className="flex items-center gap-1.5">
                   <Badge variant="outline" className="rounded-full text-[9px]">{a.type}</Badge>
@@ -109,7 +109,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
 
       {/* Upcoming */}
       {upcomingActivities.length > 0 && (
-        <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
           <div className="flex items-center gap-2 mb-3">
             <Clock className="size-4 text-amber-600 dark:text-amber-400" />
             <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Upcoming</h3>
@@ -122,7 +122,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
               <Link
                 key={a.id}
                 href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
-                className="block rounded-lg bg-white/60 p-2 text-xs hover:bg-white dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
+                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
               >
                 <div className="flex items-center gap-1.5">
                   <Badge variant="outline" className="rounded-full text-[9px]">{a.type}</Badge>
@@ -139,7 +139,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
 
       {/* Stale deals */}
       {staleDeals.length > 0 && (
-        <div className="rounded-xl border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
+        <div className="rounded-md border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
           <div className="flex items-center gap-2 mb-3">
             <CheckCircle2 className="size-4 text-orange-600 dark:text-orange-400" />
             <h3 className="text-sm font-semibold text-orange-800 dark:text-orange-200">Stale deals</h3>
@@ -152,7 +152,7 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
               <Link
                 key={d.id}
                 href={`/${workspaceSlug}/deals/${d.id}`}
-                className="block rounded-lg bg-white/60 p-2 text-xs hover:bg-white dark:bg-orange-900/30 dark:hover:bg-orange-900/50"
+                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-orange-900/30 dark:hover:bg-orange-900/50"
               >
                 <div className="flex items-center gap-1.5">
                   <span className="size-2 rounded-full" style={{ backgroundColor: d.stage.color }} />

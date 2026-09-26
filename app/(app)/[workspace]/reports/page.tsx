@@ -43,7 +43,7 @@ export default async function ReportsPage({
 
   return (
     <div className="space-y-6">
-      <div className="rounded-2xl border bg-card p-5 md:p-6 relative overflow-hidden">
+      <div className="rounded-md border bg-card p-5 md:p-6 relative overflow-hidden">
         <div className="relative flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-display font-semibold tracking-tight">Reports</h1>
@@ -97,10 +97,10 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="rounded-lg border bg-card p-2.5"><div className="text-xs text-muted-foreground">Avail</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.available}</div></div>
-              <div className="rounded-lg border bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.hold}</div></div>
-              <div className="rounded-lg border bg-blue-500/10 text-blue-700 dark:text-blue-300 p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.booked}</div></div>
-              <div className="rounded-lg border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.sold}</div></div>
+              <div className="rounded-md border bg-card p-2.5"><div className="text-xs text-muted-foreground">Avail</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.available}</div></div>
+              <div className="rounded-md border bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.hold}</div></div>
+              <div className="rounded-md border bg-blue-500/10 text-blue-700 dark:text-blue-300 p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.booked}</div></div>
+              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.sold}</div></div>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <Progress value={snapshot.inventory.soldPct} className="h-2 flex-1" />
@@ -117,9 +117,9 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-lg border p-2.5"><div className="text-xs text-muted-foreground">Due</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.due.toLocaleString("en-IN")}</div></div>
-              <div className="rounded-lg border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
-              <div className="rounded-lg border bg-destructive/10 text-destructive p-2.5"><div className="text-xs opacity-80">Overdue</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.overdue.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border p-2.5"><div className="text-xs text-muted-foreground">Due</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.due.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border bg-destructive/10 text-destructive p-2.5"><div className="text-xs opacity-80">Overdue</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.overdue.toLocaleString("en-IN")}</div></div>
             </div>
             <div className="flex items-center gap-2">
               <Progress value={snapshot.collections.overduePct} className="h-2 flex-1" />
@@ -139,7 +139,7 @@ export default async function ReportsPage({
             ) : (
               <div className="space-y-2">
                 {snapshot.sourceROI.map((r) => (
-                  <div key={r.source} className="flex items-center justify-between rounded-lg border px-3 py-2 text-sm">
+                  <div key={r.source} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
                     <div><div className="font-medium">{r.source === "UNKNOWN" ? "Not recorded" : r.source}</div><div className="text-xs text-muted-foreground font-mono tabular-nums">{r.leads} leads · {r.bookings} bookings</div></div>
                     <div className="text-right"><div className="font-mono text-xs font-semibold tabular-nums">₹{r.revenue.toLocaleString("en-IN")}</div><Badge variant="secondary" className="font-mono text-xs tabular-nums">{r.conversionPct}%</Badge></div>
                   </div>
@@ -156,7 +156,7 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent className="space-y-2">
             {snapshot.teamVsTarget.map((r) => (
-              <div key={r.ownerId} className="rounded-lg border px-3 py-2">
+              <div key={r.ownerId} className="rounded-md border px-3 py-2">
                 <div className="flex items-center justify-between text-sm"><span className="font-medium">{r.ownerName}</span><Badge variant={r.attainmentPct >= 100 ? "default" : "secondary"} className="font-mono text-xs tabular-nums">{r.attainmentPct}%</Badge></div>
                 <div className="mt-1 flex items-center gap-2"><Progress value={Math.min(100, r.attainmentPct)} className="h-1.5 flex-1" /><span className="font-mono text-xs tabular-nums text-muted-foreground">{r.bookings}/{r.target}</span></div>
               </div>
@@ -215,7 +215,7 @@ export default async function ReportsPage({
                   const totalDeals = snapshot.dealsByOwner.reduce((sum, o) => sum + o.count, 0)
                   const pct = totalDeals > 0 ? Math.round((r.count / totalDeals) * 100) : 0
                   return (
-                    <div key={r.ownerId} className="flex items-center gap-3 rounded-lg border px-3 py-2">
+                    <div key={r.ownerId} className="flex items-center gap-3 rounded-md border px-3 py-2">
                       <span className="size-3 rounded-full" style={{ backgroundColor: r.color }} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{r.name}</div>

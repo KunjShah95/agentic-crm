@@ -27,7 +27,7 @@ export default async function AuthLayout({
 
       <div className="relative z-10 flex w-full max-w-sm flex-col gap-8">
         <Link href="/" className="flex flex-col items-center gap-2">
-          <span className="flex size-11 items-center justify-center rounded-xl bg-brand shadow-sm">
+          <span className="flex size-11 items-center justify-center rounded-md bg-brand shadow-sm">
             <Layers className="size-5 text-brand-foreground" aria-hidden />
           </span>
           <div className="text-center">

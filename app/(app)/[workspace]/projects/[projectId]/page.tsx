@@ -48,7 +48,7 @@ export default async function ProjectDetailPage({
         }
       />
       {units.length === 0 ? (
-        <div className="rounded-xl border border-dashed bg-card py-10 text-center text-sm text-muted-foreground">No units yet — import CSV or create manually.</div>
+        <div className="rounded-md border border-dashed bg-card py-10 text-center text-sm text-muted-foreground">No units yet — import CSV or create manually.</div>
       ) : (
         <InventoryWithDrawer units={units as unknown as never[]} />
       )}

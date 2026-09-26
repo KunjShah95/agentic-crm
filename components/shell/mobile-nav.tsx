@@ -47,7 +47,7 @@ export function MobileNav({
       <SheetContent side="left" className="w-72 gap-0 p-0">
         <SheetHeader className="border-b p-3 text-left">
           <SheetTitle className="flex items-center gap-2">
-            <span className="flex size-6 items-center justify-center rounded-md bg-foreground text-[10px] font-bold text-background">
+            <span className="flex size-6 items-center justify-center rounded-xs bg-foreground text-[10px] font-bold text-background">
               {workspaceName.slice(0, 2).toUpperCase()}
             </span>
             <span className="truncate text-sm">{workspaceName}</span>
@@ -62,7 +62,7 @@ export function MobileNav({
                 href={`/${workspaceSlug}/${item.href}`}
                 onClick={() => setOpen(false)}
                 className={cn(
-                  "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                  "flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                   active &&
                     "bg-sidebar-accent text-sidebar-accent-foreground font-semibold border-l-2 border-brand pl-2"
                 )}
@@ -82,7 +82,7 @@ export function MobileNav({
               <Link
                 href={`/${workspaceSlug}/settings/social`}
                 onClick={() => setOpen(false)}
-                className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
+                className="flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
               >
                 <Share2 className="size-4 shrink-0 text-muted-foreground" />
                 <span>WhatsApp</span>
@@ -92,7 +92,7 @@ export function MobileNav({
             <Link
               href={`/${workspaceSlug}/settings`}
               onClick={() => setOpen(false)}
-              className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
+              className="flex items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-sidebar-foreground/75 hover:bg-sidebar-accent"
             >
               <Settings className="size-4 shrink-0 text-muted-foreground" />
               <span>Settings</span>

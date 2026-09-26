@@ -39,7 +39,7 @@ export default async function WorkspaceSettingsPage({
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
-      <div className="rounded-2xl border bg-card p-5 md:p-6 relative overflow-hidden">
+      <div className="rounded-md border bg-card p-5 md:p-6 relative overflow-hidden">
         <div className="relative flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-display font-semibold tracking-tight">Workspace Settings</h1>

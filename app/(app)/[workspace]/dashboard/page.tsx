@@ -91,7 +91,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {stats.map((s) => (
           <Link key={s.label} href={s.href}>
-            <div className="group rounded-xl border bg-card p-4 transition-colors hover:border-foreground/20">
+            <div className="group rounded-md border bg-card p-4 transition-colors hover:border-foreground/20">
               <div className="flex items-center gap-2 text-muted-foreground">
                 <s.icon className="size-4" />
                 <span className="text-xs font-medium">{s.label}</span>
@@ -108,7 +108,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       <div className="grid gap-4 lg:grid-cols-4">
         <div className="lg:col-span-3">
           {/* Pipeline — reference-style data table */}
-          <section className="overflow-hidden rounded-xl border bg-card">
+          <section className="overflow-hidden rounded-md border bg-card">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
@@ -125,7 +125,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
             </div>
             {topDeals.length === 0 ? (
               <div className="px-4 py-12 text-center">
-                <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
+                <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-muted"><KanbanSquare className="size-6 text-muted-foreground" /></div>
                 <div className="mt-3 text-sm font-medium">No deals in your pipeline yet</div>
                 <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Create your first deal to start tracking opportunities and closing sales.</p>
                 <Button size="sm" className="mt-4 rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
@@ -212,7 +212,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
       </div>
 
       {/* Recent activity */}
-      <section className="overflow-hidden rounded-xl border bg-card">
+      <section className="overflow-hidden rounded-md border bg-card">
         <div className="border-b px-4 py-3">
           <h2 className="text-sm font-semibold tracking-tight">Recent activity</h2>
           <p className="text-xs text-muted-foreground">Across contacts and deals.</p>
@@ -220,14 +220,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <div className="space-y-2 p-4">
           {recentActivities.length === 0 && (
             <div className="px-4 py-8 text-center">
-              <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
+              <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
               <p className="mt-2 text-sm text-muted-foreground">No activity yet. Start by adding contacts or creating deals.</p>
             </div>
           )}
           {recentActivities.map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-3 rounded-xl border bg-muted/40 px-3 py-2.5"
+              className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2.5"
             >
               <Badge variant="outline" className="rounded-full font-mono text-[10px] shrink-0">
                 {a.type}

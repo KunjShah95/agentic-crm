@@ -49,7 +49,7 @@ export function PageHeader({
 
 export function Stat({ label, value, sub, icon }: { label: string; value: React.ReactNode; sub?: string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-xl border bg-muted/30 px-3.5 py-3">
+    <div className="rounded-md border bg-muted/30 px-3.5 py-3">
       <div className="flex items-center gap-1.5 text-[11px] font-medium tracking-[0.08em] text-muted-foreground uppercase">
         {icon} {label}
       </div>

@@ -38,7 +38,7 @@ export default async function ProjectsPage({
       {projects.length === 0 ? (
         <Card className="border-dashed">
           <CardContent className="py-12 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-xl bg-muted"><Building2 className="size-6 text-muted-foreground" /></div>
+            <div className="mx-auto flex size-12 items-center justify-center rounded-md bg-muted"><Building2 className="size-6 text-muted-foreground" /></div>
             <div className="mt-3 text-sm font-medium">No projects yet</div>
             <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">Add your first project, then add towers and units to start managing inventory and payments.</p>
           </CardContent>
@@ -53,7 +53,7 @@ export default async function ProjectsPage({
             >
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,oklch(0.58_0.16_68/0.08),transparent_70%)]" />
               <div className="relative flex items-start justify-between gap-3">
-                <span className="flex size-9 items-center justify-center rounded-xl bg-foreground text-background text-xs font-bold">
+                <span className="flex size-9 items-center justify-center rounded-sm bg-foreground text-background text-xs font-bold">
                   {p.name.slice(0, 2).toUpperCase()}
                 </span>
                 <Badge variant="outline" className="rounded-full font-mono text-[11px]">{p.city}</Badge>

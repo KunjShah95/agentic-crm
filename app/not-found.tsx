@@ -15,7 +15,7 @@ export default function NotFound() {
       <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-6 py-20 text-center">
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-brand-soft/60 via-background to-background" />
         <Link href="/" className="mb-8 flex items-center gap-2.5" aria-label="Estate360 home">
-          <span className="flex size-9 items-center justify-center rounded-lg bg-foreground text-background">
+          <span className="flex size-9 items-center justify-center rounded-sm bg-foreground text-background">
             <Layers className="size-4" aria-hidden />
           </span>
           <span className="text-[13px] font-semibold tracking-[0.18em]">ESTATE360</span>

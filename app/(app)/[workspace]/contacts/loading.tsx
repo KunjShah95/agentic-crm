@@ -28,7 +28,7 @@ export default function ContactsLoading() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl border bg-card">
+      <div className="overflow-hidden rounded-md border bg-card">
         <div className="p-4 space-y-3">
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} className="flex items-center gap-4">

@@ -88,13 +88,13 @@ export default async function AIPage({
         <CardContent className="space-y-4">
           <form className="flex gap-2">
             <Input name="q" defaultValue={q ?? ""} placeholder="Ask — e.g. overdue payments" className="flex-1 focus-visible:ring-brand" />
-            <Button type="submit" className="rounded-lg bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
+            <Button type="submit" className="rounded-sm bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
           </form>
           {askResult ? (
-            <div className="rounded-xl border bg-muted/30 p-4 space-y-2">
+            <div className="rounded-md border bg-muted/30 p-4 space-y-2">
               <div className="text-sm font-medium">{askResult.answer}</div>
               {askResult.rows && askResult.rows.length > 0 ? (
-                <div className="text-xs font-mono bg-card rounded-lg border p-3 overflow-auto max-h-64">
+                <div className="text-xs font-mono bg-card rounded-md border p-3 overflow-auto max-h-64">
                   <pre>{JSON.stringify(askResult.rows.slice(0, 20), null, 2)}</pre>
                 </div>
               ) : null}

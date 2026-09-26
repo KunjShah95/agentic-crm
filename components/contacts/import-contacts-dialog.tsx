@@ -237,7 +237,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
         <div className="min-h-48">
           {step === "upload" && (
             <div
-              className="flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed bg-muted/20 p-8 text-center"
+              className="flex flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed bg-muted/20 p-8 text-center"
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => e.preventDefault()}
               onDrop={(e) => {
@@ -251,7 +251,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
                 }
               }}
             >
-              <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10">
+              <div className="flex size-12 items-center justify-center rounded-md bg-primary/10">
                 <Upload className="size-5 text-primary" />
               </div>
               <div>
@@ -282,7 +282,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
                         [field.crmField]: e.target.value || null,
                       }))
                     }
-                    className="flex-1 rounded-lg border bg-background px-3 py-1.5 text-sm"
+                    className="flex-1 rounded-sm border bg-background px-3 py-1.5 text-sm"
                   >
                     <option value="">— Skip —</option>
                     {csvData.headers.map((h) => (
@@ -307,7 +307,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
 
           {step === "done" && result && (
             <div className="space-y-4 py-4">
-              <div className="flex items-center gap-3 rounded-lg border bg-emerald-500/5 p-3">
+              <div className="flex items-center gap-3 rounded-md border bg-emerald-500/5 p-3">
                 <CheckCircle2 className="size-5 text-emerald-500" />
                 <div>
                   <p className="text-sm font-medium">{result.imported} contacts imported</p>
@@ -319,7 +319,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
                 </div>
               </div>
               {result.errors.length > 0 && (
-                <div className="max-h-32 overflow-y-auto rounded-lg border bg-muted/20 p-3">
+                <div className="max-h-32 overflow-y-auto rounded-md border bg-muted/20 p-3">
                   {result.errors.slice(0, 10).map((err, i) => (
                     <p key={i} className="text-xs text-muted-foreground">{err}</p>
                   ))}

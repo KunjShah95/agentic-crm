@@ -36,7 +36,7 @@ export function BottomNav({ workspaceSlug }: { workspaceSlug: string }) {
               key={item.href}
               href={href}
               className={cn(
-                "flex flex-col items-center gap-0.5 rounded-lg py-2 text-[10px] font-medium transition-colors",
+                "flex flex-col items-center gap-0.5 rounded-sm py-2 text-[10px] font-medium transition-colors",
                 active
                   ? "text-brand"
                   : "text-muted-foreground hover:text-foreground"

@@ -59,23 +59,23 @@ export function ExtendedSettingsTabs({
 
   return (
     <Tabs defaultValue="general" className="w-full space-y-6">
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-xl border bg-muted/50 p-1">
-        <TabsTrigger value="general" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
+        <TabsTrigger value="general" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Building2 className="mr-1.5 size-3.5" /> General
         </TabsTrigger>
-        <TabsTrigger value="pipeline" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="pipeline" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Sliders className="mr-1.5 size-3.5" /> Pipeline & RERA
         </TabsTrigger>
-        <TabsTrigger value="localization" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="localization" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Globe className="mr-1.5 size-3.5" /> Localization
         </TabsTrigger>
-        <TabsTrigger value="integrations" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="integrations" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <BellRing className="mr-1.5 size-3.5" /> Integrations
         </TabsTrigger>
-        <TabsTrigger value="api" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="api" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Key className="mr-1.5 size-3.5" /> API & Webhooks
         </TabsTrigger>
-        <TabsTrigger value="tags" className="rounded-lg text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="tags" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Tag className="mr-1.5 size-3.5" /> Tags
         </TabsTrigger>
       </TabsList>
@@ -153,7 +153,7 @@ export function ExtendedSettingsTabs({
               <p className="text-xs text-muted-foreground">Automatic expiration timeframe for temporary HOLD stage before releasing inventory back to pool.</p>
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-3.5">
+            <div className="flex items-center justify-between rounded-md border p-3.5">
               <div>
                 <Label className="text-sm font-medium">Construction Linked Payment (CLP) Automation</Label>
                 <p className="text-xs text-muted-foreground">Auto-generate milestone demand letters upon milestone completion updates.</p>
@@ -161,7 +161,7 @@ export function ExtendedSettingsTabs({
               <Switch checked={clpEnabled} onCheckedChange={setClpEnabled} />
             </div>
 
-            <div className="flex items-center justify-between rounded-lg border p-3.5">
+            <div className="flex items-center justify-between rounded-md border p-3.5">
               <div>
                 <Label className="text-sm font-medium">Auto-assign Inbound Site Visit Leads</Label>
                 <p className="text-xs text-muted-foreground">Distribute unassigned inbound web/QR leads round-robin to active sales managers.</p>
@@ -217,9 +217,9 @@ export function ExtendedSettingsTabs({
           </CardHeader>
           <CardContent className="space-y-4">
             {whatsappEnabled && (
-              <div className="flex items-center justify-between rounded-lg border p-4">
+              <div className="flex items-center justify-between rounded-md border p-4">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <span className="flex size-10 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
                     <Radio className="size-5" />
                   </span>
                   <div>
@@ -233,9 +233,9 @@ export function ExtendedSettingsTabs({
               </div>
             )}
 
-            <div className="flex items-center justify-between rounded-lg border p-4">
+            <div className="flex items-center justify-between rounded-md border p-4">
               <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                <span className="flex size-10 items-center justify-center rounded-sm bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   <Share2 className="size-5" />
                 </span>
                 <div>

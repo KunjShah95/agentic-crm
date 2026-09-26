@@ -56,7 +56,7 @@ export default async function ChannelPartnersPage({ params }: { params: Promise<
       </div>
 
       {isAdmin ? (
-        <section className="rounded-xl border bg-card p-4 space-y-3">
+        <section className="rounded-md border bg-card p-4 space-y-3">
           <h2 className="text-sm font-semibold">Partners <span className="text-muted-foreground font-normal">· {cps.length}</span></h2>
           <Table>
             <TableHeader>
@@ -89,7 +89,7 @@ export default async function ChannelPartnersPage({ params }: { params: Promise<
         </section>
       ) : null}
 
-      <section className="rounded-xl border bg-card p-4 space-y-3">
+      <section className="rounded-md border bg-card p-4 space-y-3">
         <h2 className="text-sm font-semibold">Commissions <span className="text-muted-foreground font-normal">· {commissions.length}</span></h2>
         <Table>
           <TableHeader>

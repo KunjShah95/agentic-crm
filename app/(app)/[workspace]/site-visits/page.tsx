@@ -41,7 +41,7 @@ export default async function SiteVisitsPage({ params }: { params: Promise<{ wor
         </div>
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden">
+      <div className="rounded-md border bg-card overflow-hidden">
         <Table>
         <TableHeader>
           <TableRow>
