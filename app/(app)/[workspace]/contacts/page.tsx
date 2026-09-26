@@ -78,7 +78,7 @@ export default async function ContactsPage({
             <h1 className="text-[22px] font-semibold tracking-tight">Contacts</h1>
             <p className="mt-1 text-sm text-muted-foreground">{data.total} contact{data.total !== 1 ? "s" : ""} · find, filter, and manage your leads</p>
           </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1"><span className="size-2 rounded-full bg-emerald-500 animate-pulse" /> {orgs.length} orgs</span>
             <span className="hidden sm:inline-flex items-center gap-1.5 rounded-full border bg-muted/30 px-2.5 py-1">{members.length} members</span>
           </div>

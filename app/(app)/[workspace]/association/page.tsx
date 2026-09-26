@@ -32,7 +32,7 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
             <CardDescription>Join to pool a lead → other members claim → both see audit; your units visible in association grid.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {all.length === 0 ? <p className="text-sm text-muted-foreground">No associations seeded. Create one via <span className="font-mono">createAssociation</span>.</p> : all.map((a) => (
+            {all.length === 0 ? <p className="text-sm text-muted-foreground">No associations seeded. Create one via <span>createAssociation</span>.</p> : all.map((a) => (
               <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
                 <div><div className="font-medium">{a.name}</div><div className="text-xs text-muted-foreground">{a.slug} · {a.city}</div></div>
                 <Badge variant="outline">{a.slug}</Badge>
@@ -84,7 +84,7 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
             <CardDescription>Builder can&apos;t service → pool → other members claim (audit + consent preserved)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {pooled.length === 0 ? <p className="text-sm text-muted-foreground">No pooled leads. Pool via <span className="font-mono">poolLead</span>.</p> : pooled.slice(0, 5).map((p) => (
+            {pooled.length === 0 ? <p className="text-sm text-muted-foreground">No pooled leads. Pool via <span>poolLead</span>.</p> : pooled.slice(0, 5).map((p) => (
               <div key={p.id} className="rounded-md border px-3 py-2 text-sm">
                 <div className="font-medium">{p.contact.firstName} {p.contact.lastName} <Badge variant="outline" className="ml-1">{p.contact.leadSource ?? "UNKNOWN"}</Badge></div>
                 <div className="text-xs text-muted-foreground">pooled by {p.pooledBy.name} · {p.status}</div>
@@ -99,7 +99,7 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
             <CardDescription>Members list Units to shared grid — CP/other builders view allocated inventory (reuse brokerScope at association level)</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {listings.length === 0 ? <p className="text-sm text-muted-foreground">No listings. List via <span className="font-mono">listUnitToAssociation</span>.</p> : listings.slice(0, 5).map((l) => (
+            {listings.length === 0 ? <p className="text-sm text-muted-foreground">No listings. List via <span>listUnitToAssociation</span>.</p> : listings.slice(0, 5).map((l) => (
               <div key={l.id} className="rounded-md border px-3 py-2 text-sm flex justify-between"><span>{l.unit.unitNo} · {l.unit.config}</span><span className="text-xs text-muted-foreground">{l.listedBy.name}</span></div>
             ))}
           </CardContent>
@@ -112,7 +112,7 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
           <CardDescription>Cross-member referral → CommissionRule split. Acceptance: builder A pools → B claims → both see audit; A&apos;s units visible in association grid.</CardDescription>
         </CardHeader>
         <CardContent>
-          {referrals.length === 0 ? <p className="text-sm text-muted-foreground">No referrals yet. Create via <span className="font-mono">createReferral</span>.</p> : (
+          {referrals.length === 0 ? <p className="text-sm text-muted-foreground">No referrals yet. Create via <span>createReferral</span>.</p> : (
             <div className="space-y-2">
               {referrals.slice(0, 5).map((r) => (
                 <div key={r.id} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">

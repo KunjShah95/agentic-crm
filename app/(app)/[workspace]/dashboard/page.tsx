@@ -74,7 +74,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <div>
           <h1 className="flex items-center gap-2.5 text-2xl font-display font-semibold tracking-tight">
             Dashboard
-            <Badge variant="secondary" className="rounded-md font-mono text-xs">{ws.name}</Badge>
+            <Badge variant="secondary" className="rounded-md text-xs">{ws.name}</Badge>
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">Your workspace at a glance — contacts, deals, projects, and activity.</p>
         </div>
@@ -112,7 +112,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
             <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
               <div className="flex items-center gap-2">
                 <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 font-mono text-[10px] text-muted-foreground">
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
                   by value
                 </span>
               </div>
@@ -229,7 +229,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
               key={a.id}
               className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2.5"
             >
-              <Badge variant="outline" className="rounded-full font-mono text-[10px] shrink-0">
+              <Badge variant="outline" className="rounded-full text-[10px] shrink-0">
                 {a.type}
               </Badge>
               <span className="text-xs text-muted-foreground truncate">{a.body || a.type}</span>

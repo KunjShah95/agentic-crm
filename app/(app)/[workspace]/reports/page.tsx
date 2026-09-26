@@ -55,7 +55,7 @@ export default async function ReportsPage({
 
       {projects.length > 0 ? (
         <div className="flex flex-wrap gap-2 items-center text-sm">
-          <span className="text-muted-foreground font-mono text-[11px] tracking-wider uppercase">Filter Project</span>
+          <span className="text-muted-foreground text-[11px] tracking-wider uppercase">Filter Project</span>
           <Link href={`/${slug}/reports`} className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${!projectId ? "bg-primary text-primary-foreground" : "bg-card hover:bg-muted"}`}>
             All projects
           </Link>
@@ -81,10 +81,10 @@ export default async function ReportsPage({
           <CardContent className="space-y-2">
             {snapshot.funnel.map((r) => (
               <div key={r.stage} className="grid grid-cols-[110px_1fr_64px_56px] items-center gap-2 text-sm">
-                <span className="font-mono text-xs tracking-wider text-muted-foreground">{r.stage}</span>
+                <span className="text-xs tracking-wider text-muted-foreground">{r.stage}</span>
                 <Progress value={funnelMax ? (r.count / funnelMax) * 100 : 0} className="h-2" />
-                <span className="text-right font-mono text-xs tabular-nums">{r.count}</span>
-                <Badge variant="secondary" className="justify-center font-mono text-xs tabular-nums">{r.conversionPct}%</Badge>
+                <span className="text-right text-xs tabular-nums">{r.count}</span>
+                <Badge variant="secondary" className="justify-center text-xs tabular-nums">{r.conversionPct}%</Badge>
               </div>
             ))}
           </CardContent>
@@ -97,15 +97,15 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-4 gap-2 text-center">
-              <div className="rounded-md border bg-card p-2.5"><div className="text-xs text-muted-foreground">Avail</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.available}</div></div>
-              <div className="rounded-md border bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.hold}</div></div>
-              <div className="rounded-md border bg-blue-500/10 text-blue-700 dark:text-blue-300 p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.booked}</div></div>
-              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold font-mono tabular-nums">{snapshot.inventory.sold}</div></div>
+              <div className="rounded-md border bg-card p-2.5"><div className="text-xs text-muted-foreground">Avail</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.available}</div></div>
+              <div className="rounded-md border bg-amber-500/10 text-amber-700 dark:text-amber-300 p-2.5"><div className="text-xs opacity-80">Hold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.hold}</div></div>
+              <div className="rounded-md border bg-blue-500/10 text-blue-700 dark:text-blue-300 p-2.5"><div className="text-xs opacity-80">Booked</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.booked}</div></div>
+              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Sold</div><div className="text-lg font-semibold tabular-nums">{snapshot.inventory.sold}</div></div>
             </div>
             <div className="mt-4 flex items-center gap-3">
               <Progress value={snapshot.inventory.soldPct} className="h-2 flex-1" />
-              <Badge className="rounded-md font-mono text-xs tabular-nums">{snapshot.inventory.soldPct}% sold</Badge>
-              <span className="text-xs text-muted-foreground font-mono tabular-nums">{snapshot.inventory.total} units</span>
+              <Badge className="rounded-md text-xs tabular-nums">{snapshot.inventory.soldPct}% sold</Badge>
+              <span className="text-xs text-muted-foreground tabular-nums">{snapshot.inventory.total} units</span>
             </div>
           </CardContent>
         </Card>
@@ -117,13 +117,13 @@ export default async function ReportsPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center">
-              <div className="rounded-md border p-2.5"><div className="text-xs text-muted-foreground">Due</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.due.toLocaleString("en-IN")}</div></div>
-              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
-              <div className="rounded-md border bg-destructive/10 text-destructive p-2.5"><div className="text-xs opacity-80">Overdue</div><div className="font-mono font-semibold tabular-nums">₹{snapshot.collections.overdue.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border p-2.5"><div className="text-xs text-muted-foreground">Due</div><div className="font-semibold tabular-nums">₹{snapshot.collections.due.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 p-2.5"><div className="text-xs opacity-80">Paid</div><div className="font-semibold tabular-nums">₹{snapshot.collections.paid.toLocaleString("en-IN")}</div></div>
+              <div className="rounded-md border bg-destructive/10 text-destructive p-2.5"><div className="text-xs opacity-80">Overdue</div><div className="font-semibold tabular-nums">₹{snapshot.collections.overdue.toLocaleString("en-IN")}</div></div>
             </div>
             <div className="flex items-center gap-2">
               <Progress value={snapshot.collections.overduePct} className="h-2 flex-1" />
-              <span className="text-xs text-muted-foreground font-mono tabular-nums">{snapshot.collections.overduePct}% overdue · total ₹{snapshot.collections.total.toLocaleString("en-IN")}</span>
+              <span className="text-xs text-muted-foreground tabular-nums">{snapshot.collections.overduePct}% overdue · total ₹{snapshot.collections.total.toLocaleString("en-IN")}</span>
             </div>
           </CardContent>
         </Card>
@@ -140,8 +140,8 @@ export default async function ReportsPage({
               <div className="space-y-2">
                 {snapshot.sourceROI.map((r) => (
                   <div key={r.source} className="flex items-center justify-between rounded-md border px-3 py-2 text-sm">
-                    <div><div className="font-medium">{r.source === "UNKNOWN" ? "Not recorded" : r.source}</div><div className="text-xs text-muted-foreground font-mono tabular-nums">{r.leads} leads · {r.bookings} bookings</div></div>
-                    <div className="text-right"><div className="font-mono text-xs font-semibold tabular-nums">₹{r.revenue.toLocaleString("en-IN")}</div><Badge variant="secondary" className="font-mono text-xs tabular-nums">{r.conversionPct}%</Badge></div>
+                    <div><div className="font-medium">{r.source === "UNKNOWN" ? "Not recorded" : r.source}</div><div className="text-xs text-muted-foreground tabular-nums">{r.leads} leads · {r.bookings} bookings</div></div>
+                    <div className="text-right"><div className="text-xs font-semibold tabular-nums">₹{r.revenue.toLocaleString("en-IN")}</div><Badge variant="secondary" className="text-xs tabular-nums">{r.conversionPct}%</Badge></div>
                   </div>
                 ))}
               </div>
@@ -157,8 +157,8 @@ export default async function ReportsPage({
           <CardContent className="space-y-2">
             {snapshot.teamVsTarget.map((r) => (
               <div key={r.ownerId} className="rounded-md border px-3 py-2">
-                <div className="flex items-center justify-between text-sm"><span className="font-medium">{r.ownerName}</span><Badge variant={r.attainmentPct >= 100 ? "default" : "secondary"} className="font-mono text-xs tabular-nums">{r.attainmentPct}%</Badge></div>
-                <div className="mt-1 flex items-center gap-2"><Progress value={Math.min(100, r.attainmentPct)} className="h-1.5 flex-1" /><span className="font-mono text-xs tabular-nums text-muted-foreground">{r.bookings}/{r.target}</span></div>
+                <div className="flex items-center justify-between text-sm"><span className="font-medium">{r.ownerName}</span><Badge variant={r.attainmentPct >= 100 ? "default" : "secondary"} className="text-xs tabular-nums">{r.attainmentPct}%</Badge></div>
+                <div className="mt-1 flex items-center gap-2"><Progress value={Math.min(100, r.attainmentPct)} className="h-1.5 flex-1" /><span className="text-xs tabular-nums text-muted-foreground">{r.bookings}/{r.target}</span></div>
               </div>
             ))}
           </CardContent>
@@ -184,7 +184,7 @@ export default async function ReportsPage({
                           <span className="size-2 rounded-full" style={{ backgroundColor: r.color }} />
                           {r.name}
                         </span>
-                        <span className="font-mono text-xs tabular-nums text-muted-foreground">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</span>
+                        <span className="text-xs tabular-nums text-muted-foreground">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</span>
                       </div>
                       <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                         <div
@@ -219,9 +219,9 @@ export default async function ReportsPage({
                       <span className="size-3 rounded-full" style={{ backgroundColor: r.color }} />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium truncate">{r.name}</div>
-                        <div className="text-xs text-muted-foreground font-mono tabular-nums">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</div>
+                        <div className="text-xs text-muted-foreground tabular-nums">{r.count} deals · ₹{r.value.toLocaleString("en-IN")}</div>
                       </div>
-                      <Badge variant="secondary" className="font-mono text-xs tabular-nums">{pct}%</Badge>
+                      <Badge variant="secondary" className="text-xs tabular-nums">{pct}%</Badge>
                     </div>
                   )
                 })}
@@ -254,10 +254,10 @@ export default async function ReportsPage({
                     {snapshot.winRateByType.map((r) => (
                       <tr key={r.type} className="border-b last:border-0">
                         <td className="py-2.5 pr-4 font-medium">{r.type === "UNCLASSIFIED" ? "Unclassified" : r.type}</td>
-                        <td className="py-2.5 pr-4 text-right font-mono tabular-nums">{r.total}</td>
-                        <td className="py-2.5 pr-4 text-right font-mono tabular-nums">{r.won}</td>
+                        <td className="py-2.5 pr-4 text-right tabular-nums">{r.total}</td>
+                        <td className="py-2.5 pr-4 text-right tabular-nums">{r.won}</td>
                         <td className="py-2.5 text-right">
-                          <Badge variant={r.winRate >= 50 ? "default" : "secondary"} className="font-mono text-xs tabular-nums">
+                          <Badge variant={r.winRate >= 50 ? "default" : "secondary"} className="text-xs tabular-nums">
                             {r.winRate}%
                           </Badge>
                         </td>

@@ -35,7 +35,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {templates.map((t) => (
               <div key={t.id} className="group rounded-md border bg-muted/20 px-3.5 py-3 hover:bg-card hover:shadow-sm hover:border-brand/30 transition-colors">
-                <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{t.name}</span><Badge variant="secondary" className="rounded-full font-mono text-[11px]">{t.kind}</Badge></div>
+                <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">{t.name}</span><Badge variant="secondary" className="rounded-full text-[11px]">{t.kind}</Badge></div>
                 {t.reraAligned ? <Badge className="mt-2 rounded-full">RERA</Badge> : null}
               </div>
             ))}

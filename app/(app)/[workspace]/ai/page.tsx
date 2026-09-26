@@ -51,8 +51,8 @@ export default async function AIPage({
             <CardDescription>Weighted by stage probability</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold font-mono tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
-            <div className="text-xs text-muted-foreground font-mono tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
+            <div className="text-2xl font-semibold tabular-nums">₹{rev.weighted.toLocaleString("en-IN")}</div>
+            <div className="text-xs text-muted-foreground tabular-nums">Pipeline ₹{rev.pipeline.toLocaleString("en-IN")} · {rev.count} deals</div>
           </CardContent>
         </Card>
         <Card>
@@ -61,8 +61,8 @@ export default async function AIPage({
             <CardDescription>Due in 30d vs overdue</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-semibold font-mono tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
-            <div className="text-xs text-muted-foreground font-mono tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
+            <div className="text-2xl font-semibold tabular-nums text-destructive">₹{coll.overdue.toLocaleString("en-IN")} overdue</div>
+            <div className="text-xs text-muted-foreground tabular-nums">Due 30d ₹{coll.due30.toLocaleString("en-IN")} · next {coll.nextDueDate ?? "—"}</div>
           </CardContent>
         </Card>
         <Card>
@@ -73,7 +73,7 @@ export default async function AIPage({
           <CardContent className="text-sm">
             <div className="flex flex-wrap gap-1">
               {snapshot.funnel.slice(0, 4).map((r) => (
-                <Badge key={r.stage} variant="secondary" className="font-mono text-xs tabular-nums">{r.stage}: {r.count}</Badge>
+                <Badge key={r.stage} variant="secondary" className="text-xs tabular-nums">{r.stage}: {r.count}</Badge>
               ))}
             </div>
           </CardContent>
@@ -94,7 +94,7 @@ export default async function AIPage({
             <div className="rounded-md border bg-muted/30 p-4 space-y-2">
               <div className="text-sm font-medium">{askResult.answer}</div>
               {askResult.rows && askResult.rows.length > 0 ? (
-                <div className="text-xs font-mono bg-card rounded-md border p-3 overflow-auto max-h-64">
+                <div className="text-xs bg-card rounded-md border p-3 overflow-auto max-h-64">
                   <pre>{JSON.stringify(askResult.rows.slice(0, 20), null, 2)}</pre>
                 </div>
               ) : null}

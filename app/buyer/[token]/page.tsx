@@ -18,20 +18,20 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
     <div className="mx-auto max-w-4xl p-6 space-y-6">
       <div>
         <h1 className="text-2xl font-display font-semibold">Buyer Portal — {contact.firstName} {contact.lastName}</h1>
-        <p className="text-sm text-muted-foreground">Magic link · expires <span className="font-mono tabular-nums">{access.expiresAt.toLocaleDateString("en-IN")}</span> · {access.workspace.name}</p>
+        <p className="text-sm text-muted-foreground">Magic link · expires <span className="tabular-nums">{access.expiresAt.toLocaleDateString("en-IN")}</span> · {access.workspace.name}</p>
       </div>
       <div className="grid md:grid-cols-2 gap-4">
         {deals.map((d) => (
           <Card key={d.id}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base font-display flex items-center gap-2"><Building2 className="size-4 text-brand" /> {d.title}</CardTitle>
-              <CardDescription>{d.bookingStage ?? "INQUIRY"} · {d.unit?.unitNo ?? "no unit"} · <span className="font-mono tabular-nums">₹{d.value?.toLocaleString("en-IN") ?? "—"}</span></CardDescription>
+              <CardDescription>{d.bookingStage ?? "INQUIRY"} · {d.unit?.unitNo ?? "no unit"} · <span className="font-mono tabular-nums" data-mono="money">₹{d.value?.toLocaleString("en-IN") ?? "—"}</span></CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
-              <div className="text-xs font-mono">Unit {d.unit?.unitNo ?? "—"} · Project {d.unit?.projectId ?? "—"}</div>
+              <div className="text-xs font-mono" data-mono="id">Unit {d.unit?.unitNo ?? "—"} · Project {d.unit?.projectId ?? "—"}</div>
               <div className="flex flex-wrap gap-1">
                 {d.payments.slice(0, 4).map((p) => (
-                  <Badge key={p.id} variant={p.status==="PAID"?"default":p.status==="OVERDUE"?"destructive":"secondary"} className="font-mono text-xs tabular-nums">{p.status} ₹{p.amount.toLocaleString("en-IN")}</Badge>
+                  <Badge key={p.id} variant={p.status==="PAID"?"default":p.status==="OVERDUE"?"destructive":"secondary"} className="font-mono text-xs tabular-nums" data-mono="money">{p.status} ₹{p.amount.toLocaleString("en-IN")}</Badge>
                 ))}
               </div>
               {d.payments.length===0 ? <p className="text-xs text-muted-foreground">No payments yet.</p> : null}
@@ -47,7 +47,7 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
         </CardHeader>
         <CardContent>
           {docs.length===0 ? <p className="text-sm text-muted-foreground">No documents yet.</p> : docs.map((doc: { id: string; templateId: string; createdAt: Date }) => (
-            <div key={doc.id} className="rounded-md border px-3 py-2 text-sm flex justify-between"><span>{doc.templateId}</span><span className="text-xs text-muted-foreground font-mono tabular-nums">{new Date(doc.createdAt).toLocaleDateString("en-IN")}</span></div>
+            <div key={doc.id} className="rounded-md border px-3 py-2 text-sm flex justify-between"><span>{doc.templateId}</span><span className="text-xs text-muted-foreground tabular-nums">{new Date(doc.createdAt).toLocaleDateString("en-IN")}</span></div>
           ))}
         </CardContent>
       </Card>

@@ -166,9 +166,7 @@
     @apply font-sans;
   }
   /* TypeUI Premium: display headings carry the brand, tabular data figures */
-  h1, h2, h3 {
-    font-family: var(--font-display);
-    letter-spacing: -0.025em;
+  .text-balance {
     text-wrap: balance;
   }
   .tabular-nums, table, td, th {

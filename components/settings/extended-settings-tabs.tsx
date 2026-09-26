@@ -148,7 +148,7 @@ export function ExtendedSettingsTabs({
                 type="number"
                 value={holdDays}
                 onChange={(e) => setHoldDays(e.target.value)}
-                className="max-w-xs focus-visible:ring-brand font-mono tabular-nums"
+                className="max-w-xs focus-visible:ring-brand tabular-nums"
               />
               <p className="text-xs text-muted-foreground">Automatic expiration timeframe for temporary HOLD stage before releasing inventory back to pool.</p>
             </div>
@@ -186,18 +186,18 @@ export function ExtendedSettingsTabs({
           <CardContent className="space-y-4">
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Primary Currency</Label>
-              <Input value="INR (₹) — Indian Rupee" disabled className="max-w-md bg-muted font-mono text-xs" />
+              <Input value="INR (₹) — Indian Rupee" disabled className="max-w-md bg-muted text-xs" />
             </div>
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Default Timezone</Label>
-              <Input value="Asia/Kolkata (IST — UTC +05:30)" disabled className="max-w-md bg-muted font-mono text-xs" />
+              <Input value="Asia/Kolkata (IST — UTC +05:30)" disabled className="max-w-md bg-muted text-xs" />
             </div>
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Supported Languages</Label>
               <div className="flex gap-2">
-                <Badge variant="secondary" className="font-mono text-xs">English (EN)</Badge>
-                <Badge variant="secondary" className="font-mono text-xs">Gujarati (GU)</Badge>
-                <Badge variant="secondary" className="font-mono text-xs">Hindi (HI)</Badge>
+                <Badge variant="secondary" className="text-xs">English (EN)</Badge>
+                <Badge variant="secondary" className="text-xs">Gujarati (GU)</Badge>
+                <Badge variant="secondary" className="text-xs">Hindi (HI)</Badge>
               </div>
             </div>
           </CardContent>
@@ -259,13 +259,13 @@ export function ExtendedSettingsTabs({
             <div className="grid gap-2">
               <Label className="text-sm font-medium">Secret Workspace API Key</Label>
               <div className="flex max-w-md items-center gap-2">
-                <Input value={apiKey} readOnly className="font-mono text-xs focus-visible:ring-brand" />
+                <Input value={apiKey} readOnly data-mono="secret" className="font-mono text-xs focus-visible:ring-brand" />
                 <Button variant="outline" size="sm" onClick={copyApiKey}>
                   {copied ? <Check className="size-3.5 text-emerald-600" /> : <Copy className="size-3.5" />}
                   {copied ? "Copied" : "Copy"}
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground">Keep this key confidential. Use in <code className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">Authorization: Bearer</code> header.</p>
+              <p className="text-xs text-muted-foreground">Keep this key confidential. Use in <code data-mono="secret" className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">Authorization: Bearer</code> header.</p>
             </div>
 
             <div className="grid gap-2 border-t pt-4">
@@ -273,7 +273,7 @@ export function ExtendedSettingsTabs({
               <Input
                 value={`https://${slug}.estate360.vercel.com/api/webhooks/leads`}
                 readOnly
-                className="max-w-md bg-muted font-mono text-xs"
+                className="max-w-md bg-muted font-mono text-xs" data-mono="url"
               />
               <p className="text-xs text-muted-foreground">POST JSON lead payloads to this URL to trigger instant lead creation and AI qualification.</p>
             </div>

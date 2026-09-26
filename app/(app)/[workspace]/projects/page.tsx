@@ -56,7 +56,7 @@ export default async function ProjectsPage({
                 <span className="flex size-9 items-center justify-center rounded-sm bg-foreground text-background text-xs font-bold">
                   {p.name.slice(0, 2).toUpperCase()}
                 </span>
-                <Badge variant="outline" className="rounded-full font-mono text-[11px]">{p.city}</Badge>
+                <Badge variant="outline" className="rounded-full text-[11px]">{p.city}</Badge>
               </div>
               <div className="relative mt-3 font-medium tracking-tight">{p.name}</div>
               <div className="relative mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">

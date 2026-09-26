@@ -77,7 +77,7 @@ export default async function TasksPage({
           <CardHeader className="flex-row items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-sm bg-brand/10 text-brand"><Circle className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 font-mono text-[11px] text-white">{open.length}</span></CardTitle>
+              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[11px] text-white">{open.length}</span></CardTitle>
               <CardDescription>To-dos assigned to you</CardDescription>
             </div>
           </CardHeader>
@@ -96,7 +96,7 @@ export default async function TasksPage({
           <CardHeader className="flex-row items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-sm bg-emerald-500/10 text-emerald-600"><CheckCircle2 className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 font-mono text-[11px] text-white">{completed.length}</span></CardTitle>
+              <CardTitle className="text-base">Completed <span className="ml-1 rounded-full bg-emerald-500 px-1.5 py-0.5 text-[11px] text-white">{completed.length}</span></CardTitle>
               <CardDescription>Recently finished tasks</CardDescription>
             </div>
           </CardHeader>

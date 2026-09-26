@@ -99,11 +99,11 @@ export default function InboxPage() {
 //           <h2 className="text-sm font-semibold">Inbox</h2>
 //           <div className="flex items-center gap-2">
 //             {needsReplyCount > 0 ? (
-//               <span className="rounded-full bg-brand px-2 py-0.5 font-mono text-[11px] text-background">
+//               <span className="rounded-full bg-brand px-2 py-0.5 text-[11px] text-background">
 //                 {needsReplyCount} to reply
 //               </span>
 //             ) : null}
-//             <span className="rounded-full border px-2 py-0.5 font-mono text-[11px] text-muted-foreground">
+//             <span className="rounded-full border px-2 py-0.5 text-[11px] text-muted-foreground">
 //               {contacts.length}
 //             </span>
 //           </div>
@@ -155,7 +155,7 @@ export default function InboxPage() {
 //                 {c.needsReply ? <span className="size-1.5 shrink-0 rounded-full bg-brand" aria-label="Needs reply" /> : null}
 //                 {typeof c.leadScore === "number" ? (
 //                   <span
-//                     className={`shrink-0 rounded-full px-2 py-0.5 font-mono text-xs ${
+//                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs ${
 //                       c.leadScore >= 70
 //                         ? "bg-emerald-500 text-white"
 //                         : c.leadScore >= 40

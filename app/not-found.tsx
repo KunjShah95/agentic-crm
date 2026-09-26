@@ -21,7 +21,7 @@ export default function NotFound() {
           <span className="text-[13px] font-semibold tracking-[0.18em]">ESTATE360</span>
           <span className="text-[13px] font-light tracking-[0.12em] text-muted-foreground">CRM</span>
         </Link>
-        <p className="font-mono text-[12px] tracking-[0.2em] text-muted-foreground">404 · LOOP BROKEN</p>
+        <p className="text-[12px] tracking-[0.2em] text-muted-foreground">404 · LOOP BROKEN</p>
         <h1 className="mt-3 max-w-[520px] font-display text-[40px] font-[600] leading-[1.05] tracking-[-0.03em] sm:text-[52px]">
           This page isn&apos;t on the site plan.
         </h1>

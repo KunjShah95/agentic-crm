@@ -197,7 +197,7 @@ export function KanbanBoard({
                   <span className="text-xs text-muted-foreground">
                     {stageDeals.length}
                   </span>
-                  <span className="ml-auto text-xs font-mono font-medium tabular-nums text-muted-foreground">
+                  <span className="ml-auto text-xs font-medium tabular-nums text-muted-foreground">
                     {formatMoney(total)}
                   </span>
                 </div>
@@ -248,7 +248,7 @@ export function KanbanBoard({
                               </p>
 
                               <div className="mt-2.5 flex items-center justify-between">
-                                <span className="text-sm font-semibold font-mono tabular-nums">
+                                <span className="text-sm font-semibold tabular-nums">
                                   {formatMoney(deal.value, deal.currency)}
                                 </span>
                                 {deal.probability != null && (
