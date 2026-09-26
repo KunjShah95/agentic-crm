@@ -16,11 +16,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
 
   return (
     <div className="space-y-6">
-      <div className="rounded-md border bg-card p-5 md:p-6 relative overflow-hidden">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 -right-16 h-48 w-64 rounded-full bg-gradient-to-br from-brand/10 via-amber-500/5 to-transparent blur-2xl" />
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-blue-500/20 to-transparent" />
-        </div>
+      <div className="rounded-md border bg-card p-5 md:p-6">
         <div className="relative">
           <h1 className="text-[22px] font-semibold tracking-tight">Documents</h1>
           <p className="mt-1 text-sm text-muted-foreground">RERA-aligned demand / allotment / receipt / possession letters with PDF download.</p>
