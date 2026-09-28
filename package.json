@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prebuild": "tsx scripts/write-llms-txt.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -18,7 +19,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
-    "setup": "prisma migrate dev && prisma db seed"
+    "setup": "prisma migrate dev && prisma db seed",
+    "seo:llms": "tsx scripts/write-llms-txt.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

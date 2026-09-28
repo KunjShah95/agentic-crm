@@ -8,12 +8,7 @@ import { pageMetadata, SITE } from "@/components/landing/site-config"
 import { Card, CardContent } from "@/components/ui/card"
 import { Mail, MapPin, Phone, Clock } from "lucide-react"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Contact",
-  description:
-    "Contact Estate360 in Ahmedabad — Mondeal Heights, SG Highway. Email hello@estate360.in or call +91 79 4890 2200. Book a NAAR demo for your sites.",
-  path: "/contact",
-})
+export const metadata: Metadata = pageMetadata({ path: "/contact" })
 
 export default async function ContactPage() {
   const session = await auth()

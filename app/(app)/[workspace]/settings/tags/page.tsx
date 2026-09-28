@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { TagManager } from "@/components/settings/tag-manager"
+import { PageHeader } from "@/components/shell/page-header"
 
 export const metadata: Metadata = { title: "Manage Tags" }
 
@@ -43,12 +44,16 @@ export default async function TagsSettingsPage({
 
   return (
     <div className="flex max-w-4xl flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-display font-semibold tracking-tight">Manage Tags</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Create, edit, and delete tags used across contacts and deals in {workspace.name}.
-        </p>
-      </div>
+      {/*
+        The one h1 on this screen, via the shared primitive. It previously
+        hand-rolled its own header at a different size, tracking and leading
+        from every other page in the app — which is exactly what a `PageHeader`
+        exists to prevent.
+      */}
+      <PageHeader
+        title="Manage tags"
+        description={`Create, edit, and delete tags used across contacts and deals in ${workspace.name}.`}
+      />
       <TagManager workspaceId={workspace.id} initialTags={tags} />
     </div>
   )

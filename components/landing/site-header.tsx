@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/shell/mode-toggle"
-import { ArrowRight, ArrowUpRight, Layers } from "lucide-react"
+import { ArrowRight, ArrowUpRight, Layers, Menu, X } from "lucide-react"
 import { NAV_LINKS } from "@/components/landing/site-config"
 import { cn } from "@/lib/utils"
 
@@ -54,19 +54,19 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
           <ModeToggle />
           {!isAuthed ? (
             <>
-              <Button variant="ghost" size="sm" className="rounded-full text-[13px]" render={<Link href="/login" />}>
+              <Button variant="ghost" size="sm" className="rounded-md text-[13px]" render={<Link href="/login" />}>
                 Sign in
               </Button>
               <Button
                 size="sm"
-                className="gap-1.5 rounded-full border-0 text-[13px] bg-brand text-brand-foreground hover:bg-brand/90"
+                className="gap-1.5 rounded-md border-0 text-[13px] bg-brand text-brand-foreground hover:bg-brand/90"
                 render={<Link href="/signup" />}
               >
-                Start free — 14 days <ArrowUpRight className="size-3.5" aria-hidden />
+                Start free <ArrowUpRight className="size-3.5" aria-hidden />
               </Button>
             </>
           ) : (
-            <Button size="sm" className="gap-1.5 rounded-full" render={<Link href={primaryHref} />}>
+            <Button size="sm" className="gap-1.5 rounded-md" render={<Link href={primaryHref} />}>
               Go to workspace <ArrowRight className="size-3.5" aria-hidden />
             </Button>
           )}
@@ -77,11 +77,13 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
           aria-label={mobileOpen ? "Close menu" : "Open menu"}
           aria-expanded={mobileOpen}
           onClick={() => setMobileOpen((v) => !v)}
-          className="rounded-full md:hidden"
+          className="rounded-md md:hidden"
         >
-          <span className="text-sm" aria-hidden>
-            {mobileOpen ? "✕" : "≡"}
-          </span>
+          {mobileOpen ? (
+            <X className="size-4" aria-hidden />
+          ) : (
+            <Menu className="size-4" aria-hidden />
+          )}
         </Button>
       </div>
       {mobileOpen && (
@@ -98,7 +100,7 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
               </Link>
             ))}
             <Button
-              className="mt-3 rounded-full border-0 bg-brand text-brand-foreground hover:bg-brand/90"
+              className="mt-3 rounded-md border-0 bg-brand text-brand-foreground hover:bg-brand/90"
               render={<Link href={primaryHref} onClick={() => setMobileOpen(false)} />}
             >
               {isAuthed ? "Open workspace" : "Start free"}
@@ -106,7 +108,7 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
             {!isAuthed && (
               <Button
                 variant="outline"
-                className="mt-2 rounded-full"
+                className="mt-2 rounded-md"
                 render={<Link href="/login" onClick={() => setMobileOpen(false)} />}
               >
                 Sign in

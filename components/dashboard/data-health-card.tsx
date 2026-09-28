@@ -1,6 +1,10 @@
 import { db } from "@/lib/db"
 import { cn } from "@/lib/utils"
-import { completenessBarColor, completenessTextColor } from "@/lib/completeness"
+import {
+  completenessBarColor,
+  completenessTextColor,
+  type CompletenessTone,
+} from "@/lib/completeness"
 import {
   Card,
   CardContent,
@@ -82,35 +86,83 @@ export async function DataHealthCard({ workspaceId }: { workspaceId: string }) {
         <CardTitle className="text-sm">Data Health</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Contacts ({contacts.length} sampled)</span>
-            <span className={cn("text-xs font-semibold tabular-nums", completenessTextColor(contactColor))}>
-              {avgContactScore}%
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn("h-full rounded-full transition-all", completenessBarColor(contactColor))}
-              style={{ width: `${avgContactScore}%` }}
-            />
-          </div>
-        </div>
-        <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-xs text-muted-foreground">Deals ({deals.length} sampled)</span>
-            <span className={cn("text-xs font-semibold tabular-nums", completenessTextColor(dealColor))}>
-              {avgDealScore}%
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
-            <div
-              className={cn("h-full rounded-full transition-all", completenessBarColor(dealColor))}
-              style={{ width: `${avgDealScore}%` }}
-            />
-          </div>
-        </div>
+        {/*
+          The one progress bar in the app, shared by both rows. It used to be
+          hand-rolled twice with `transition-all` — which animates width on every
+          repaint, so the bar visibly re-eased whenever an unrelated card
+          re-rendered. Naming the property (`transform`) and driving the fill
+          with a scale transform instead of a width percentage means the
+          compositor handles it and no layout is invalidated at all.
+        */}
+        <ScoreBar
+          label="Contacts"
+          sampleSize={contacts.length}
+          score={avgContactScore}
+          color={contactColor}
+        />
+        <ScoreBar
+          label="Deals"
+          sampleSize={deals.length}
+          score={avgDealScore}
+          color={dealColor}
+        />
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * One labelled completeness bar.
+ *
+ * The track is 6px tall, which is the smallest height that still reads as a
+ * filled proportion at a glance without becoming a chart. The fill is
+ * `transform-origin: left` and scaled, not sized — width changes force layout
+ * on every animated frame, scale does not.
+ */
+function ScoreBar({
+  label,
+  sampleSize,
+  score,
+  color,
+}: {
+  label: string
+  sampleSize: number
+  score: number
+  color: CompletenessTone
+}) {
+  const pct = Math.max(0, Math.min(100, score))
+  return (
+    <div>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <span className="truncate text-xs text-muted-foreground">
+          {label}
+          <span className="text-muted-foreground/70"> ({sampleSize} sampled)</span>
+        </span>
+        <span
+          className={cn(
+            "shrink-0 text-xs font-semibold tabular-nums",
+            completenessTextColor(color)
+          )}
+        >
+          {pct}%
+        </span>
+      </div>
+      <div
+        role="meter"
+        aria-valuenow={pct}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label={`${label} record completeness`}
+        className="h-1.5 w-full overflow-hidden rounded-full bg-muted"
+      >
+        <div
+          className={cn(
+            "h-full origin-left rounded-full transition-transform duration-500 [transition-timing-function:var(--ease-out)] motion-reduce:transition-none",
+            completenessBarColor(color)
+          )}
+          style={{ transform: `scaleX(${pct / 100})` }}
+        />
+      </div>
+    </div>
   )
 }

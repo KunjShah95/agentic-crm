@@ -7,12 +7,7 @@ import { pageMetadata, SITE } from "@/components/landing/site-config"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, ArrowRight } from "lucide-react"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Thank you",
-  description: "Thanks for contacting Estate360. Our Ahmedabad team will reply within one business day.",
-  path: "/thank-you",
-  robots: { index: false, follow: false },
-})
+export const metadata: Metadata = pageMetadata({ path: "/thank-you" })
 
 export default async function ThankYouPage() {
   const session = await auth()

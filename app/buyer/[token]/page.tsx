@@ -24,7 +24,7 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
         {deals.map((d) => (
           <Card key={d.id}>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base font-display flex items-center gap-2"><Building2 className="size-4 text-brand" /> {d.title}</CardTitle>
+              <CardTitle className="text-base flex items-center gap-2"><Building2 className="size-4 text-brand" /> {d.title}</CardTitle>
               <CardDescription>{d.bookingStage ?? "INQUIRY"} · {d.unit?.unitNo ?? "no unit"} · <span className="font-mono tabular-nums" data-mono="money">₹{d.value?.toLocaleString("en-IN") ?? "—"}</span></CardDescription>
             </CardHeader>
             <CardContent className="space-y-2">
@@ -42,7 +42,7 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
       </div>
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base font-display flex items-center gap-2"><FileText className="size-4 text-brand" /> Documents</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2"><FileText className="size-4 text-brand" /> Documents</CardTitle>
           <CardDescription>Demand letters, allotment, receipts — RERA-aligned</CardDescription>
         </CardHeader>
         <CardContent>

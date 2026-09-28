@@ -1,12 +1,18 @@
+/**
+ * The three completeness bands. Named after the severity they represent rather
+ * than the colour they used to hardcode, so a call site reads as intent.
+ */
+export type CompletenessTone = "red" | "yellow" | "green"
+
 export type ContactCompleteness = {
   score: number
-  color: "red" | "yellow" | "green"
+  color: CompletenessTone
   missing: string[]
 }
 
 export type DealCompleteness = {
   score: number
-  color: "red" | "yellow" | "green"
+  color: CompletenessTone
   missing: string[]
 }
 
@@ -90,30 +96,54 @@ export function dealCompleteness(deal: {
   return { score, color: completenessColor(score), missing }
 }
 
-export function completenessColor(score: number): "red" | "yellow" | "green" {
+export function completenessColor(score: number): CompletenessTone {
   if (score < 40) return "red"
   if (score < 70) return "yellow"
   return "green"
 }
 
-export function completenessBarColor(color: "red" | "yellow" | "green"): string {
+/**
+ * Completeness → status token.
+ *
+ * These used to return raw palette classes (`bg-red-500`, `text-amber-600
+ * dark:text-amber-400`). That bought nothing: the token layer already
+ * defines critical / caution / positive pairs that are warm-neutral rather
+ * than saturated, so the hand-rolled colors were both off-system *and*
+ * louder than the surfaces around them. Every mode now comes from one
+ * token, so a theme change re-tints the whole completeness language at once
+ * and a new severity is a one-line addition instead of a search across
+ * call sites.
+ */
+export function completenessBarColor(color: CompletenessTone): string {
   switch (color) {
     case "red":
-      return "bg-red-500"
+      return "bg-status-critical-fg"
     case "yellow":
-      return "bg-amber-500"
+      return "bg-status-caution-fg"
     case "green":
-      return "bg-emerald-500"
+      return "bg-status-positive-fg"
   }
 }
 
-export function completenessTextColor(color: "red" | "yellow" | "green"): string {
+export function completenessTextColor(color: CompletenessTone): string {
   switch (color) {
     case "red":
-      return "text-red-600 dark:text-red-400"
+      return "text-status-critical-fg"
     case "yellow":
-      return "text-amber-600 dark:text-amber-400"
+      return "text-status-caution-fg"
     case "green":
-      return "text-emerald-600 dark:text-emerald-400"
+      return "text-status-positive-fg"
+  }
+}
+
+/** Fill for a completeness bar, on the same token as the text beside it. */
+export function completenessTrackColor(color: CompletenessTone): string {
+  switch (color) {
+    case "red":
+      return "bg-status-critical-bg"
+    case "yellow":
+      return "bg-status-caution-bg"
+    case "green":
+      return "bg-status-positive-bg"
   }
 }

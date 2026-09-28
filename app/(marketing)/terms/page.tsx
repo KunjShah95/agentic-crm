@@ -4,12 +4,7 @@ import { MarketingChrome } from "@/components/landing/marketing-chrome"
 import { PageHero } from "@/components/landing/page-hero"
 import { pageMetadata, SITE } from "@/components/landing/site-config"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Terms & Conditions",
-  description:
-    "Estate360 Terms & Conditions — acceptable use, subscriptions, trials, liability, and governing law for the multi-tenant CRM service.",
-  path: "/terms",
-})
+export const metadata: Metadata = pageMetadata({ path: "/terms" })
 
 const SECTIONS: { h: string; p: string[] }[] = [
   {

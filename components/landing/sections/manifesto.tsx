@@ -1,39 +1,97 @@
 import Link from "next/link"
-import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Building2, Star } from "lucide-react"
+import { ArrowRight, MapPin, Clock, ReceiptText, ShieldCheck } from "lucide-react"
 
-const QUOTES = [
-  { q: "“Cost sheet in 18s, demand letter while the family is still at the site. That was Excel never.”", a: "— Hemal Shah, Shilp Infra, Director — 3 sites SG Highway" },
-  { q: "“GPS check-in killed fake visits. Our Site Engineers actually check in now.”", a: "— Nirav Doshi, Safal Corp, Site — 200m verified" },
-  { q: "“Brokers see only their allocation now. No more ‘who showed that unit?’ fights.”", a: "— Riya Desai, Gala Builders, CP Lead — NAAR exchange" },
-  { q: "“UPI link in the demand WhatsApp — collections before the 7th, Tally-ready.”", a: "— Accounts, Shilp Infra — CLP 8 milestones" },
+/**
+ * Why we built it — the closer.
+ *
+ * IMPORTANT: this section previously carried four testimonials attributed to
+ * named individuals at named companies ("Hemal Shah, Shilp Infra, Director",
+ * "Nirav Doshi, Safal Corp", and so on). Those are not real customers. Shipping
+ * invented people as social proof is a reputational and legal risk, so they have
+ * been removed rather than restyled.
+ *
+ * What replaces them carries the same persuasion without fabricating anyone:
+ * the concrete operational change the product makes, stated as capability. If
+ * you have real quotes, drop them back into PROOF below.
+ */
+const PROOF = [
+  {
+    icon: ReceiptText,
+    claim: "Cost sheets and demand notices leave the building in minutes.",
+    detail: "Computed from the unit record, not retyped from a spreadsheet.",
+  },
+  {
+    icon: ShieldCheck,
+    claim: "Site visits verify themselves.",
+    detail: "200m GPS check-in, so a visit log can be trusted by Accounts.",
+  },
+  {
+    icon: Clock,
+    claim: "Brokers see only their allocation.",
+    detail: "The 'who showed that unit' argument stops happening.",
+  },
 ]
 
-export function ManifestoSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; workspaceSlug?: string | null }) {
-  const cta = isAuthed ? `/${workspaceSlug}/contacts` : "/signup"
+export function ManifestoSection({
+  isAuthed,
+  workspaceSlug,
+}: {
+  isAuthed: boolean
+  workspaceSlug?: string | null
+}) {
+  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/contacts` : "/signup"
+
   return (
-    <section id="manifesto" className="border-y bg-muted/30">
-      <div className="mx-auto max-w-[1280px] px-6 py-12 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+    <section id="manifesto" className="relative isolate overflow-hidden border-t border-border/70">
+      <div aria-hidden className="field-gradient -z-10 opacity-70" />
+
+      <div className="mx-auto max-w-[1280px] px-6 py-20 lg:px-8 lg:py-32">
+        <div className="grid gap-14 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
           <div>
-            <span className="inline-flex items-center gap-1.5 text-[11px] tracking-[0.14em] text-muted-foreground"><Building2 className="size-3" /> MANIFESTO · AHMEDABAD BUILDS, LOOP RUNS</span>
-            <h2 className="mt-3 text-[28px] font-bold leading-[0.95] tracking-[-0.02em]">Possession isn&apos;t luck.<br />It&apos;s a loop that closes.</h2>
-            <p className="mt-4 max-w-[460px] text-[14px] leading-6 text-muted-foreground">We verticalized Estate360 for NAAR: Shilp Infra to Gala Builders, 2–10 sites, SG Highway to South Bopal. Same workspace for Owners, Sales, Brokers, Site, Accounts — gu/hi where the buyer reads it, RERA where the auditor needs it.</p>
-            <div className="mt-6 flex gap-3">
-              <Button className="rounded-full gap-1.5" render={<Link href={cta} />}>Enter Estate360 — NAAR demo <ArrowRight className="size-4" /></Button>
-            </div>
+            <h2 className="font-display text-[32px] font-semibold leading-[1.08] tracking-[-0.03em] text-balance sm:text-[42px]">
+              Possession is not luck.
+              <br />
+              It is a loop that closes.
+            </h2>
+            <p className="mt-5 max-w-[46ch] text-[15px] leading-7 text-muted-foreground text-pretty">
+              We built Estate360 for NAAR-registered builders in Ahmedabad: two
+              to ten sites, SG Highway through South Bopal, one workspace shared
+              by Owners, Sales, Brokers, Site and Accounts. Gujarati and Hindi
+              where the buyer reads it. RERA-correct where the auditor needs it.
+            </p>
+
+            <p className="mt-6 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+              <MapPin className="size-3.5 shrink-0" aria-hidden />
+              Currently running across Ahmedabad NAAR associations
+            </p>
+
+            <Button className="mt-8 gap-2 px-6" size="lg" render={<Link href={cta} />}>
+              Start free
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {QUOTES.map((t) => (
-              <Card key={t.q} className="group transition-transform hover:-translate-y-0.5 border-border/60 overflow-hidden">
-                <CardContent className="p-5">
-                  <div className="text-[15px] font-medium leading-snug tracking-tight">{t.q}</div>
-                  <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1"><Star className="size-3 fill-foreground text-foreground" /> {t.a}</div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
+
+          <ul className="rule-y self-start">
+            {PROOF.map((p) => {
+              const Icon = p.icon
+              return (
+                <li key={p.claim} className="flex gap-4 py-6">
+                  <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-sm bg-brand/10 text-brand">
+                    <Icon className="size-4" aria-hidden />
+                  </span>
+                  <div>
+                    <p className="text-[15px] font-semibold leading-snug tracking-[-0.01em] text-balance">
+                      {p.claim}
+                    </p>
+                    <p className="mt-1 text-[13px] leading-6 text-muted-foreground">
+                      {p.detail}
+                    </p>
+                  </div>
+                </li>
+              )
+            })}
+          </ul>
         </div>
       </div>
     </section>

@@ -190,7 +190,7 @@ export function ContactForm() {
         />
       </div>
 
-      <Button type="submit" size="lg" className="h-11 w-full gap-2 rounded-full sm:w-auto" disabled={pending}>
+      <Button type="submit" size="lg" className="h-11 w-full gap-2 rounded-md sm:w-auto" disabled={pending}>
         {pending ? (
           <>
             <Loader2 className="size-4 animate-spin" aria-hidden />

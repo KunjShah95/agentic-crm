@@ -41,11 +41,13 @@ import {
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar } from "@/components/ui/table-metrics"
 import {
-  Empty,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
+  DataSurface,
+  DataTableHeader,
+  RowActions,
+  ROW_CLASS,
+  rowEnterStyle,
+} from "@/components/shell/data-surface"
+import { EmptyState } from "@/components/shell/empty-state"
 
 type OrgRow = {
   id: string
@@ -81,6 +83,11 @@ export function OrgsTable({
     )
   }, [orgs, query])
 
+  /** Filter and search are client-side here, so clearing is just local state. */
+  function clearFilters() {
+    setQuery("")
+  }
+
   async function onDelete(org: OrgRow) {
     const result = await deleteOrganizationAction(workspaceId, org.id)
     if (result.error) {
@@ -105,31 +112,40 @@ export function OrgsTable({
       </div>
 
       {filtered.length === 0 ? (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <Building2 />
-          </EmptyMedia>
-          <EmptyTitle>No companies found</EmptyTitle>
-          <EmptyDescription>
-            {query ? "Try a different search." : "Add your first company."}
-          </EmptyDescription>
-        </Empty>
+        <DataSurface>
+          <EmptyState
+            icon={Building2}
+            title={query ? "No companies found" : "No companies yet"}
+            description={
+              query
+                ? `Nothing matches “${query}”. Try a shorter search, or add the company you were looking for.`
+                : "Add your first company to group contacts and deals under one account."
+            }
+            action={query ? { label: "Clear search", onClick: clearFilters } : undefined}
+            actionNode={
+              query ? undefined : (
+                <OrgFormDialog
+                  workspaceId={workspaceId}
+                  trigger={<Button>Add your first company</Button>}
+                />
+              )
+            }
+          />
+        </DataSurface>
       ) : (
-        <div className="overflow-hidden rounded-md border bg-card">
+        <DataSurface>
           <Table>
-            <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
-              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                <TableHead>Company</TableHead>
-                <TableHead className="hidden md:table-cell">Domain</TableHead>
-                <TableHead className="hidden lg:table-cell">Industry</TableHead>
-                <TableHead className="text-right">Contacts</TableHead>
-                <TableHead className="text-right">Deals</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
+            <DataTableHeader>
+              <TableHead>Company</TableHead>
+              <TableHead className="hidden md:table-cell">Domain</TableHead>
+              <TableHead className="hidden lg:table-cell">Industry</TableHead>
+              <TableHead className="text-right">Contacts</TableHead>
+              <TableHead className="text-right">Deals</TableHead>
+              <TableHead className="w-10" />
+            </DataTableHeader>
             <TableBody>
-              {filtered.map((org) => (
-                <TableRow key={org.id}>
+              {filtered.map((org, i) => (
+                <TableRow key={org.id} className={ROW_CLASS} style={rowEnterStyle(i)}>
                   <TableCell>
                     <div className="flex items-center gap-2.5">
                       <span className="flex size-8 items-center justify-center rounded-md bg-muted">
@@ -167,15 +183,16 @@ export function OrgsTable({
                     {org._count.deals}
                   </TableCell>
                   <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        }
-                      />
+                    <RowActions>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button variant="ghost" size="icon" className="size-8">
+                              <MoreHorizontal />
+                              <span className="sr-only">Actions for {org.name}</span>
+                            </Button>
+                          }
+                        />
                       <DropdownMenuContent align="end">
                         <OrgFormDialog
                           workspaceId={workspaceId}
@@ -200,6 +217,7 @@ export function OrgsTable({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
+                    </RowActions>
                   </TableCell>
                 </TableRow>
               ))}
@@ -221,7 +239,7 @@ export function OrgsTable({
               value={filtered.reduce((s, o) => s + o._count.deals, 0)}
             />
           </TableTotalsBar>
-        </div>
+        </DataSurface>
       )}
 
       <AlertDialog open={!!pendingDelete} onOpenChange={(o) => !o && setPendingDelete(null)}>

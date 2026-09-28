@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Fragment } from "react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { KanbanSquare, Search, Table as TableIcon } from "lucide-react"
+import { KanbanSquare, Table as TableIcon } from "lucide-react"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"

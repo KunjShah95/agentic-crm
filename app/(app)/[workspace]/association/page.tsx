@@ -1,20 +1,16 @@
 import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
-import { auth } from "@/lib/auth"
 import { listAssociationMembers, listPooledLeads, listReferrals } from "@/modules/association/queries"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Building2, Users, Handshake, Share2 } from "lucide-react"
 import { PageHeader } from "@/components/shell/page-header"
-import Link from "next/link"
+import { EmptyState } from "@/components/shell/empty-state"
 
 export default async function AssociationPage({ params }: { params: Promise<{ workspace: string }> }) {
   const { workspace: slug } = await params
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
-  const session = await auth()
-  const membership = session?.user?.id ? await db.workspaceMember.findFirst({ where: { workspaceId: ws.id, userId: session.user.id } }) : null
   const assocMember = await db.associationMember.findFirst({ where: { workspaceId: ws.id }, include: { association: true } })
   const association = assocMember?.association ?? null
 
@@ -23,22 +19,40 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
     const all = await db.association.findMany({ take: 10, orderBy: { createdAt: "desc" } })
     return (
       <div className="flex flex-col gap-6">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">NAAR Association <Badge variant="secondary">P0 moat</Badge></h1>
-          <p className="text-sm text-muted-foreground">No association joined yet. Join NAAR to enable shared lead pool + inventory exchange + referral ledger. Every query association-scoped.</p>
-        </div>
+        {/*
+          The joined state below uses `PageHeader`; this unjoined state had its
+          own hand-rolled h1 at a different size and weight. Same screen, same
+          product — the header should not change shape because the user has not
+          joined an association yet.
+        */}
+        <PageHeader
+          title="NAAR Association"
+          badge={<Badge variant="secondary">P0 moat</Badge>}
+          description="No association joined yet. Join NAAR to enable the shared lead pool, inventory exchange, and referral ledger. Every query stays association-scoped."
+        />
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Available associations</CardTitle>
-            <CardDescription>Join to pool a lead → other members claim → both see audit; your units visible in association grid.</CardDescription>
+            <CardTitle>Available associations</CardTitle>
+            <CardDescription>Join to pool a lead, let other members claim it, and keep a shared audit trail — your units become visible in the association grid.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
-            {all.length === 0 ? <p className="text-sm text-muted-foreground">No associations seeded. Create one via <span>createAssociation</span>.</p> : all.map((a) => (
-              <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
-                <div><div className="font-medium">{a.name}</div><div className="text-xs text-muted-foreground">{a.slug} · {a.city}</div></div>
-                <Badge variant="outline">{a.slug}</Badge>
-              </div>
-            ))}
+            {all.length === 0 ? (
+              <EmptyState
+                compact
+                title="No associations available yet"
+                description="Once an association is seeded in this deployment it will appear here, and you can join it from this page."
+              />
+            ) : (
+              all.map((a) => (
+                <div key={a.id} className="flex items-center justify-between rounded-md border px-3 py-2">
+                  <div>
+                    <div className="text-[13px] font-medium">{a.name}</div>
+                    <div className="text-xs text-muted-foreground">{a.slug} · {a.city}</div>
+                  </div>
+                  <Badge variant="outline">{a.slug}</Badge>
+                </div>
+              ))
+            )}
           </CardContent>
         </Card>
       </div>
@@ -57,8 +71,13 @@ export default async function AssociationPage({ params }: { params: Promise<{ wo
       <PageHeader
         title={association.name}
         description="Member directory · Shared lead pool · Inventory exchange · Referral ledger — all association-scoped. Network effects: the moat."
-        badge={<Badge className="rounded-full">{association.slug}</Badge>}
-        actions={<Badge variant="secondary" className="rounded-full gap-1.5"><Users className="size-3" /> {members.length} members</Badge>}
+        badge={<Badge>{association.slug}</Badge>}
+        actions={
+          <Badge variant="secondary">
+            <Users size={11} />
+            {members.length} members
+          </Badge>
+        }
       />
 
       <div className="grid gap-4 lg:grid-cols-3">

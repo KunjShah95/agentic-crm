@@ -4,12 +4,7 @@ import { MarketingChrome } from "@/components/landing/marketing-chrome"
 import { PageHero } from "@/components/landing/page-hero"
 import { pageMetadata, SITE } from "@/components/landing/site-config"
 
-export const metadata: Metadata = pageMetadata({
-  title: "Privacy Policy",
-  description:
-    "Estate360 Privacy Policy — how we collect, use, and protect personal data for builders, brokers, and buyers under India's DPDP Act context.",
-  path: "/privacy",
-})
+export const metadata: Metadata = pageMetadata({ path: "/privacy" })
 
 const SECTIONS: { h: string; p: string[] }[] = [
   {

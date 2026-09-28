@@ -54,10 +54,10 @@ export function CookieBanner() {
         .
       </p>
       <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" className="rounded-full" onClick={() => save("accepted")}>
+        <Button size="sm" className="rounded-md" onClick={() => save("accepted")}>
           Accept all
         </Button>
-        <Button size="sm" variant="outline" className="rounded-full" onClick={() => save("essential")}>
+        <Button size="sm" variant="outline" className="rounded-md" onClick={() => save("essential")}>
           Essential only
         </Button>
       </div>

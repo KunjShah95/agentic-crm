@@ -21,18 +21,36 @@ export function Topbar({
     })) ?? []
 
   return (
-    <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-background/70 px-3 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60 md:px-6">
+    <header
+      className={[
+        // The bar is sticky within a non-scrolling column, so it never needs to
+        // blur its own content — but the app canvas scrolls *under* it, so a
+        // translucent bar with a backdrop is what keeps rows from smearing
+        // through on fast scroll.
+        "flex h-14 shrink-0 items-center gap-3 border-b bg-background/80 px-3 backdrop-blur-xl",
+        "supports-[backdrop-filter]:bg-background/60",
+        "md:px-6",
+      ].join(" ")}
+    >
       <MobileNav workspaceSlug={workspace.slug} workspaceName={workspace.name} />
+
+      {/*
+        On mobile the sidebar is a drawer, so the workspace needs an anchor in
+        the bar. From `md` up the sidebar is always visible and already names the
+        workspace — repeating it here is noise, so the block retires.
+      */}
       <div className="flex min-w-0 items-center gap-2 md:hidden">
-        <span className="flex size-6 shrink-0 items-center justify-center rounded-md bg-primary text-[10px] font-bold text-primary-foreground">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-xs bg-foreground text-[10px] font-bold text-background">
           {workspace.name.slice(0, 2).toUpperCase()}
         </span>
         <span className="truncate text-sm font-medium">{workspace.name}</span>
       </div>
 
-      <CommandMenu workspaceSlug={workspace.slug} workspaces={workspaces} />
+      <div className="flex min-w-0 flex-1">
+        <CommandMenu workspaceSlug={workspace.slug} workspaces={workspaces} />
+      </div>
 
-      <div className="ml-auto flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <ModeToggle />
         <UserMenu
           user={{
