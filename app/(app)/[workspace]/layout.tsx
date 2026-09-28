@@ -53,7 +53,7 @@ export default async function WorkspaceLayout({
   }
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="app-scope flex h-dvh overflow-hidden bg-surface-canvas">
       <a
         href="#main-content"
         className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-sm focus:bg-background focus:px-4 focus:py-2 focus:shadow-lg focus:ring-2 focus:ring-ring"
@@ -70,14 +70,34 @@ export default async function WorkspaceLayout({
           role: m.role,
         }))}
       />
-      <div className="flex min-w-0 flex-1 flex-col bg-gradient-to-b from-muted/20 via-background to-background">
+      {/*
+        The column is a fixed-height flex stack, not a page: the sidebar and
+        topbar stay put while `main` scrolls underneath. Painting the canvas on
+        this wrapper (rather than letting each page own its background) means
+        overscroll shows app chrome, not white.
+      */}
+      <div className="flex min-w-0 flex-1 flex-col">
         <Topbar workspace={workspaceLite} />
-        <main id="main-content" className="relative flex-1 overflow-y-auto pb-16 md:pb-0" tabIndex={-1}>
-          <div className="pointer-events-none absolute inset-y-0 left-0 right-0 z-0 hidden md:block">
-            <div className="absolute inset-0 bg-[radial-gradient(600px_circle_at_85%_0%,oklch(0.58_0.16_68/0.05),transparent_60%)]" />
-          </div>
-          <div className="relative z-10 mx-auto w-full max-w-7xl p-4 md:p-6 space-y-6">
-            <ErrorBoundary>{children}</ErrorBoundary>
+        <main
+          id="main-content"
+          tabIndex={-1}
+          className="relative min-h-0 flex-1 overflow-y-auto pb-16 outline-none md:pb-0"
+          style={{ scrollbarGutter: "stable" }}
+        >
+          {/*
+            Staggered entrance, capped at ~5 chunks. Each direct child of a page
+            root fades up ~6px in sequence so the page assembles in reading
+            order instead of appearing as one slab. `animation-fill-mode:
+            backwards` is what hides the pre-delay state — without it the first
+            frame paints the element at full opacity and the animation is a
+            no-op. The animation is one-shot, so it does not replay on the
+            back/forward cache and is not interruptible, which is why it is a
+            keyframe rather than a transition.
+          */}
+          <div className="mx-auto w-full max-w-7xl p-4 md:p-6">
+            <div className="space-y-6 [&>*]:animate-rise-in motion-reduce:[&>*]:animate-none">
+              <ErrorBoundary>{children}</ErrorBoundary>
+            </div>
           </div>
         </main>
         <BottomNav workspaceSlug={workspace.slug} />

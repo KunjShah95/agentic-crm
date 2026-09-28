@@ -1,26 +1,21 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
-import Link from "next/link"
-import { Users, KanbanSquare, Building2, CalendarCheck, ArrowRight, CheckSquare } from "lucide-react"
+import { Plus, ArrowUpRight } from "lucide-react"
 
 import { db } from "@/lib/db"
-import { formatMoney, initials } from "@/lib/format"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { formatMoneyShort } from "@/lib/format"
+import { getDashboardData } from "@/modules/dashboard/queries"
+import { ButtonLink } from "@/components/ds/button"
+import { Masthead, type MastheadFigure } from "@/components/ds/masthead"
+import { Panel, PanelHeader } from "@/components/ds/panel"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
-import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { FollowUpNudge } from "@/components/dashboard/follow-up-nudge"
-import { DataHealthCard } from "@/components/dashboard/data-health-card"
-import { PageHeader } from "@/components/shell/page-header"
+  LeadSourceDonut,
+  PipelineByStageChart,
+  WinProbabilityGauge,
+  WonRevenueChart,
+} from "@/components/dashboard/charts"
+import { ActivityFeed, PipelineTable } from "@/components/dashboard/pipeline-table"
+import { ProjectListing } from "@/components/projects/project-listing"
 
 export const metadata: Metadata = { title: "Dashboard" }
 
@@ -29,214 +24,191 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
 
-  const [contacts, deals, projects, siteVisits, organizations, topDeals, recentActivities] =
-    await Promise.all([
-      db.contact.count({ where: { workspaceId: ws.id } }),
-      db.deal.count({ where: { workspaceId: ws.id } }),
-      db.project.count({ where: { workspaceId: ws.id } }),
-      db.siteVisit.count({ where: { workspaceId: ws.id } }),
-      db.organization.count({ where: { workspaceId: ws.id } }),
-      db.deal.findMany({
-        where: { workspaceId: ws.id },
-        orderBy: [{ value: "desc" }, { updatedAt: "desc" }],
-        take: 8,
-        include: {
-          stage: { select: { name: true, color: true } },
-          owner: { select: { name: true } },
-          organization: { select: { name: true } },
-          contact: { select: { firstName: true, lastName: true } },
-          tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
-        },
-      }),
-      db.activity.findMany({
-        where: { workspaceId: ws.id },
-        orderBy: { createdAt: "desc" },
-        take: 6,
-        select: { id: true, type: true, body: true, createdAt: true },
-      }),
-    ])
+  const data = await getDashboardData(ws.id)
+  const { counts } = data
 
-  const stats = [
-    { label: "Contacts", value: contacts, icon: Users, href: `/${slug}/contacts` },
-    { label: "Deals", value: deals, icon: KanbanSquare, href: `/${slug}/deals` },
-    { label: "Projects", value: projects, icon: Building2, href: `/${slug}/projects` },
-    { label: "Site visits", value: siteVisits, icon: CalendarCheck, href: `/${slug}/site-visits` },
-    { label: "Organizations", value: organizations, icon: Building2, href: `/${slug}/organizations` },
+  // The date goes in the eyebrow rather than in a "Last updated: …" line. A
+  // fresh-workspace reading of a timestamp makes people distrust the numbers
+  // underneath it; a plain date in the corner is honest without being alarming.
+  const today = new Intl.DateTimeFormat("en-IN", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  }).format(new Date())
+
+  const figures: MastheadFigure[] = [
+    {
+      label: "Open pipeline",
+      value: formatMoneyShort(data.openPipeline),
+      sub: `${counts.openDeals} ${counts.openDeals === 1 ? "deal" : "deals"} in play`,
+      href: `/${slug}/deals?view=board`,
+    },
+    {
+      label: "Won",
+      value: counts.wonDeals,
+      sub: `all time, ${formatMoneyShort(data.wonByMonth.at(-1)?.value ?? 0)} this month`,
+      href: `/${slug}/deals`,
+    },
+    {
+      label: "Contacts",
+      value: counts.contacts,
+      sub: `${counts.tasks} open ${counts.tasks === 1 ? "task" : "tasks"}`,
+      href: `/${slug}/contacts`,
+    },
+    {
+      label: "Projects",
+      value: counts.projects,
+      sub: `${data.projects.reduce((s, p) => s + p._count.units, 0)} units listed`,
+      href: `/${slug}/projects`,
+    },
+    {
+      label: "Site visits",
+      value: counts.siteVisits,
+      sub: "logged to date",
+      href: `/${slug}/site-visits`,
+    },
   ]
 
-  const sumPipeline = topDeals.reduce((s, d) => s + (d.value ?? 0), 0)
-  const probs = topDeals.filter((d) => d.probability != null).map((d) => d.probability as number)
-  const avgProb = probs.length
-    ? Math.round(probs.reduce((s, p) => s + p, 0) / probs.length)
-    : null
-
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Dashboard"
-        description="Your workspace at a glance — contacts, deals, projects, and activity."
-        badge={<Badge variant="secondary" className="rounded-md text-xs">{ws.name}</Badge>}
-        actions={
+    <div className="space-y-4">
+      <Masthead
+        eyebrow={
           <>
-            <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/contacts`} />}>
-              Go to contacts <ArrowRight className="size-3.5" />
-            </Button>
-            <Button variant="outline" size="sm" className="rounded-full" render={<Link href={`/${slug}/reports`} />}>
-              Reports
-            </Button>
+            <span className="size-[5px] rounded-full bg-white" />
+            {ws.name}
+            <span className="text-white/25">/</span>
+            {today}
           </>
         }
+        title="Dashboard"
+        description="What is live, what is at risk, and what to do next. Everything below is scoped to this workspace."
+        actions={
+          <>
+            <ButtonLink
+              variant="inverse-outline"
+              size="sm"
+              href={`/${slug}/reports`}
+            >
+              Reports
+              <ArrowUpRight data-icon="inline-end" className="size-3.5" strokeWidth={2} />
+            </ButtonLink>
+            <ButtonLink variant="inverse" size="sm" href={`/${slug}/contacts`}>
+              <Plus data-icon="inline-start" className="size-3.5" strokeWidth={2.2} />
+              New contact
+            </ButtonLink>
+          </>
+        }
+        figures={figures}
       />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {stats.map((s) => (
-          <Link key={s.label} href={s.href}>
-            <div className="group rounded-md border bg-card p-4 transition-colors hover:border-foreground/20">
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <s.icon className="size-4" />
-                <span className="text-xs font-medium">{s.label}</span>
-              </div>
-              <div className="mt-3 font-display text-[28px] font-medium tracking-[-0.02em] tabular-nums">{s.value}</div>
-            </div>
-          </Link>
-        ))}
+      {/*
+        Charts first, tables second. A dashboard's job is to answer "is anything
+        wrong" in one look, and that is a shape question before it is a list
+        question — so the two big shapes (trend, gauge) sit at the top where
+        they are unmissable, and the two supporting breakdowns sit beneath them
+        at the same weight as each other.
+      */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel className="lg:col-span-2">
+          <PanelHeader
+            label="Won value"
+            hint="Last 6 months, by month the deal was last touched in Won"
+            actions={
+              <span className="text-[11.5px] tabular-nums text-[#a8a8a8]">
+                {data.wonByMonth.reduce((s, m) => s + m.count, 0)} deals
+              </span>
+            }
+          />
+          {/* A `min-h` floor, not a hard height, for the same reason the
+              pipeline chart below uses one: this Panel stretches to the taller
+              Win-probability cell beside it, and a fixed height left the area
+              between the axis and the panel edge empty. The floor keeps the
+              plot area from collapsing to nothing on a short row. */}
+          <div className="min-h-[232px] flex-1 px-2 pt-4 pb-3">
+            <WonRevenueChart data={data.wonByMonth} />
+          </div>
+        </Panel>
+
+        <Panel>
+          <PanelHeader label="Win probability" hint="Value-weighted" />
+          {/* `flex-1` + centred: the gauge is a fixed 168px square, so in a
+              panel stretched to match the taller area chart beside it, the
+              extra space otherwise all lands below the footnote. */}
+          <div className="flex flex-1 flex-col justify-center px-4 pt-5 pb-4">
+            <WinProbabilityGauge value={data.winProbability} />
+            <p className="mt-3 border-t border-[#f0f0f0] pt-3 text-[11.5px] leading-relaxed text-[#8a8a8a]">
+              Weighted by deal value, so a ₹2 Cr opportunity counts for more than a
+              ₹20 L one. Deals with no probability set are excluded.
+            </p>
+          </div>
+        </Panel>
       </div>
 
-      {/* Follow-up nudges */}
-      <FollowUpNudge workspaceId={ws.id} workspaceSlug={slug} />
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel className="lg:col-span-2">
+          <PanelHeader
+            label="Pipeline by stage"
+            hint="Open and closed deals per stage"
+            actions={
+              <span className="text-[11.5px] tabular-nums text-[#a8a8a8]">
+                {formatMoneyShort(data.openPipeline)} open
+              </span>
+            }
+          />
+          {/*
+            `flex-1` with a `min-h` floor, not a fixed height. This panel is a
+            grid item beside the donut, so it stretches to the taller of the
+            two; a hard `h-[214px]` left the chart pinned to the top with ~200px
+            of dead white below it. The floor keeps the chart legible when the
+            donut is the shorter cell, and the flex lets it take up the slack
+            when it is the taller one.
+          */}
+          <div className="min-h-[214px] flex-1 px-2 pt-4 pb-3">
+            <PipelineByStageChart data={data.stages} />
+          </div>
+        </Panel>
 
-      <div className="grid gap-4 lg:grid-cols-4">
-        <div className="lg:col-span-3">
-          {/* Pipeline — reference-style data table */}
-          <section className="overflow-hidden rounded-md border bg-card">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
-              <div className="flex items-center gap-2">
-                <h2 className="text-sm font-semibold tracking-tight">Top pipeline</h2>
-                <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
-                  by value
-                </span>
-              </div>
-              <Link
-                href={`/${slug}/deals?view=table`}
-                className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
-              >
-                View all deals <ArrowRight className="size-3.5" />
-              </Link>
-            </div>
-            {topDeals.length === 0 ? (
-              <Empty>
-                <EmptyMedia variant="icon"><KanbanSquare /></EmptyMedia>
-                <EmptyTitle>No deals in your pipeline yet</EmptyTitle>
-                <EmptyDescription>Create your first deal to start tracking opportunities and closing sales.</EmptyDescription>
-                <Button size="sm" className="rounded-full gap-1.5" render={<Link href={`/${slug}/deals`} />}>
-                  Go to deals <ArrowRight className="size-3.5" />
-                </Button>
-              </Empty>
-            ) : (
-              <>
-                <Table>
-                  <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
-                    <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                      <TableHead>Deal</TableHead>
-                      <TableHead>Stage</TableHead>
-                      <TableHead className="hidden lg:table-cell">Owner</TableHead>
-                      <TableHead className="hidden md:table-cell">Pipeline value</TableHead>
-                      <TableHead className="hidden md:table-cell">Win probability</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {topDeals.map((d) => (
-                      <TableRow key={d.id}>
-                        <TableCell>
-                          <Link
-                            href={`/${slug}/deals/${d.id}`}
-                            className="text-sm font-medium hover:underline"
-                          >
-                            {d.title}
-                          </Link>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {d.organization?.name ??
-                              (d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "—")}
-                          </p>
-                          <TagPills tags={d.tags} />
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center gap-1.5 text-sm">
-                            <span
-                              className="size-2 rounded-full"
-                              style={{ backgroundColor: d.stage.color }}
-                            />
-                            {d.stage.name}
-                          </span>
-                        </TableCell>
-                        <TableCell className="hidden lg:table-cell">
-                          {d.owner ? (
-                            <span className="inline-flex items-center gap-1.5 text-sm text-muted-foreground">
-                              <Avatar className="size-5">
-                                <AvatarFallback className="text-[9px]">
-                                  {initials(d.owner.name)}
-                                </AvatarFallback>
-                              </Avatar>
-                              {d.owner.name}
-                            </span>
-                          ) : (
-                            <span className="text-sm text-muted-foreground/50">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="hidden font-medium tabular-nums md:table-cell">
-                          {formatMoney(d.value, d.currency)}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          <WinBar value={d.probability} />
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <TableTotalsBar>
-                  <span className="font-medium">
-                    <span className="tabular-nums">{topDeals.length}</span>{" "}
-                    <span className="text-muted-foreground">deals in view</span>
-                  </span>
-                  <Metric label="Sum of pipeline" value={formatMoney(sumPipeline)} />
-                  <Metric label="Avg win probability" value={avgProb == null ? "—" : `${avgProb}%`} />
-                </TableTotalsBar>
-              </>
-            )}
-          </section>
-        </div>
-
-        <div className="lg:col-span-1">
-          <DataHealthCard workspaceId={ws.id} />
-        </div>
+        <Panel>
+          <PanelHeader label="Lead sources" hint="Where contacts came from" />
+          {/* `flex-1` so the donut is vertically centred in whatever height the
+              row settles at, rather than clinging to the top of a stretched
+              panel. `centerContent` on a column flex pushes the remaining space
+              above and below equally. */}
+          <div className="flex flex-1 items-center px-4 pt-4 pb-4">
+            <LeadSourceDonut data={data.leadSources} />
+          </div>
+        </Panel>
       </div>
 
-      {/* Recent activity */}
-      <section className="overflow-hidden rounded-md border bg-card">
-        <div className="border-b px-4 py-3">
-          <h2 className="text-sm font-semibold tracking-tight">Recent activity</h2>
-          <p className="text-xs text-muted-foreground">Across contacts and deals.</p>
+      <PipelineTable
+        rows={data.topDeals}
+        hrefBase={`/${slug}`}
+        openDeals={counts.openDeals}
+        openPipeline={data.openPipeline}
+        avgProbability={data.winProbability}
+      />
+
+      <Panel>
+        <PanelHeader label="Recent projects" hint="Inventory you are actively working" />
+        <div className="p-4">
+          <ProjectListing
+            hrefBase={`/${slug}`}
+            searchable={false}
+            projects={data.projects.map((p) => ({
+              id: p.id,
+              name: p.name,
+              city: p.city,
+              reraNo: p.reraNo,
+              unitCount: p._count.units,
+            }))}
+          />
         </div>
-        <div className="space-y-2 p-4">
-          {recentActivities.length === 0 && (
-            <div className="px-4 py-8 text-center">
-              <div className="mx-auto flex size-10 items-center justify-center rounded-md bg-muted"><CheckSquare className="size-5 text-muted-foreground" /></div>
-              <p className="mt-2 text-sm text-muted-foreground">No activity yet. Start by adding contacts or creating deals.</p>
-            </div>
-          )}
-          {recentActivities.map((a) => (
-            <div
-              key={a.id}
-              className="flex items-center gap-3 rounded-md border bg-muted/40 px-3 py-2.5"
-            >
-              <Badge variant="outline" className="rounded-full text-[10px] shrink-0">
-                {a.type}
-              </Badge>
-              <span className="text-xs text-muted-foreground truncate">{a.body || a.type}</span>
-            </div>
-          ))}
-        </div>
-      </section>
+      </Panel>
+
+      <Panel>
+        <PanelHeader label="Recent activity" hint="Across contacts and deals" />
+        <ActivityFeed items={data.recentActivity} />
+      </Panel>
     </div>
   )
 }

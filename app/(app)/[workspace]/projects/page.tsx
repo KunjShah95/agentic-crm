@@ -1,11 +1,12 @@
-import Link from "next/link"
 import { notFound } from "next/navigation"
+import { Plus } from "lucide-react"
+
 import { db } from "@/lib/db"
 import { listProjects } from "@/modules/property/queries"
-import { PageHeader, Stat } from "@/components/shell/page-header"
-import { Empty, EmptyDescription, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Badge } from "@/components/ui/badge"
-import { Building2, MapPin, Layers, Sparkles, ArrowRight } from "lucide-react"
+import { ButtonLink } from "@/components/ds/button"
+import { Masthead, type MastheadFigure } from "@/components/ds/masthead"
+import { Panel, PanelHeader } from "@/components/ds/panel"
+import { ProjectListing } from "@/components/projects/project-listing"
 
 export default async function ProjectsPage({
   params,
@@ -17,56 +18,67 @@ export default async function ProjectsPage({
   if (!ws) notFound()
 
   const projects = await listProjects(ws.id)
-  const totalUnits = projects.reduce((s, p) => s + (p as unknown as { _count: { units: number } })._count.units, 0)
+  const rows = projects.map((p) => {
+    const project = p as unknown as { _count: { units: number } }
+    return {
+      id: p.id,
+      name: p.name,
+      city: p.city,
+      reraNo: p.reraNo,
+      unitCount: project._count.units,
+    }
+  })
+
+  const totalUnits = rows.reduce((s, p) => s + p.unitCount, 0)
+  const registered = rows.filter((p) => p.reraNo).length
+
+  const figures: MastheadFigure[] = [
+    { label: "Projects", value: rows.length, sub: "in this workspace" },
+    { label: "Units", value: totalUnits, sub: "across every project" },
+    { label: "Cities", value: new Set(rows.map((p) => p.city)).size, sub: "locations covered" },
+    {
+      label: "RERA registered",
+      value: `${registered}/${rows.length}`,
+      sub: registered === rows.length && rows.length > 0 ? "all clear" : "some pending",
+    },
+  ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="Projects"
-        description={`${projects.length} ${projects.length === 1 ? "project" : "projects"} · ${totalUnits} ${totalUnits === 1 ? "unit" : "units"} total`}
-        badge={<Badge variant="secondary" className="rounded-full gap-1.5"><Building2 className="size-3" /> Inventory</Badge>}
-        stats={
+    <div className="space-y-4">
+      {/*
+        `paper` tone, not the black band. A solid black header above a grid of
+        white project cards puts two competing containers on the screen and the
+        cards stop reading as the subject. The black belongs to the rail and to
+        the dashboard's numbers; a listing page needs to be paper.
+      */}
+      <Masthead
+        tone="paper"
+        eyebrow={
           <>
-            <Stat label="Projects" value={projects.length} sub="Active projects" icon={<Building2 className="size-3" />} />
-            <Stat label="Units" value={totalUnits} sub="Across all projects" icon={<Layers className="size-3" />} />
-            <Stat label="Cities" value={new Set(projects.map((p) => p.city)).size || 1} sub="Locations covered" icon={<MapPin className="size-3" />} />
-            <Stat label="RERA" value={`${projects.filter((p) => p.reraNo).length}/${projects.length}`} sub="Registered" icon={<Sparkles className="size-3" />} />
+            <span className="size-[5px] rounded-full bg-[#0d0d0d]" />
+            Inventory
           </>
         }
+        title="Projects"
+        description="Every tower, unit, price, and payment plan in this workspace. Open a project to work its inventory."
+        actions={
+          <ButtonLink size="sm" href={`/${slug}/bookings`}>
+            <Plus data-icon="inline-start" className="size-3.5" strokeWidth={2.2} />
+            New booking
+          </ButtonLink>
+        }
+        figures={figures}
       />
 
-      {projects.length === 0 ? (
-        <Empty>
-          <EmptyMedia variant="icon"><Building2 /></EmptyMedia>
-          <EmptyTitle>No projects yet</EmptyTitle>
-          <EmptyDescription>Add your first project, then add towers and units to start managing inventory and payments.</EmptyDescription>
-        </Empty>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {projects.map((p) => (
-            <Link
-              key={p.id}
-              href={`/${slug}/projects/${p.id}`}
-              className="group relative overflow-hidden rounded-md border bg-card p-5 hover:shadow-[0_16px_40px_rgba(0,0,0,0.08)] hover:-translate-y-0.5 hover:border-brand/40 transition-all"
-            >
-              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-[radial-gradient(400px_circle_at_80%_0%,oklch(0.58_0.16_68/0.08),transparent_70%)]" />
-              <div className="relative flex items-start justify-between gap-3">
-                <span className="flex size-9 items-center justify-center rounded-sm bg-foreground text-background text-xs font-bold">
-                  {p.name.slice(0, 2).toUpperCase()}
-                </span>
-                <Badge variant="outline" className="rounded-full text-[11px]">{p.city}</Badge>
-              </div>
-              <div className="relative mt-3 font-medium tracking-tight">{p.name}</div>
-              <div className="relative mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Sparkles className="size-3" /> {p.reraNo ?? "RERA pending"} · {(p as unknown as { _count: { units: number } })._count.units} units
-              </div>
-              <div className="relative mt-4 flex items-center gap-1.5 text-xs font-medium text-brand">
-                View inventory <ArrowRight className="size-3 group-hover:translate-x-0.5 transition-transform" />
-              </div>
-            </Link>
-          ))}
+      <Panel>
+        <PanelHeader
+          label="All projects"
+          hint={rows.length ? undefined : "Nothing here yet"}
+        />
+        <div className="p-4">
+          <ProjectListing projects={rows} hrefBase={`/${slug}`} />
         </div>
-      )}
+      </Panel>
     </div>
   )
 }
