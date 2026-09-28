@@ -5,10 +5,8 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
   Download,
+  KanbanSquare,
   MoreHorizontal,
   Trash2,
   Tag as TagIcon,
@@ -29,7 +27,7 @@ import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { MobileCard, MobileCardRow } from "@/components/ui/responsive-table"
+import { MobileCardRow } from "@/components/ui/responsive-table"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -66,10 +64,19 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar, TagPills, WinBar } from "@/components/ui/table-metrics"
+import {
+  BulkActionBar,
+  DataSurface,
+  DataTableHeader,
+  RowActions,
+  ROW_CLASS,
+  SortableHead,
+  rowEnterStyle,
+} from "@/components/shell/data-surface"
+import { EmptyState } from "@/components/shell/empty-state"
 
 type Row = {
   id: string
@@ -91,15 +98,6 @@ type Row = {
 type SortKey = "title" | "value" | "stage" | "updatedAt"
 
 type SortState = { key: SortKey; dir: "asc" | "desc" }
-
-function SortIcon({ sort, column }: { sort: SortState; column: SortKey }) {
-  if (sort.key !== column) return <ArrowUpDown className="size-3.5 opacity-50" />
-  return sort.dir === "asc" ? (
-    <ArrowUp className="size-3.5" />
-  ) : (
-    <ArrowDown className="size-3.5" />
-  )
-}
 
 export function DealsTable({
   workspaceSlug,
@@ -180,6 +178,15 @@ export function DealsTable({
     )
   }
 
+  // "Nothing here" and "nothing matched" are different failures, so the empty
+  // state branches on whether a filter is actually responsible for the void.
+  const hasFilters = ownerFilter !== "all" || stageFilter !== "all"
+
+  function clearFilters() {
+    setOwnerFilter("all")
+    setStageFilter("all")
+  }
+
   async function changeStage(dealId: string, stageId: string) {
     const result = await moveDealStageAction(workspaceId, dealId, stageId)
     if (result.error) toast.error(result.error.message)
@@ -196,8 +203,6 @@ export function DealsTable({
     setPendingDelete(null)
     router.refresh()
   }
-
-  const hasFilters = ownerFilter !== "all" || stageFilter !== "all"
 
   const allSelected = rows.length > 0 && rows.every((d) => selected.has(d.id))
 
@@ -270,7 +275,7 @@ export function DealsTable({
       <div className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center gap-2">
           <Select value={ownerFilter} onValueChange={(v) => v && setOwnerFilter(v)}>
-            <SelectTrigger size="sm" className="w-auto gap-1.5 rounded-full">
+            <SelectTrigger size="sm" className="w-auto gap-1.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -284,7 +289,7 @@ export function DealsTable({
             </SelectContent>
           </Select>
           <Select value={stageFilter} onValueChange={(v) => v && setStageFilter(v)}>
-            <SelectTrigger size="sm" className="w-auto gap-1.5 rounded-full">
+            <SelectTrigger size="sm" className="w-auto gap-1.5">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -297,102 +302,111 @@ export function DealsTable({
             </SelectContent>
           </Select>
           {hasFilters && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="rounded-full text-muted-foreground"
-              onClick={() => {
-                setOwnerFilter("all")
-                setStageFilter("all")
-              }}
-            >
+            <Button variant="ghost" size="sm" onClick={clearFilters}>
               Clear filters
             </Button>
           )}
         </div>
 
         {selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/50 px-3 py-2">
-            <span className="text-sm font-medium">{selected.size} selected</span>
-            <div className="ml-auto flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={() => setStageDialogOpen(true)}>
-                <ArrowRightLeft data-icon="inline-start" />
-                Move stage
+          <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+            <Button variant="outline" size="sm" onClick={() => setStageDialogOpen(true)}>
+              <ArrowRightLeft data-icon="inline-start" />
+              Move stage
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAssignDialogOpen(true)}>
+              <UserRound data-icon="inline-start" />
+              Assign owner
+            </Button>
+            {tags && tags.length > 0 && (
+              <Button variant="outline" size="sm" onClick={() => setTagDialogOpen(true)}>
+                <TagIcon data-icon="inline-start" />
+                Tag
               </Button>
-              <Button variant="outline" size="sm" onClick={() => setAssignDialogOpen(true)}>
-                <UserRound data-icon="inline-start" />
-                Assign owner
-              </Button>
-              {tags && tags.length > 0 && (
-                <Button variant="outline" size="sm" onClick={() => setTagDialogOpen(true)}>
-                  <TagIcon data-icon="inline-start" />
-                  Tag
-                </Button>
-              )}
-              <Button variant="outline" size="sm" onClick={() => runExport([...selected])}>
-                <Download data-icon="inline-start" />
-                Export
-              </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>Clear</Button>
-            </div>
-          </div>
+            )}
+            <Button variant="outline" size="sm" onClick={() => runExport([...selected])}>
+              <Download data-icon="inline-start" />
+              Export
+            </Button>
+          </BulkActionBar>
         )}
 
-        <div className="overflow-hidden rounded-md border bg-card">
+        {/*
+          Two branches, same container. The empty state used to render bare on
+          the canvas while the loaded state rendered inside a border, so the page
+          visibly resized the first time a filter produced results.
+        */}
+        {rows.length === 0 ? (
+          <DataSurface>
+            <EmptyState
+              icon={KanbanSquare}
+              title={hasFilters ? "No deals match these filters" : "No deals yet"}
+              description={
+                hasFilters
+                  ? "Try a different stage, owner, or search term — or clear the filters to see everything."
+                  : "Create your first deal to start tracking opportunities, values, and win probability."
+              }
+              action={hasFilters ? { label: "Clear filters", onClick: clearFilters } : undefined}
+              actionNode={
+                hasFilters ? undefined : (
+                  <DealFormDialog
+                    workspaceId={workspaceId}
+                    stages={stages}
+                    contacts={contacts}
+                    organizations={organizations}
+                    members={members}
+                    trigger={<Button size="sm">Add your first deal</Button>}
+                  />
+                )
+              }
+            />
+          </DataSurface>
+        ) : (
+        <DataSurface>
+          {/*
+            The mobile card list below renders the same rows. Without this
+            breakpoint the table and the list both paint on a phone, so every
+            deal appears twice.
+          */}
+          <div className="hidden sm:block">
           <Table>
-          <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
-            <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
+          <DataTableHeader>
               <TableHead className="w-10">
                 <Checkbox checked={allSelected} onCheckedChange={toggleAll} aria-label="Select all" />
               </TableHead>
-              <TableHead>
-                <button
-                  type="button"
-                  onClick={() => toggleSort("title")}
-                  className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-                >
-                  Deal
-                  <SortIcon sort={sort} column="title" />
-                </button>
-              </TableHead>
-              <TableHead>
-                <button
-                  type="button"
-                  onClick={() => toggleSort("stage")}
-                  className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-                >
-                  Stage
-                  <SortIcon sort={sort} column="stage" />
-                </button>
-              </TableHead>
-              <TableHead className="hidden md:table-cell">
-                <button
-                  type="button"
-                  onClick={() => toggleSort("value")}
-                  className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-                >
-                  Value
-                  <SortIcon sort={sort} column="value" />
-                </button>
-              </TableHead>
+              <SortableHead
+                label="Deal"
+                active={sort.key === "title"}
+                direction={sort.key === "title" ? sort.dir : null}
+                onSort={() => toggleSort("title")}
+              />
+              <SortableHead
+                label="Stage"
+                active={sort.key === "stage"}
+                direction={sort.key === "stage" ? sort.dir : null}
+                onSort={() => toggleSort("stage")}
+              />
+              <SortableHead
+                label="Value"
+                active={sort.key === "value"}
+                direction={sort.key === "value" ? sort.dir : null}
+                onSort={() => toggleSort("value")}
+                className="hidden md:table-cell"
+              />
               <TableHead className="hidden lg:table-cell">Owner</TableHead>
               <TableHead className="hidden md:table-cell">Win probability</TableHead>
-              <TableHead className="hidden sm:table-cell">
-                <button
-                  type="button"
-                  onClick={() => toggleSort("updatedAt")}
-                  className="inline-flex items-center gap-1 font-medium hover:text-foreground"
-                >
-                  Updated
-                  <SortIcon sort={sort} column="updatedAt" />
-                </button>
-              </TableHead>
+              <SortableHead
+                label="Updated"
+                active={sort.key === "updatedAt"}
+                direction={sort.key === "updatedAt" ? sort.dir : null}
+                onSort={() => toggleSort("updatedAt")}
+                className="hidden sm:table-cell"
+              />
               <TableHead className="w-10" />
-            </TableRow>
-          </TableHeader>
+          </DataTableHeader>
           <TableBody>
-            {rows.map((deal) => (
-              <TableRow key={deal.id}>
+            {rows.map((deal, rowIndex) => (
+              <TableRow key={deal.id} className={ROW_CLASS} style={rowEnterStyle(rowIndex)}>
                 <TableCell>
                   <Checkbox
                     checked={selected.has(deal.id)}
@@ -465,12 +479,13 @@ export function DealsTable({
                   {formatDate(deal.updatedAt)}
                 </TableCell>
                 <TableCell>
+                  <RowActions>
                   <DropdownMenu>
                     <DropdownMenuTrigger
                       render={
                         <Button variant="ghost" size="icon" className="size-8">
                           <MoreHorizontal />
-                          <span className="sr-only">Actions</span>
+                          <span className="sr-only">Actions for {deal.title}</span>
                         </Button>
                       }
                     />
@@ -506,11 +521,13 @@ export function DealsTable({
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </RowActions>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table>
+          </div>
         <TableTotalsBar>
           <span className="font-medium">
             <span className="tabular-nums">{rows.length}</span>{" "}
@@ -519,7 +536,8 @@ export function DealsTable({
           <Metric label="Sum of pipeline" value={formatMoney(totals.sum)} />
           <Metric label="Avg win probability" value={totals.avgProb == null ? "—" : `${totals.avgProb}%`} />
         </TableTotalsBar>
-        </div>
+        </DataSurface>
+        )}
       </div>
 
       {/* Mobile card list */}

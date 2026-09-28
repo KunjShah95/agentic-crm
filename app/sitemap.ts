@@ -1,25 +1,41 @@
 import type { MetadataRoute } from "next"
+import { BASE_URL, PAGES } from "@/content/marketing"
 
+/**
+ * Built from `content/marketing.ts`, so a page cannot be in the sitemap without
+ * also having a title and description, and cannot be indexed without someone
+ * deciding that in the same file.
+ */
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "https://estate360.vercel.com"
   const now = new Date()
-  const routes: { path: string; changeFrequency: MetadataRoute.Sitemap[number]["changeFrequency"]; priority: number }[] = [
-    { path: "/", changeFrequency: "daily", priority: 1 },
-    { path: "/product", changeFrequency: "weekly", priority: 0.9 },
-    { path: "/pricing", changeFrequency: "weekly", priority: 0.9 },
-    { path: "/contact", changeFrequency: "monthly", priority: 0.8 },
-    { path: "/privacy", changeFrequency: "yearly", priority: 0.4 },
-    { path: "/terms", changeFrequency: "yearly", priority: 0.4 },
-    { path: "/signup", changeFrequency: "monthly", priority: 0.7 },
-  ]
-  // /login is intentionally excluded (noindex), and tenant /sites/* URLs are
-  // deliberately not enumerated: one global sitemap would expose every
-  // builder's project inventory to competitors. Public site pages are
-  // discovered via their shared links.
-  return routes.map((r) => ({
-    url: `${base}${r.path}`,
+
+  const pages = PAGES.filter((p) => p.index).map((p) => ({
+    url: `${BASE_URL}${p.path}`,
     lastModified: now,
-    changeFrequency: r.changeFrequency,
-    priority: r.priority,
+    changeFrequency: p.changefreq,
+    priority: p.priority,
   }))
+
+  // The LLM-readable entry points. They are not HTML and will never appear in a
+  // SERP, but listing them lets a crawler that reads the sitemap discover the
+  // markdown versions of the site without being told separately.
+  const machine = [
+    { url: `${BASE_URL}/llms.txt`, priority: 0.5 },
+    { url: `${BASE_URL}/llms-full.txt`, priority: 0.5 },
+  ].map((m) => ({
+    ...m,
+    lastModified: now,
+    changeFrequency: "weekly" as const,
+  }))
+
+  /*
+   * Deliberately absent:
+   *   /login     — noindex, and a login page in a sitemap is a free signal that
+   *                the site is thin on real content.
+   *   tenant /sites/* — enumerating these in one global sitemap would expose
+   *                every builder's project inventory to a competitor. Public
+   *                project pages are discovered via their own shared links and
+   *                carry `noindex` until claimed.
+   */
+  return [...pages, ...machine]
 }

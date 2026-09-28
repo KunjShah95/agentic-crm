@@ -46,7 +46,7 @@ export default async function AIPage({
       <div className="grid gap-4 lg:grid-cols-3">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-display flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Revenue forecast</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Revenue forecast</CardTitle>
             <CardDescription>Weighted by stage probability</CardDescription>
           </CardHeader>
           <CardContent>
@@ -56,7 +56,7 @@ export default async function AIPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-display flex items-center gap-2"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
             <CardDescription>Due in 30d vs overdue</CardDescription>
           </CardHeader>
           <CardContent>
@@ -66,7 +66,7 @@ export default async function AIPage({
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base font-display flex items-center gap-2"><Sparkles className="size-4 text-brand" /> Funnel snapshot</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2"><Sparkles className="size-4 text-brand" /> Funnel snapshot</CardTitle>
             <CardDescription>{snapshot.funnel[0]?.count ?? 0} enquiries · {snapshot.inventory.total} units</CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
@@ -81,7 +81,7 @@ export default async function AIPage({
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 font-display"><Bot className="size-4 text-brand" /> Ask your pipeline</CardTitle>
+          <CardTitle className="flex items-center gap-2"><Bot className="size-4 text-brand" /> Ask your pipeline</CardTitle>
           <CardDescription>Try “show funnel”, “overdue payments”, “recent deals”, “recent contacts”, “inventory by status”.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -110,7 +110,7 @@ export default async function AIPage({
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground space-y-1">
           <div>• <span className="font-medium text-foreground">Suggested next actions</span> — ranked call, WhatsApp, or site-visit follow-ups for the deals that are going quiet.</div>
-          <div>• <span className="font-medium text-foreground">Follow-up cadence</span> — hot, warm, and cold leads get automatic check-in tasks on your team's timeline.</div>
+          <div>• <span className="font-medium text-foreground">Follow-up cadence</span> — hot, warm, and cold leads get automatic check-in tasks on your team&apos;s timeline.</div>
           <div>• <span className="font-medium text-foreground">Message drafts</span> — ready-to-send WhatsApp and email replies you approve before anything goes out.</div>
           <div>• <span className="font-medium text-foreground">Call analysis</span> — pull budget, unit preference, and intent out of call notes.</div>
         </CardContent>

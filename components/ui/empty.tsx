@@ -7,7 +7,10 @@ function Empty({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="empty"
       className={cn(
-        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-xl border-dashed p-6 text-center text-balance",
+        // `rounded-xl` was off-token; the card radius is `rounded-md`. The
+        // dashed treatment stays — an empty state is a target to fill, not a
+        // filled surface, and the dashes say so without a word.
+        "flex w-full min-w-0 flex-1 flex-col items-center justify-center gap-4 rounded-md border-dashed p-6 text-center text-balance",
         className
       )}
       {...props}
@@ -60,7 +63,10 @@ function EmptyTitle({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="empty-title"
       className={cn(
-        "font-heading text-sm font-medium tracking-tight",
+        // `font-heading` is the sans family here, not the display serif. A 14px
+        // serif empty-state title reads as a rendering fault, and Fraunces is
+        // scoped to the page h1 and stat numerals.
+        "font-heading text-[13px] font-semibold leading-5 tracking-[-0.005em]",
         className
       )}
       {...props}

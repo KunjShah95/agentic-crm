@@ -5,7 +5,6 @@ import { listUnits } from "@/modules/property/queries"
 import { InventoryWithDrawer } from "@/components/property/InventoryWithDrawer"
 import { PageHeader, Stat } from "@/components/shell/page-header"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
 import { Building2, Layers, ArrowLeft } from "lucide-react"
 
 export default async function ProjectDetailPage({

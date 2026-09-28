@@ -116,7 +116,7 @@ export function TagManager({ workspaceId, initialTags }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-display text-lg">Tags</CardTitle>
+        <CardTitle className=" text-lg">Tags</CardTitle>
         <CardDescription>
           Create and manage tags to organize your contacts and deals.
         </CardDescription>

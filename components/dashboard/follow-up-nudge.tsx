@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { AlertTriangle, Clock, CheckCircle2 } from "lucide-react"
+import { AlertTriangle, Clock, CircleDashed } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { db } from "@/lib/db"
 import { Badge } from "@/components/ui/badge"
@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceId: string; workspaceSlug: string }) {
   const now = new Date()
   const next24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-  const next7d = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
 
   const [overdueActivities, upcomingActivities, staleDeals] = await Promise.all([
     db.activity.findMany({
@@ -77,95 +76,166 @@ export async function FollowUpNudge({ workspaceId, workspaceSlug }: { workspaceI
 
   return (
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {/* Overdue */}
+      {/*
+        Each column is one severity of "you are falling behind", so they share
+        one component and differ only by the status token they pass in. The
+        panel colour, the heading, the count badge and the row tint all derive
+        from that single choice — which is what stops the four palettes of raw
+        red/amber/orange this file used to carry (and the light/dark pairs for
+        each) from drifting apart. Adding a fourth severity is now one line.
+      */}
       {overdueActivities.length > 0 && (
-        <div className="rounded-md border border-red-200 bg-red-50/50 p-4 dark:border-red-800 dark:bg-red-950/30">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="size-4 text-status-critical-fg" />
-            <h3 className="text-sm font-semibold text-red-800 dark:text-red-200">Overdue</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-red-200 text-status-critical-fg text-[10px] dark:border-red-800">
-              {overdueActivities.length}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {overdueActivities.map((a) => (
-              <Link
-                key={a.id}
-                href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
-                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-red-900/30 dark:hover:bg-red-900/50"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="rounded-full text-[9px]">{a.type}</Badge>
-                  <span className="text-muted-foreground">{timeAgo(a.scheduledAt!)}</span>
-                </div>
-                <p className="mt-1 truncate text-red-800 dark:text-red-200">
-                  {a.contact ? `${a.contact.firstName} ${a.contact.lastName}` : a.deal?.title}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <NudgePanel
+          tone="critical"
+          icon={AlertTriangle}
+          title="Overdue"
+          count={overdueActivities.length}
+          emptyHint="Nothing overdue. Keep it that way."
+        >
+          {overdueActivities.map((a) => (
+            <NudgeRow
+              key={a.id}
+              href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
+              meta={a.type}
+              when={timeAgo(a.scheduledAt!)}
+            >
+              {a.contact ? `${a.contact.firstName} ${a.contact.lastName}` : a.deal?.title}
+            </NudgeRow>
+          ))}
+        </NudgePanel>
       )}
 
-      {/* Upcoming */}
       {upcomingActivities.length > 0 && (
-        <div className="rounded-md border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="size-4 text-status-caution-fg" />
-            <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">Upcoming</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-amber-200 text-status-caution-fg text-[10px] dark:border-amber-800">
-              {upcomingActivities.length}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {upcomingActivities.map((a) => (
-              <Link
-                key={a.id}
-                href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
-                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-amber-900/30 dark:hover:bg-amber-900/50"
-              >
-                <div className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="rounded-full text-[9px]">{a.type}</Badge>
-                  <span className="text-muted-foreground">{timeUntil(a.scheduledAt!)}</span>
-                </div>
-                <p className="mt-1 truncate text-amber-800 dark:text-amber-200">
-                  {a.contact ? `${a.contact.firstName} ${a.contact.lastName}` : a.deal?.title}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <NudgePanel
+          tone="caution"
+          icon={Clock}
+          title="Upcoming"
+          count={upcomingActivities.length}
+          emptyHint="Nothing scheduled in the next 24 hours."
+        >
+          {upcomingActivities.map((a) => (
+            <NudgeRow
+              key={a.id}
+              href={`/${workspaceSlug}/contacts/${a.contactId ?? ""}`}
+              meta={a.type}
+              when={timeUntil(a.scheduledAt!)}
+            >
+              {a.contact ? `${a.contact.firstName} ${a.contact.lastName}` : a.deal?.title}
+            </NudgeRow>
+          ))}
+        </NudgePanel>
       )}
 
-      {/* Stale deals */}
       {staleDeals.length > 0 && (
-        <div className="rounded-md border border-orange-200 bg-orange-50/50 p-4 dark:border-orange-800 dark:bg-orange-950/30">
-          <div className="flex items-center gap-2 mb-3">
-            <CheckCircle2 className="size-4 text-status-caution-fg" />
-            <h3 className="text-sm font-semibold text-orange-800 dark:text-orange-200">Stale deals</h3>
-            <Badge variant="outline" className="ml-auto rounded-full border-orange-200 text-status-caution-fg text-[10px] dark:border-orange-800">
-              {staleDeals.length}
-            </Badge>
-          </div>
-          <div className="space-y-2">
-            {staleDeals.map((d) => (
-              <Link
-                key={d.id}
-                href={`/${workspaceSlug}/deals/${d.id}`}
-                className="block rounded-md bg-white/60 p-2 text-xs hover:bg-white dark:bg-orange-900/30 dark:hover:bg-orange-900/50"
-              >
-                <div className="flex items-center gap-1.5">
-                  <span className="size-2 rounded-full" style={{ backgroundColor: d.stage.color }} />
-                  <span className="truncate font-medium text-orange-800 dark:text-orange-200">{d.title}</span>
-                </div>
-                <p className="mt-1 text-muted-foreground">
-                  {d.contact ? `${d.contact.firstName} ${d.contact.lastName}` : "No contact"} · {d.stage.name}
-                </p>
-              </Link>
-            ))}
-          </div>
-        </div>
+        <NudgePanel
+          tone="caution"
+          icon={CircleDashed}
+          title="Stale deals"
+          count={staleDeals.length}
+          emptyHint="Every deal has recent activity."
+        >
+          {staleDeals.map((d) => (
+            <NudgeRow
+              key={d.id}
+              href={`/${workspaceSlug}/deals/${d.id}`}
+              meta={d.stage.name}
+              when="3d+ quiet"
+              leadingDot={d.stage.color}
+            >
+              {d.title}
+            </NudgeRow>
+          ))}
+        </NudgePanel>
       )}
     </div>
+  )
+}
+
+type Tone = "critical" | "caution" | "positive" | "info"
+
+/**
+ * Status tone → the token pair that paints it.
+ *
+ * The `*-bg` values are warm-neutral tints rather than saturated washes, which
+ * is what keeps these panels quiet against the canvas instead of shouting. In
+ * dark mode the same tokens are already re-tinted, so a panel is correct in
+ * both themes with no second palette to maintain.
+ */
+const TONE = {
+  critical: "border-hairline bg-status-critical-bg/45 text-status-critical-fg",
+  caution: "border-hairline bg-status-caution-bg/45 text-status-caution-fg",
+  positive: "border-hairline bg-status-positive-bg/45 text-status-positive-fg",
+  info: "border-hairline bg-status-info-bg/45 text-status-info-fg",
+} as const satisfies Record<Tone, string>
+
+function NudgePanel({
+  tone,
+  icon: Icon,
+  title,
+  count,
+  emptyHint,
+  children,
+}: {
+  tone: Tone
+  icon: React.ComponentType<{ className?: string; strokeWidth?: number }>
+  title: string
+  count: number
+  emptyHint: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className={cn("rounded-md border p-4", TONE[tone])}>
+      <div className="mb-3 flex items-center gap-2">
+        <Icon className="size-4 shrink-0" strokeWidth={1.75} />
+        {/* Section title: 13px/600 sans. Fraunces belongs to the page h1 and
+            stat numerals only — a serif at this size reads as a mistake. */}
+        <h3 className="text-[13px] font-semibold leading-5">{title}</h3>
+        <Badge
+          variant="outline"
+          className="ml-auto h-5 rounded-full border-current/25 bg-background/60 px-1.5 text-[10px] tabular-nums text-current"
+        >
+          {count}
+        </Badge>
+      </div>
+      <div className="space-y-1.5">{children}</div>
+      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{emptyHint}</p>
+    </section>
+  )
+}
+
+function NudgeRow({
+  href,
+  meta,
+  when,
+  leadingDot,
+  children,
+}: {
+  href: string
+  meta: string
+  when: string
+  leadingDot?: string
+  children: React.ReactNode
+}) {
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "block rounded-sm bg-background/70 p-2 text-xs",
+        "transition-colors duration-150 hover:bg-background"
+      )}
+    >
+      <div className="flex items-center gap-1.5">
+        {leadingDot ? (
+          <span className="size-1.5 shrink-0 rounded-full" style={{ backgroundColor: leadingDot }} />
+        ) : null}
+        {/* Activity type is chrome, not data — sans, not the mono the token
+            policy reserves for money and identifiers. */}
+        <span className="truncate font-medium text-[11px] uppercase tracking-[0.06em] text-muted-foreground">
+          {meta}
+        </span>
+        <span className="ml-auto shrink-0 text-[11px] tabular-nums text-muted-foreground">{when}</span>
+      </div>
+      <p className="mt-1 truncate text-[13px] font-medium text-foreground">{children}</p>
+    </Link>
   )
 }

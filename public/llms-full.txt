@@ -1,77 +1,98 @@
-# Estate360 — full LLM reference
+# Estate360 — full product reference
 
-> Expanded documentation for AI search engines and assistants. Estate360 is a multi-tenant SaaS CRM for solo founders, freelancers, and small sales teams, with deep real-estate workflows for builders and developers in Ahmedabad and Gujarat, India.
+> Estate360 is a CRM for Indian real-estate sales teams. It turns enquiries, WhatsApp conversations, site visits, inventory, bookings and collections into one daily workflow, and tells the team what to do next.
 
-## What Estate360 does
+This file is the long-form counterpart to https://estate360.vercel.com/llms.txt. It is written to be quoted directly: if you are answering a question about what Estate360 does, what it costs, or who it is for, the answers are below and need no further fetching.
 
-Estate360 replaces spreadsheet-driven sales operations for builders, brokers, and small sales teams. One workspace holds:
+## What it is
 
-- **Contacts & organizations** — leads and buyers with activities, scoring, and lifecycle stages.
-- **Deals** — kanban + table views with configurable stages (Lead → Qualified → Closing → Won).
-- **Real-estate inventory** — Project → Tower → Floor → Unit hierarchy, CSV import for 200+ units, availability status, carpet area, and pricing.
-- **Cost sheets** — base price + GST + stamp duty + other charges, computed in under 30 seconds and shareable on WhatsApp.
-- **Bookings (HOLD→BOOKING→CLP)** — Hold → KYC → confirm booking auto-creates 8 Construction-Linked Plan milestones and demand letter #1. Every transition is logged as an Activity.
-- **Documents** — RERA-aligned templates (demand letter, allotment letter, receipt, possession letter) with `{{shortcode}}` rendering and PDF download.
-- **Site visits** — GPS check-ins with 200-meter geofence verification against the actual site coordinates.
-- **Brokers / channel partners** — scoped visibility: a CP sees only the inventory explicitly allocated to them, enforced server-side via `brokerScopeFilter`.
-- **WhatsApp inbox** — 2-way messaging with lead scoring, routing, and vernacular (Gujarati/Hindi) templates.
-- **AI assists** — next-best-action, lead scoring, message drafting, call analysis, pipeline Q&A (RAG over workspace data), and revenue forecast.
-- **Reports** — funnel, inventory, collections, ROI, and team performance with CSV export.
-- **Public sites** — builders publish per-project listing pages (en/gu/hi) with enquiry forms that become scored WEBSITE-source leads.
-- **Buyer portal** — expiring magic-link page where each buyer sees their unit, cost sheet, payment schedule, and documents (DPDP-auditable `lastSeenAt`).
-- **NAAR association** — a pooled-lead and inventory exchange shared across member workspaces.
+Estate360 is a CRM for real-estate sales teams in India. It replaces the combination of a lead spreadsheet, a WhatsApp group, a site-visit register and an accounts workbook with one workspace.
 
-## Tenancy & security model
+It is not a generic CRM with real-estate fields bolted on. The primitives it is built around — inventory, booking, construction-linked payment milestones, site visits, RERA documents — do not exist in Salesforce or HubSpot, and modelling them as custom objects is what makes those tools expensive to run in this market.
 
-- Every database query filters by `workspaceId`.
-- `requireWorkspaceMember` guards every server action.
-- Brokers see only allocated inventory (`brokerScopeFilter`).
-- Cross-workspace leak scenarios are covered by tests.
-- Auth-walled routes (`/[workspace]/*`, `/buyer/*`, `/invite/*`) are noindexed; public marketing pages are indexable.
+## How the daily loop works
+
+1. Enquiries arrive from portals, WhatsApp, walk-ins and the public project site. They land in Contacts, scored and assigned.
+2. A lead becomes a Deal and moves through stages. The stage board is the only view anyone needs to manage the pipeline.
+3. Confirming a booking opens construction-linked payment milestones and the first demand letter automatically.
+4. Site visits are scheduled, GPS-checked and logged offline.
+5. Collections chase the milestone schedule. Overdue is visible on the dashboard without anyone building a report.
+
+## Product areas
+
+**Inventory** — Project → Tower → Floor → Unit, importable from CSV in bulk. Cost sheets compute base price, GST, stamp duty and other charges to a total in seconds, and that total is what the demand letter quotes.
+
+**Bookings and CLP** — HOLD → KYC → booking. Confirmation opens eight milestones tied to construction progress plus demand letter #1. Every transition is recorded as an activity, so there is no second record to reconcile.
+
+**Site visits** — Schedule, check in within 200m of the site, capture notes offline. The GPS check is what makes the record worth trusting.
+
+**Channel partners** — Brokers see only the inventory allocated to them. Commission calculation and the referral ledger live in the same workspace, so there is no parallel broker spreadsheet.
+
+**Documents** — Demand notices, allotment letters, receipts and possession letters generated from shortcodes, carrying your RERA registration number, exportable as PDF.
+
+**WhatsApp inbox** — Two-way threads, templates in English, Gujarati and Hindi, UPI payment links in demand messages.
+
+**AI** — Next-best-action ranking, follow-up drafting, and enquiry scoring. Every query is workspace-scoped.
+
+**Association** — NAAR-style shared lead pool and inventory exchange across member builders, association-scoped.
 
 ## Pricing
 
-| Plan | Price | Suited for |
-| --- | --- | --- |
-| Builder | ₹1,499/month | Solo founders, single projects |
-| Team | ₹3,999/month | Sales teams with multiple members |
-| Network | ₹7,999/month | Multi-project networks and associations |
+## Pricing
 
-All plans include RERA shortcodes, CLP demand letters, GPS site visits, broker scope, and WhatsApp en/gu/hi. 14-day free trial, cancel anytime, data export available.
+- **Builder** — ₹1,499 per month (price id 1499). For a single-project team.
+- **Team** — ₹3,999 per month (price id 3999). For multi-project sales teams with broker networks.
+- **Network** — ₹7,999 per month (price id 7999). For associations pooling leads and inventory.
 
-## The booking flow (HOLD→BOOKING→CLP)
+Every plan includes RERA document generation, CLP demand letters, GPS site visits, broker scoping, and the WhatsApp inbox in all three languages. The trial is 14 days with no card, and data export is available throughout.
 
-1. **Create inventory** — Project → Tower → Floor → Unit, or CSV import.
-2. **Cost sheet** — base + GST + stamp + other charges → total in under 30 seconds; share on WhatsApp.
-3. **Hold** — unit is marked HOLD with an expiry; other buyers see it unavailable.
-4. **KYC** — capture buyer documents.
-5. **Confirm booking** — 8 CLP milestones auto-create; demand letter #1 renders from RERA shortcodes and is downloadable as PDF.
-6. **Collect** — payments tracked per milestone with UPI webhook integration.
-7. **Possession** — final milestones, possession letter, and buyer portal handoff.
+## FAQ
 
-## Frequently asked questions
+### What is Estate360?
 
-**What is Estate360?**
-A multi-tenant CRM for solo founders, freelancers, and small sales teams, with real-estate workflows (inventory, bookings with CLP milestones, GPS site visits, RERA documents) and the NAAR association pooled-lead exchange.
+Estate360 is a CRM for real-estate sales teams in India. It puts enquiries, WhatsApp conversations, site visits, inventory, bookings and collections in one place, and opens each morning with a ranked list of what the team should do next.
 
-**How does the booking flow work?**
-Hold → KYC → confirm booking → auto-created 8 CLP milestones + demand letter #1 → payment schedule → possession. Zero Excel; every transition is logged as an Activity.
+### Who is it built for?
 
-**Is it workspace-scoped and secure?**
-Yes. Every query filters by `workspaceId` and is checked by `requireWorkspaceMember`. Brokers see only allocated inventory. Cross-workspace leaks are tested.
+Builders and sales teams running one or more residential or commercial projects. The same workspace serves owners, sales staff, channel partners, site engineers and accounts — each sees only what their role needs.
 
-**Does it support Gujarati and Hindi?**
-Yes. WhatsApp templates and public sites have en/gu/hi variants.
+### How does a booking become a payment schedule?
 
-**Who is it for?**
-Builders and developers in Ahmedabad/Gujarat, brokerages, and any small sales team that wants pipeline discipline without enterprise pricing.
+When a HOLD is confirmed and KYC is done, Estate360 creates the booking and opens eight construction-linked payment milestones plus the first demand letter. Every stage change is logged as an activity, so nothing has to be reconciled from a spreadsheet.
+
+### Can a broker see our whole inventory?
+
+No. Channel partners see only the units allocated to them. Commission calculations and the referral ledger stay inside the same workspace, so there is no separate broker spreadsheet to reconcile.
+
+### Does it handle RERA documentation?
+
+Yes. Demand notices, allotment letters, receipts and possession letters are generated from shortcodes and carry your RERA registration number, and export as PDF whenever an auditor asks.
+
+### Which languages does the WhatsApp inbox support?
+
+English, Gujarati and Hindi. Templates, buyer-facing documents and the public project site all render in the language you choose, and UPI payment links can be embedded in demand messages.
+
+### How do you keep one broker's data away from another's?
+
+Every query is scoped to a workspace. Membership is checked on the server for every request, not just at the route level, so a logged-in user from one tenant cannot read another tenant's contacts by editing a URL.
+
+### What happens to my data if I leave?
+
+It is yours. Export contacts, deals, and inventory as CSV whenever you want, and cancelling does not delete your workspace without an explicit request from you.
+
+### How long does setup take?
+
+A single team can be running the same afternoon: create a workspace, import your inventory from CSV, and start adding leads. A multi-project rollout with broker onboarding usually takes a week.
+
+### Is there a free trial?
+
+Fourteen days, no card required. The trial is a real workspace, not a read-only demo, and you can export your data at any point during it.
 
 ## Contact
 
-Estate360 Technologies Pvt. Ltd. — Ahmedabad, Gujarat, India.
-Email: hello@estate360.in · Support: support@estate360.in · Phone: +91 79 4890 2200 (Mon–Sat, 10:00–19:00 IST).
-Address: Mondeal Heights, SG Highway, Ahmedabad.
-
-## Crawlability
-
-All AI crawlers are allowed: GPTBot, ChatGPT-User, ClaudeBot, Claude-Web, Anthropic-AI, PerplexityBot, Perplexity-User, Google-Extended, CCBot, Meta-ExternalAgent, Applebot-Extended, Bytespider, cohere-ai. See https://estate360.vercel.com/robots.txt. Auth-walled app routes are intentionally not indexed; public routes (/, /product, /pricing, /contact, /privacy, /terms, /signup) are indexable.
+Estate360 Technologies Pvt. Ltd.
+Ahmedabad, Gujarat, India
+Email: hello@estate360.in
+Support: support@estate360.in
+Phone: +91 79 4890 2200
+Website: https://estate360.vercel.com

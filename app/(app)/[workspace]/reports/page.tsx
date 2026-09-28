@@ -72,7 +72,7 @@ export default async function ReportsPage({
       <div className="grid gap-4 lg:grid-cols-12">
         <Card className="lg:col-span-7">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><TrendingUp className="size-4 text-brand" /> Funnel</CardTitle>
+            <CardTitle className="flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Funnel</CardTitle>
             <CardDescription>Every stage from enquiry to close, with conversion against enquiries.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -89,7 +89,7 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-5">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Building2 className="size-4 text-status-positive-fg" /> Inventory Health</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Building2 className="size-4 text-status-positive-fg" /> Inventory Health</CardTitle>
             <CardDescription>Units available, on hold, booked, and sold across projects.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -109,7 +109,7 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-5">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Wallet className="size-4 text-brand" /> Collections</CardTitle>
             <CardDescription>Milestones due, collected, and past their due date.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -127,7 +127,7 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-4">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Users className="size-4 text-status-info-fg" /> Source ROI</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Users className="size-4 text-status-info-fg" /> Source ROI</CardTitle>
             <CardDescription>Leads, bookings, and revenue by where they came from.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -148,7 +148,7 @@ export default async function ReportsPage({
 
         <Card className="lg:col-span-3">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Target className="size-4 text-brand" /> Team vs Target</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Target className="size-4 text-brand" /> Team vs Target</CardTitle>
             <CardDescription>Bookings per owner against their monthly target.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2">
@@ -164,7 +164,7 @@ export default async function ReportsPage({
         {/* Pipeline by Stage */}
         <Card className="lg:col-span-6">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><BarChart3 className="size-4 text-status-info-fg" /> Pipeline by Stage</CardTitle>
+            <CardTitle className="flex items-center gap-2"><BarChart3 className="size-4 text-status-info-fg" /> Pipeline by Stage</CardTitle>
             <CardDescription>Deal count and value across pipeline stages.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -200,7 +200,7 @@ export default async function ReportsPage({
         {/* Deals by Owner */}
         <Card className="lg:col-span-6">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><PieChart className="size-4 text-status-positive-fg" /> Deals by Owner</CardTitle>
+            <CardTitle className="flex items-center gap-2"><PieChart className="size-4 text-status-positive-fg" /> Deals by Owner</CardTitle>
             <CardDescription>Distribution of deals across team members.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -230,7 +230,7 @@ export default async function ReportsPage({
         {/* Win Rate by Deal Type */}
         <Card className="lg:col-span-12">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base font-display"><Trophy className="size-4 text-status-caution-fg" /> Win Rate by Deal Type</CardTitle>
+            <CardTitle className="flex items-center gap-2"><Trophy className="size-4 text-status-caution-fg" /> Win Rate by Deal Type</CardTitle>
             <CardDescription>Conversion rate across different property types.</CardDescription>
           </CardHeader>
           <CardContent>

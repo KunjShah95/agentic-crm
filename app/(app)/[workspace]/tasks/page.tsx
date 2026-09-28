@@ -70,7 +70,18 @@ export default async function TasksPage({
           <CardHeader className="flex-row items-center gap-2">
             <span className="flex size-8 items-center justify-center rounded-sm bg-brand/10 text-brand"><Circle className="size-4" /></span>
             <div>
-              <CardTitle className="text-base">Open <span className="ml-1 rounded-full bg-brand px-1.5 py-0.5 text-[11px] text-white">{open.length}</span></CardTitle>
+              {/*
+                A count chip, not a button. `bg-brand` + raw `text-white` was
+                both an off-token colour pair and unreadable against the amber
+                brand in light mode; the token pair is legible in both themes and
+                is the same one the sidebar active state uses.
+              */}
+              <CardTitle>
+                Open
+                <span className="ml-1.5 inline-flex h-5 items-center rounded-full bg-brand px-2 text-[11px] font-medium tabular-nums text-brand-foreground">
+                  {open.length}
+                </span>
+              </CardTitle>
               <CardDescription>To-dos assigned to you</CardDescription>
             </div>
           </CardHeader>

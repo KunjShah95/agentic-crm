@@ -84,7 +84,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="general" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg">General Information</CardTitle>
+            <CardTitle className=" text-lg">General Information</CardTitle>
             <CardDescription>
               Update your workspace brand name and web slug URL.
             </CardDescription>
@@ -114,7 +114,7 @@ export function ExtendedSettingsTabs({
         {isOwner && (
           <Card className="border-destructive/40 bg-destructive/5">
             <CardHeader>
-              <CardTitle className="text-base text-destructive flex items-center gap-2 font-display">
+              <CardTitle className="text-base text-destructive flex items-center gap-2">
                 <ShieldAlert className="size-4" /> Danger Zone
               </CardTitle>
               <CardDescription className="text-xs">
@@ -135,7 +135,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="pipeline" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg">Real Estate & Pipeline Preferences</CardTitle>
+            <CardTitle className=" text-lg">Real Estate & Pipeline Preferences</CardTitle>
             <CardDescription>
               Configure default unit booking hold windows, RERA document templates, and payment schedules.
             </CardDescription>
@@ -180,7 +180,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="localization" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg font-semibold">Regional & Currency Format</CardTitle>
+            <CardTitle className=" text-lg font-semibold">Regional & Currency Format</CardTitle>
             <CardDescription>Set defaults for currency symbols, number formats, and timezones.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -208,7 +208,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="integrations" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg font-semibold">Connected Channels & Messaging</CardTitle>
+            <CardTitle className=" text-lg font-semibold">Connected Channels & Messaging</CardTitle>
             <CardDescription>
               {whatsappEnabled
                 ? "Manage WhatsApp Cloud API, Meta lead ads, and email notification sync."
@@ -252,7 +252,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="api" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg font-semibold">API Access & Developer Webhooks</CardTitle>
+            <CardTitle className=" text-lg font-semibold">API Access & Developer Webhooks</CardTitle>
             <CardDescription>Generate secret API keys and configure HTTP webhooks for custom integrations.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-5">
@@ -285,7 +285,7 @@ export function ExtendedSettingsTabs({
       <TabsContent value="tags" className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle className="font-display text-lg">Tags</CardTitle>
+            <CardTitle className=" text-lg">Tags</CardTitle>
             <CardDescription>
               Create and manage tags to organize your contacts and deals.
             </CardDescription>

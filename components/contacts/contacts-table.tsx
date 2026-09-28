@@ -28,7 +28,7 @@ import { ImportContactsDialog } from "@/components/contacts/import-contacts-dial
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import { MobileCard, MobileCardRow } from "@/components/ui/responsive-table"
+import { MobileCardRow } from "@/components/ui/responsive-table"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -75,16 +75,19 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar, TagPills } from "@/components/ui/table-metrics"
 import {
-  Empty,
-  EmptyDescription,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
+  BulkActionBar,
+  DataSurface,
+  DataTableHeader,
+  RowActions,
+  ROW_CLASS,
+  rowEnterStyle,
+} from "@/components/shell/data-surface"
+import { EmptyState } from "@/components/shell/empty-state"
+import { Spinner } from "@/components/ui/spinner"
 
 type ContactRow = {
   id: string
@@ -148,31 +151,74 @@ export function ContactsTable({
   const [filtersOpen, setFiltersOpen] = React.useState(false)
   const [importDialogOpen, setImportDialogOpen] = React.useState(false)
 
-  // Debounced search → URL
+  /**
+   * Search, filters and pagination all resolve into the URL, so the view is
+   * shareable and the back button works.
+   *
+   * The writes go through `startTransition`, which is what surfaces `pending`.
+   * Without it the filter change fires a server render with no feedback at all:
+   * the old rows stay on screen looking authoritative while the new ones are
+   * still in flight, and there is nothing to tell the user the click landed.
+   */
+  const [isNavigating, startNavigation] = React.useTransition()
+
+  function commit(mutate: (params: URLSearchParams) => void) {
+    const params = new URLSearchParams(searchParams.toString())
+    mutate(params)
+    // Any filter change invalidates the current page number — staying on page
+    // 4 of a result set that now has two pages is the classic off-by-one empty.
+    if (!params.has("page")) params.delete("page")
+    startNavigation(() => {
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false })
+    })
+  }
+
+  // Debounced search → URL. 350ms is long enough that a five-letter name does
+  // not fire five round-trips, short enough that the pause before results
+  // appear does not register as lag.
   React.useEffect(() => {
     const timer = setTimeout(() => {
-      const params = new URLSearchParams(searchParams.toString())
-      if (query.trim()) params.set("q", query.trim())
-      else params.delete("q")
-      params.delete("page")
-      router.replace(`${pathname}?${params.toString()}`)
+      commit((params) => {
+        if (query.trim()) params.set("q", query.trim())
+        else params.delete("q")
+        params.delete("page")
+      })
     }, 350)
     return () => clearTimeout(timer)
-  }, [query]) // eslint-disable-line react-hooks/exhaustive-deps
+    // `commit` is intentionally excluded: it closes over the live `searchParams`,
+    // and this effect must only re-arm when the query itself changes. Including
+    // it would restart the debounce on every render and the input would never
+    // settle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query])
 
   function updateParam(key: string, value: string | null) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (value && value !== "all") params.set(key, value)
-    else params.delete(key)
-    params.delete("page")
-    router.replace(`${pathname}?${params.toString()}`)
+    commit((params) => {
+      if (value && value !== "all") params.set(key, value)
+      else params.delete(key)
+    })
   }
 
   function goToPage(page: number) {
-    const params = new URLSearchParams(searchParams.toString())
-    if (page > 1) params.set("page", String(page))
-    else params.delete("page")
-    router.replace(`${pathname}?${params.toString()}`)
+    commit((params) => {
+      if (page > 1) params.set("page", String(page))
+      else params.delete("page")
+    })
+  }
+
+  /** How many filters are currently narrowing the result set. */
+  const activeFilterCount = [filters.tagId, filters.organizationId, filters.ownerId].filter(
+    Boolean
+  ).length
+
+  const hasActiveFilters = Boolean(filters.q) || activeFilterCount > 0
+
+  /** One place to undo every filter — the empty state and the toolbar share it. */
+  function clearAllFilters() {
+    setQuery("")
+    commit((params) => {
+      for (const key of ["q", "tag", "org", "owner"]) params.delete(key)
+    })
   }
 
   const allSelected =
@@ -261,27 +307,74 @@ export function ContactsTable({
 
   return (
     <div className="flex flex-col gap-4">
+      {/*
+        A hairline progress rail at the top of the data region while a filter
+        change is in flight. This is the single highest-value affordance on the
+        page: without it, typing in the search box or picking a stage leaves the
+        previous rows sitting there looking like the answer, with nothing to
+        indicate a fetch is underway. A rail — rather than a spinner or an
+        overlay — keeps the rows readable and still unmissable, and it costs
+        2px of layout that does not shift anything below it.
+      */}
+      <div
+        aria-hidden
+        className={cn(
+          "h-0.5 -mt-4 overflow-hidden rounded-full bg-transparent transition-colors duration-150",
+          isNavigating && "bg-brand/20"
+        )}
+      >
+        <div
+          className={cn(
+            "h-full origin-left rounded-full bg-brand transition-transform duration-300 [transition-timing-function:var(--ease-out)]",
+            isNavigating ? "scale-x-75" : "scale-x-0"
+          )}
+        />
+      </div>
+      <span aria-live="polite" className="sr-only">
+        {isNavigating ? "Updating contacts" : `${data.total} contacts`}
+      </span>
+
       {/* Toolbar */}
       <div className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-56 flex-1">
-            <Search className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+          <div className="relative min-w-0 flex-1">
+            <Search
+              aria-hidden
+              className="absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+            />
             <Input
+              type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search contacts…"
-              className="pl-8"
+              aria-label="Search contacts"
+              // `type="search"` so mobile keyboards offer a search key and
+              // Safari renders its own clear affordance.
+              className="pl-8 [&::-webkit-search-cancel-button]:hidden"
             />
           </div>
 
+          {/*
+            The Filters button only appears when a filter would actually be
+            hidden. A count on the label tells the user whether the collapsed
+            panel is doing anything — otherwise "Filters" is a button that
+            silently changes the result set, which is the worst version of this
+            control.
+          */}
           <Button
             variant="outline"
             size="sm"
             className="gap-1.5 md:hidden"
+            aria-expanded={filtersOpen}
             onClick={() => setFiltersOpen((o) => !o)}
           >
             <Filter className="size-3.5" />
             Filters
+            {activeFilterCount > 0 ? (
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold tabular-nums text-brand-foreground">
+                {activeFilterCount}
+              </span>
+            ) : null}
           </Button>
 
           <div className={cn("flex flex-wrap items-center gap-2", "max-md:w-full", !filtersOpen && "max-md:hidden")}>
@@ -352,14 +445,64 @@ export function ContactsTable({
             </Select>
           </div>
 
-          <Button variant="outline" size="icon" onClick={() => setImportDialogOpen(true)}>
+          {/*
+            Past `sm`, Import and Export collapse to icon buttons so the
+            labelled "Add contact" action keeps the strongest position in the
+            toolbar — two labelled buttons competing beside it is how the
+            primary action ends up being the one you have to hunt for. The
+            `sr-only` label is the accessible name in both forms.
+
+            Below `sm` they stay labelled. A phone has room for one clear
+            primary action, not three, and an unexplained icon in a toolbar is
+            a dead end for anyone who does not already know what an upload
+            glyph means.
+          */}
+          <Button
+            variant="outline"
+            size="icon"
+            className="hidden sm:inline-flex"
+            onClick={() => setImportDialogOpen(true)}
+            title="Import contacts from CSV"
+          >
             <Upload />
             <span className="sr-only">Import CSV</span>
           </Button>
 
-          <Button variant="outline" size="icon" onClick={() => runExport()} disabled={exporting}>
-            <Download />
+          <Button
+            variant="outline"
+            size="icon"
+            className="hidden sm:inline-flex"
+            onClick={() => runExport()}
+            disabled={exporting}
+            title={exporting ? "Preparing export…" : "Export contacts to CSV"}
+          >
+            {exporting ? (
+              <Spinner className="size-4" />
+            ) : (
+              <Download />
+            )}
             <span className="sr-only">Export CSV</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 sm:hidden"
+            onClick={() => setImportDialogOpen(true)}
+          >
+            <Upload className="size-3.5" />
+            Import
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 sm:hidden"
+            onClick={() => runExport()}
+            disabled={exporting}
+          >
+            {exporting ? <Spinner className="size-3.5" /> : <Download className="size-3.5" />}
+            Export
           </Button>
 
           <ContactFormDialog
@@ -375,76 +518,85 @@ export function ContactsTable({
         </div>
       </div>
 
-      {/* Bulk action bar */}
+      {/* Bulk action bar — same component the deals table uses. */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border bg-accent/50 px-3 py-2">
-          <span className="text-sm font-medium">
-            {selected.size} selected
-          </span>
-          <div className="ml-auto flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setTagDialogOpen(true)}>
-              <TagIcon data-icon="inline-start" />
-              Tag
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => setAssignDialogOpen(true)}>
-              <UserRound data-icon="inline-start" />
-              Assign owner
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => runExport([...selected])}>
-              <Download data-icon="inline-start" />
-              Export
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-              Clear
-            </Button>
-          </div>
-        </div>
+        <BulkActionBar count={selected.size} onClear={() => setSelected(new Set())}>
+          <Button variant="outline" size="sm" onClick={() => setTagDialogOpen(true)}>
+            <TagIcon data-icon="inline-start" />
+            Tag
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setAssignDialogOpen(true)}>
+            <UserRound data-icon="inline-start" />
+            Assign owner
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => runExport([...selected])}>
+            <Download data-icon="inline-start" />
+            Export
+          </Button>
+        </BulkActionBar>
       )}
 
       {/* Table */}
       {data.items.length === 0 ? (
-        <Empty>
-          <EmptyMedia variant="icon">
-            <Users />
-          </EmptyMedia>
-          <EmptyTitle>No contacts yet</EmptyTitle>
-          <EmptyDescription>
-            {filters.q || filters.tagId || filters.organizationId || filters.ownerId
-              ? "No contacts match your filters. Try clearing them, or add a new contact."
-              : "Add your first contact to start building your pipeline. You can import from CSV too."}
-          </EmptyDescription>
-          <ContactFormDialog
-            workspaceId={workspaceId}
-            organizations={orgs}
-            trigger={<Button>Add your first contact</Button>}
+        <DataSurface>
+          {/*
+            "No contacts yet" and "no contacts match" are different failures.
+            Telling someone their first contact does not exist when they have
+            typed a bad filter is the most disorienting thing an empty state
+            can do, so the two branches get different copy and different
+            actions.
+          */}
+          <EmptyState
+            icon={Users}
+            title={hasActiveFilters ? "No contacts match these filters" : "No contacts yet"}
+            description={
+              hasActiveFilters
+                ? `Nothing matched${filters.q ? ` “${filters.q}”` : ""}. Try a shorter search, or clear the filters to see all ${data.total} contacts.`
+                : "Add your first contact to start building your pipeline. You can import from CSV too."
+            }
+                    action={hasActiveFilters ? { label: "Clear filters", onClick: clearAllFilters } : undefined}
+            actionNode={
+              hasActiveFilters ? undefined : (
+                <ContactFormDialog
+                  workspaceId={workspaceId}
+                  organizations={orgs}
+                  trigger={<Button>Add your first contact</Button>}
+                />
+              )
+            }
           />
-        </Empty>
+        </DataSurface>
       ) : (
-        <div className="overflow-hidden rounded-md border bg-card">
+        <DataSurface>
+          {/*
+            The table and the mobile card list are siblings that each render the
+            full row set. Hiding one at the `sm` breakpoint is what stops a phone
+            from drawing every contact twice — the bug the unused
+            `responsive-table` primitive was written to prevent.
+          */}
+          <div className="hidden sm:block">
           <Table>
-            <TableHeader className="[&_th]:h-9 [&_th]:text-[11px] [&_th]:font-medium [&_th]:uppercase [&_th]:tracking-[0.08em] [&_th]:text-muted-foreground">
-              <TableRow className="border-b bg-muted/40 hover:bg-muted/40">
-                <TableHead className="w-10">
-                  <Checkbox
-                    checked={allSelected}
-                    onCheckedChange={toggleAll}
-                    aria-label="Select all"
-                  />
-                </TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead className="hidden sm:table-cell">Phone</TableHead>
-                <TableHead className="hidden md:table-cell">Company</TableHead>
-                <TableHead className="hidden lg:table-cell">Tags</TableHead>
-                <TableHead className="hidden lg:table-cell">Owner</TableHead>
-                <TableHead className="hidden sm:table-cell">Created</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
+            <DataTableHeader>
+              <TableHead className="w-10">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Select all"
+                />
+              </TableHead>
+              <TableHead>Name</TableHead>
+              <TableHead className="hidden sm:table-cell">Phone</TableHead>
+              <TableHead className="hidden md:table-cell">Company</TableHead>
+              <TableHead className="hidden lg:table-cell">Tags</TableHead>
+              <TableHead className="hidden lg:table-cell">Owner</TableHead>
+              <TableHead className="hidden sm:table-cell">Created</TableHead>
+              <TableHead className="w-10" />
+            </DataTableHeader>
             <TableBody>
-              {data.items.map((contact) => {
+              {data.items.map((contact, rowIndex) => {
                 const owner = contact.owner
                 return (
-                  <TableRow key={contact.id}>
+                  <TableRow key={contact.id} className={ROW_CLASS} style={rowEnterStyle(rowIndex)}>
                     <TableCell>
                       <Checkbox
                         checked={selected.has(contact.id)}
@@ -525,40 +677,45 @@ export function ContactsTable({
                       {formatDate(contact.createdAt)}
                     </TableCell>
                     <TableCell>
-                      <DropdownMenu>
-                      <DropdownMenuTrigger
-                        render={
-                          <Button variant="ghost" size="icon" className="size-8">
-                            <MoreHorizontal />
-                            <span className="sr-only">Actions</span>
-                          </Button>
-                        }
-                      />
-                        <DropdownMenuContent align="end">
-                          <ContactFormDialog
-                            workspaceId={workspaceId}
-                            organizations={orgs}
-                            contact={contact}
-                            trigger={
-                              <span className="w-full px-2 py-1.5 text-sm">Edit</span>
+                      <RowActions>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger
+                            render={
+                              <Button variant="ghost" size="icon" className="size-8">
+                                <MoreHorizontal />
+                                <span className="sr-only">
+                                  Actions for {fullName(contact.firstName, contact.lastName)}
+                                </span>
+                              </Button>
                             }
                           />
-                          {canDelete && (
-                            <DropdownMenuItem
-                              variant="destructive"
-                              onSelect={() => setPendingDelete(contact)}
-                            >
-                              Delete
-                            </DropdownMenuItem>
-                          )}
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                          <DropdownMenuContent align="end">
+                            <ContactFormDialog
+                              workspaceId={workspaceId}
+                              organizations={orgs}
+                              contact={contact}
+                              trigger={
+                                <span className="w-full px-2 py-1.5 text-sm">Edit</span>
+                              }
+                            />
+                            {canDelete && (
+                              <DropdownMenuItem
+                                variant="destructive"
+                                onSelect={() => setPendingDelete(contact)}
+                              >
+                                Delete
+                              </DropdownMenuItem>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </RowActions>
                     </TableCell>
                   </TableRow>
                 )
               })}
             </TableBody>
           </Table>
+          </div>
           <TableTotalsBar>
             <span className="font-medium">
               <span className="tabular-nums">{data.items.length}</span>{" "}
@@ -567,7 +724,7 @@ export function ContactsTable({
             <Metric label="Total contacts" value={data.total} />
             {selected.size > 0 && <Metric label="Selected" value={selected.size} />}
           </TableTotalsBar>
-        </div>
+        </DataSurface>
       )}
 
       {/* Mobile card list */}

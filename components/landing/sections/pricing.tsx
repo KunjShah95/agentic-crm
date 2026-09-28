@@ -1,49 +1,186 @@
 import Link from "next/link"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Check, CreditCard, ReceiptText } from "lucide-react"
+import { SectionHeader } from "@/components/landing/section-header"
+import { cn } from "@/lib/utils"
+import { ArrowRight, Check, CreditCard } from "lucide-react"
 
+/**
+ * Pricing.
+ *
+ * The section opened straight into three cards with no heading at all — a
+ * hierarchy break and an a11y/SEO gap, since pricing had no h2 anywhere on the
+ * page. It now has a header like every other section.
+ *
+ * Also fixed: the "14-day free · cancel anytime" line repeated under all three
+ * plans is one fact said three times. It now appears once, in the billing bar,
+ * which already states it. Buttons moved off pills to match the page's single
+ * radius scale.
+ */
 const PLANS = [
-  { name: "Builder", price: "₹1,499", note: "per month · 1 project", receipt: "One site, from enquiry to possession", features: ["1 workspace · 1 project", "Unlimited contacts & deals", "Cost sheet 30s + RERA docs", "GPS + WhatsApp inbox"], cta: "Start Builder", featured: false },
-  { name: "Team", price: "₹3,999", note: "per month · up to 6 staff", receipt: "Sales + Accounts + Site — same loop", features: ["3 workspaces · Owners + Sales + Brokers", "Roles: Owner/Admin/Sales/Broker/Viewer", "Invite + brokerScopeFilter + CLP", "NAAR pool trial · gu/hi"], cta: "Start Team — NAAR trial", featured: true },
-  { name: "Network", price: "₹7,999", note: "per month · up to 12 staff · multi-site", receipt: "For 2–10 projects without Excel", features: ["Unlimited projects + Buyer portal", "Public sites + enquiry→scored lead", "UPI collection + Tally/PDF export", "Association exchange + referral ledger"], cta: "Set up Network", featured: false },
+  {
+    name: "Builder",
+    price: "₹1,499",
+    note: "per month · 1 project",
+    pitch: "One site, enquiry through to possession.",
+    features: [
+      "1 workspace · 1 project",
+      "Unlimited contacts and deals",
+      "Cost sheets and RERA documents",
+      "GPS check-in and WhatsApp inbox",
+    ],
+  },
+  {
+    name: "Team",
+    price: "₹3,999",
+    note: "per month · up to 6 staff",
+    pitch: "Sales, Accounts and Site on the same loop.",
+    features: [
+      "3 workspaces · Owners, Sales, Brokers",
+      "Owner, Admin, Sales, Broker, Viewer roles",
+      "Invites, broker scope filter, CLP milestones",
+      "NAAR association pool trial · gu / hi",
+    ],
+    featured: true,
+  },
+  {
+    name: "Network",
+    price: "₹7,999",
+    note: "per month · up to 12 staff · multi-site",
+    pitch: "Two to ten projects without a spreadsheet.",
+    features: [
+      "Unlimited projects and buyer portal",
+      "Public sites with enquiry to scored lead",
+      "UPI collection and Tally / PDF export",
+      "Association exchange and referral ledger",
+    ],
+  },
 ]
 
-export function PricingSection({ isAuthed, workspaceSlug }: { isAuthed: boolean; workspaceSlug?: string | null }) {
-  const cta = isAuthed ? `/${workspaceSlug}/contacts` : "/signup"
+export function PricingSection({
+  isAuthed,
+  workspaceSlug,
+}: {
+  isAuthed: boolean
+  workspaceSlug?: string | null
+}) {
+  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/contacts` : "/signup"
+
   return (
-    <section id="pricing" className="mx-auto max-w-[1280px] px-6 pt-4 pb-14 lg:px-8 lg:pb-20">
-      <div className="mt-10 grid items-start gap-4 overflow-visible pt-4 pb-3 lg:grid-cols-3">
-        {PLANS.map((p) => (
-          <Card key={p.name} className={`group relative min-w-0 overflow-visible flex flex-col transition-transform duration-300 ${p.featured ? "border-foreground bg-foreground text-background lg:-translate-y-2 hover:-translate-y-3" : "hover:-translate-y-1 border-border/60"}`}>
-            {p.featured && <span className="absolute -top-3 left-6 rounded-full bg-background text-foreground text-[11px] tracking-[0.14em] px-3 py-1 border">MOST CHOSEN</span>}
-            <CardHeader className="relative">
-              <div className={`text-[11px] tracking-[0.16em] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.name.toUpperCase()}</div>
-              <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-1"><span className="text-[36px] font-bold leading-none tracking-tight">{p.price}</span><span className={`min-w-0 text-[11px] ${p.featured ? "text-background/60" : "text-muted-foreground"}`}>{p.note}</span></div>
-              <div className={`mt-3 border-l-2 pl-3 text-[12px] leading-5 ${p.featured ? "border-background/40 text-background/70" : "border-border text-muted-foreground"}`}>{p.receipt}</div>
-            </CardHeader>
-            <CardContent className="flex-1 relative">
-              <ul className={`space-y-2.5 text-[13px] ${p.featured ? "text-background/80" : "text-muted-foreground"}`}>{p.features.map((f) => (<li key={f} className="flex gap-2.5 items-center"><span className={`flex size-5 items-center justify-center rounded-full shrink-0 ${p.featured ? "bg-background text-foreground" : "bg-muted text-foreground border"}`}><Check className="size-3" /></span> {f}</li>))}</ul>
-            </CardContent>
-            <div className="p-6 pt-0 space-y-3 relative">
-              <Button className={`w-full rounded-full gap-1.5 ${p.featured ? "bg-background text-foreground hover:bg-background/90" : ""}`} render={<Link href={cta} />}>{p.cta} <ArrowRight className="size-4 group-hover:translate-x-0.5 transition-transform" /></Button>
-              <div className={`text-center text-[11px] ${p.featured ? "text-background/50" : "text-muted-foreground"}`}>14-day free · cancel anytime</div>
+    <section id="pricing" className="border-t border-border/70 bg-background">
+      <div className="mx-auto max-w-[1280px] px-6 py-20 lg:px-8 lg:py-28">
+        <SectionHeader
+          eyebrow="Pricing"
+          title="Three plans. Per workspace, not per seat."
+          body="Every plan includes the full daily loop. The difference is how many workspaces and how many people run on it."
+        />
+
+        <div className="mt-12 grid items-start gap-4 lg:grid-cols-3">
+          {PLANS.map((p) => (
+            <div
+              key={p.name}
+              className={cn(
+                "relative flex min-w-0 flex-col rounded-md border p-6 transition-transform duration-200",
+                p.featured
+                  ? "border-foreground bg-foreground text-background lg:-translate-y-3"
+                  : "border-border/70 bg-card hover:-translate-y-1"
+              )}
+            >
+              {p.featured ? (
+                <span className="absolute -top-2.5 left-6 rounded-sm border border-foreground bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">
+                  Most chosen
+                </span>
+              ) : null}
+
+              <p
+                className={cn(
+                  "text-[11px] font-medium uppercase tracking-[0.14em]",
+                  p.featured ? "text-background/60" : "text-muted-foreground"
+                )}
+              >
+                {p.name}
+              </p>
+
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <span className="font-display text-[38px] font-semibold leading-none tracking-[-0.03em] tabular-nums">
+                  {p.price}
+                </span>
+                <span
+                  className={cn(
+                    "text-[12px]",
+                    p.featured ? "text-background/60" : "text-muted-foreground"
+                  )}
+                >
+                  {p.note}
+                </span>
+              </div>
+
+              <p
+                className={cn(
+                  "mt-4 border-l-2 pl-3 text-[13px] leading-5",
+                  p.featured
+                    ? "border-background/40 text-background/75"
+                    : "border-border text-muted-foreground"
+                )}
+              >
+                {p.pitch}
+              </p>
+
+              <ul
+                className={cn(
+                  "mt-6 flex-1 space-y-2.5 text-[13px]",
+                  p.featured ? "text-background/85" : "text-muted-foreground"
+                )}
+              >
+                {p.features.map((f) => (
+                  <li key={f} className="flex items-start gap-2.5">
+                    <span
+                      className={cn(
+                        "mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-xs",
+                        p.featured ? "bg-background text-foreground" : "bg-muted text-foreground"
+                      )}
+                    >
+                      <Check className="size-2.5" aria-hidden />
+                    </span>
+                    <span className="leading-5">{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                className={cn(
+                  "mt-7 w-full gap-1.5",
+                  p.featured && "bg-background text-foreground hover:bg-background/90"
+                )}
+                render={<Link href={cta} />}
+              >
+                Start free
+                <ArrowRight
+                  className="size-4 transition-transform group-hover:translate-x-0.5"
+                  aria-hidden
+                />
+              </Button>
             </div>
-          </Card>
-        ))}
+          ))}
+        </div>
+
+        <div className="mt-6 flex flex-col gap-3 rounded-md border border-border/70 bg-surface-sunken p-5 sm:flex-row sm:items-center sm:justify-between">
+          <span className="flex items-center gap-3">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-sm bg-brand text-brand-foreground">
+              <CreditCard className="size-4" aria-hidden />
+            </span>
+            <span className="text-[14px] font-medium">
+              ₹0 today. Billing starts after your 14-day trial.
+            </span>
+          </span>
+          <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+            <span>Cancel anytime</span>
+            <span aria-hidden>·</span>
+            <span>CSV export included</span>
+            <span aria-hidden>·</span>
+            <span>Secure billing</span>
+          </span>
+        </div>
       </div>
-      <Card className="mt-8 overflow-hidden border-border/70">
-        <CardContent className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 items-center justify-center rounded-sm bg-foreground text-background"><CreditCard className="size-4" /></span>
-            <div>
-              <div className="flex items-center gap-1.5 text-[11px] tracking-[0.14em] text-muted-foreground"><ReceiptText className="size-3" /> CHECKOUT, WITHOUT SURPRISES</div>
-              <div className="text-sm font-medium">₹0 today · billing starts after your 14-day trial</div>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground"><span>Cancel anytime</span><span>·</span><span>CSV export included</span><span>·</span><span>Secure billing</span></div>
-        </CardContent>
-      </Card>
     </section>
   )
 }

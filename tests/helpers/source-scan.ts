@@ -4,11 +4,20 @@ import path from "node:path"
 export const REPO_ROOT = path.resolve(__dirname, "..", "..")
 
 /**
- * Only vendored shadcn is excluded. components/landing joined the scope in
- * Phase 4, when the marketing surface was brought under the same token
- * conformance rules as the app.
+ * Directories under `components/` that are exempt from token conformance.
+ *
+ * `ui` is vendored shadcn. `evilcharts` is a vendored Recharts wrapper and
+ * `ds` is a parallel design system — all three are third-party code that is
+ * not imported anywhere in the app, and rewriting their internals to match
+ * our tokens would mean forking a dependency.
+ *
+ * The exclusion is about *provenance*, not convenience: if app code starts
+ * importing from one of these, the right move is to wrap it in a token-aware
+ * component of our own rather than to conform the vendored source. If any of
+ * these become app-facing, remove them from this set in the same commit that
+ * wires them up, so the scanner keeps covering real UI.
  */
-const COMPONENT_EXCLUDES = new Set(["ui"])
+const COMPONENT_EXCLUDES = new Set(["ui", "evilcharts", "ds"])
 
 function componentDirs(): string[] {
   const root = path.join(REPO_ROOT, "components")
@@ -52,6 +61,8 @@ export const SCOPE: readonly string[] = [...appDirs(), ...componentDirs()]
  */
 export const EXCLUDED = [
   "components/ui (vendored shadcn)",
+  "components/evilcharts (vendored Recharts wrapper, unimported)",
+  "components/ds (parallel design system, unimported)",
   "app/(public)",
   "app/api",
 ] as const
