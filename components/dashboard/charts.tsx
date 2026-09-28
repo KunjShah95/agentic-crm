@@ -50,7 +50,7 @@ const INK_DARK = ["#f2f2f2"]
 const FIT = "h-full aspect-auto"
 
 const AXIS = { fontSize: 10, fontWeight: 700 } as const
-const GRID = "#ededed"
+const GRID = "var(--hairline)"
 
 /** Rupee → short form, for axis ticks. `formatMoneyShort` gives ₹4.2 Cr / ₹35 L. */
 const moneyTick = (value: number) => formatMoneyShort(value)
@@ -91,7 +91,7 @@ export function WonRevenueChart({
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          tick={{ ...AXIS, fill: "#9a9a9a" }}
+          tick={{ ...AXIS, fill: "var(--muted-foreground)" }}
         />
         <EvilAreaChart.YAxis
           // Pinned to zero. Recharts would otherwise pick a domain from the data
@@ -103,7 +103,7 @@ export function WonRevenueChart({
           tickMargin={8}
           width={52}
           tickFormatter={moneyTick}
-          tick={{ ...AXIS, fill: "#9a9a9a" }}
+          tick={{ ...AXIS, fill: "var(--muted-foreground)" }}
         />
         <EvilAreaChart.Area
           dataKey="won"
@@ -160,11 +160,11 @@ export function WinProbabilityGauge({ value }: { value: number | null }) {
           number is real DOM text — selectable, and never clipped or rescaled
           by the responsive container. */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[34px] leading-none font-bold tracking-[-0.04em] tabular-nums text-[#0d0d0d]">
+        <span className="text-[34px] leading-none font-bold tracking-[-0.04em] tabular-nums text-foreground">
           {value}
-          <span className="text-[17px] tracking-[-0.02em] text-[#9a9a9a]">%</span>
+          <span className="text-[17px] tracking-[-0.02em] text-muted-foreground">%</span>
         </span>
-        <span className="mt-1.5 text-[9.5px] font-bold tracking-[0.12em] uppercase text-[#9a9a9a]">
+        <span className="mt-1.5 text-[9.5px] font-bold tracking-[0.12em] uppercase text-muted-foreground">
           Weighted
         </span>
       </div>
@@ -230,7 +230,7 @@ export function PipelineByStageChart({
           axisLine={false}
           tickMargin={8}
           allowDecimals={false}
-          tick={{ ...AXIS, fill: "#9a9a9a" }}
+          tick={{ ...AXIS, fill: "var(--muted-foreground)" }}
         />
         <EvilBarChart.YAxis
           type="category"
@@ -239,7 +239,7 @@ export function PipelineByStageChart({
           axisLine={false}
           tickMargin={10}
           width={70}
-          tick={{ ...AXIS, fill: "#6b6b6b" }}
+          tick={{ ...AXIS, fill: "var(--foreground)" }}
         />
         {/*
           `barSize` goes through the library's `barProps` escape hatch — the
@@ -374,13 +374,13 @@ export function LeadSourceDonut({ data }: { data: { source: string; count: numbe
         {hover ? (
           <div
             role="status"
-            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-sm bg-[#0d0d0d] px-2.5 py-1.5 shadow-lg"
+            className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-sm bg-primary px-2.5 py-1.5 shadow-lg"
             style={{ left: hover.x, top: hover.y }}
           >
-            <p className="text-[11.5px] leading-4 font-bold tracking-[-0.01em] whitespace-nowrap text-white">
+            <p className="text-[11.5px] leading-4 font-bold tracking-[-0.01em] whitespace-nowrap text-primary-foreground">
               {hover.row.label}
             </p>
-            <p className="mt-0.5 text-[11px] leading-4 tabular-nums whitespace-nowrap text-white/60">
+            <p className="mt-0.5 text-[11px] leading-4 tabular-nums whitespace-nowrap text-primary-foreground/70">
               {hover.row.value} {hover.row.value === 1 ? "contact" : "contacts"}
               {total > 0 ? ` · ${Math.round((hover.row.value / total) * 100)}%` : null}
             </p>
@@ -402,18 +402,18 @@ export function LeadSourceDonut({ data }: { data: { source: string; count: numbe
             key={row.name}
             onPointerEnter={() => setHover({ row, x: 82, y: 0 })}
             onPointerLeave={() => setHover(null)}
-            className="flex items-center gap-2.5 rounded-xs py-[4px] text-[12.5px] transition-colors duration-150 hover:bg-[#f6f6f6]"
+            className="flex items-center gap-2.5 rounded-xs py-[4px] text-[12.5px] transition-colors duration-150 hover:bg-surface-sunken"
           >
             <span
               aria-hidden
               className="size-2.5 shrink-0 rounded-xs"
               style={{ backgroundColor: row.color }}
             />
-            <span className="min-w-0 flex-1 truncate tracking-[-0.01em] text-[#3d3d3d]">
+            <span className="min-w-0 flex-1 truncate tracking-[-0.01em] text-foreground">
               {row.label}
             </span>
-            <span className="font-bold tabular-nums text-[#0d0d0d]">{row.value}</span>
-            <span className="w-9 text-right tabular-nums text-[#a8a8a8]">
+            <span className="font-bold tabular-nums text-foreground">{row.value}</span>
+            <span className="w-9 text-right tabular-nums text-muted-foreground">
               {total > 0 ? Math.round((row.value / total) * 100) : 0}%
             </span>
           </li>
@@ -434,13 +434,13 @@ type DonutRow = { name: string; label: string; value: number; color: string }
  */
 function ChartBlank({ message }: { message: string }) {
   return (
-    <div className="flex h-full min-h-[168px] flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-[#e4e4e4] bg-[#fcfcfc] px-6 text-center">
+    <div className="flex h-full min-h-[168px] flex-col items-center justify-center gap-2 rounded-sm border border-dashed border-hairline bg-surface-sunken px-6 text-center">
       {/* A flat rule with a single tick — the shape of a chart with nothing on it. */}
       <svg viewBox="0 0 40 16" className="h-4 w-10" fill="none" aria-hidden>
-        <path d="M1 11.5h38" stroke="#dcdcdc" strokeWidth="1.4" strokeLinecap="round" />
-        <path d="M1 8.5v6" stroke="#d4d4d4" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M1 11.5h38" stroke="var(--muted-foreground)" strokeWidth="1.4" strokeOpacity="0.4" strokeLinecap="round" />
+        <path d="M1 8.5v6" stroke="var(--muted-foreground)" strokeWidth="1.4" strokeOpacity="0.6" strokeLinecap="round" />
       </svg>
-      <p className="max-w-[34ch] text-[12.5px] leading-relaxed text-[#8a8a8a] text-pretty">{message}</p>
+      <p className="max-w-[34ch] text-[12.5px] leading-relaxed text-muted-foreground text-pretty">{message}</p>
     </div>
   )
 }

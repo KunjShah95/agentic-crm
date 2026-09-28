@@ -31,21 +31,29 @@ type Size = "sm" | "md" | "lg" | "icon"
 const VARIANTS: Record<Variant, string> = {
   // The primary action. One per view — if two things are solid, neither is.
   solid: cn(
-    "bg-[#0d0d0d] text-white",
-    "hover:bg-[#262626]",
+    "bg-primary text-primary-foreground",
+    "hover:bg-primary/80",
     // A hairline of the background showing through keeps the button's edge
-    // crisp on a white card without needing a shadow.
+    // crisp on a card without needing a shadow.
     "shadow-[inset_0_0_0_1px_rgb(0_0_0/0.14)]"
   ),
   outline: cn(
-    "border border-[#d8d8d8] bg-white text-[#0d0d0d]",
-    "hover:border-[#0d0d0d] hover:bg-[#fafafa]"
+    "border border-border bg-card text-foreground",
+    "hover:border-foreground hover:bg-muted"
   ),
-  ghost: "text-[#3d3d3d] hover:bg-[#0d0d0d]/[0.05] hover:text-[#0d0d0d]",
-  // For use on the black surfaces (sidebar, masthead, dark panels).
-  inverse: "bg-white text-[#0d0d0d] hover:bg-white/85",
-  "inverse-outline": "border border-white/25 text-white hover:border-white/60 hover:bg-white/10",
-  link: "text-[#0d0d0d] underline-offset-4 hover:underline",
+  ghost: "text-muted-foreground hover:bg-foreground/[0.05] hover:text-foreground",
+  /*
+   * For use *on* the inverted surface (the masthead, which is
+   * `bg-foreground`). Every colour here is the surface token rather than a
+   * literal white, so the pair inverts with the theme: light mode gives a
+   * near-white chip on a near-black band, dark mode a near-black chip on a
+   * near-white one. Hard-coding `bg-white` left the dark-mode buttons
+   * invisible — white on white.
+   */
+  inverse: "bg-background text-foreground hover:bg-background/85",
+  "inverse-outline":
+    "border border-background/30 text-background hover:border-background/60 hover:bg-background/10",
+  link: "text-foreground underline-offset-4 hover:underline",
 }
 
 const SIZES: Record<Size, string> = {
@@ -65,7 +73,7 @@ const BASE = cn(
   "disabled:pointer-events-none disabled:opacity-40",
   // `focus-visible` on every variant, and it wins over the hover background so
   // a focused button never looks hovered.
-  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d0d0d]",
+  "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
   "aria-disabled:pointer-events-none aria-disabled:opacity-40"
 )
 

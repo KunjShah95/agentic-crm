@@ -86,7 +86,7 @@ export function SearchField({
         className={cn(
           "pointer-events-none absolute top-1/2 left-3 size-[15px] -translate-y-1/2",
           "transition-colors duration-150",
-          focused ? "text-[#0d0d0d]" : "text-[#9a9a9a]"
+          focused ? "text-foreground" : "text-muted-foreground"
         )}
       />
 
@@ -110,24 +110,24 @@ export function SearchField({
           }
         }}
         className={cn(
-          "h-9 w-full rounded-sm border bg-white pr-20 pl-9",
-          "text-[13px] tracking-[-0.01em] text-[#0d0d0d] placeholder:text-[#a8a8a8]",
+          "h-9 w-full rounded-sm border bg-card pr-20 pl-9",
+          "text-[13px] tracking-[-0.01em] text-foreground placeholder:text-muted-foreground",
           "transition-[border-color,height,box-shadow] duration-150",
           "[transition-timing-function:var(--ease-out)]",
           // `appearance-none` + no webkit cancel button: the native clear glyph
           // is unstyleable and would sit next to ours.
           "appearance-none [&::-webkit-search-cancel-button]:hidden",
           focused
-            ? "border-[#0d0d0d]"
-            : "border-[#e0e0e0] hover:border-[#c9c9c9]"
+            ? "border-foreground"
+            : "border-hairline hover:border-muted-foreground/50"
         )}
       />
 
       <span className="absolute top-1/2 right-2.5 flex -translate-y-1/2 items-center gap-1.5">
         {count ? (
-          <span className="text-[11px] tabular-nums text-[#a8a8a8]">
+          <span className="text-[11px] tabular-nums text-muted-foreground">
             {count.shown}
-            <span className="text-[#d0d0d0]">/{count.total}</span>
+            <span className="text-muted-foreground/50">/{count.total}</span>
           </span>
         ) : null}
 
@@ -140,9 +140,9 @@ export function SearchField({
             }}
             aria-label="Clear search"
             className={cn(
-              "flex size-5 items-center justify-center rounded-xs text-[#8a8a8a]",
-              "transition-colors duration-150 hover:bg-[#0d0d0d] hover:text-white",
-              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0d0d0d]"
+              "flex size-5 items-center justify-center rounded-xs text-muted-foreground",
+              "transition-colors duration-150 hover:bg-foreground hover:text-background",
+              "focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-ring"
             )}
           >
             <X className="size-3.5" strokeWidth={2} />
@@ -153,7 +153,7 @@ export function SearchField({
           // already is rather than in a tooltip.
           <kbd
             aria-hidden
-            className="hidden rounded-xs border border-[#e6e6e6] bg-[#fafafa] px-1.5 py-0.5 font-sans text-[10px] font-bold tracking-[0.02em] text-[#a8a8a8] sm:block"
+            className="hidden rounded-xs border border-hairline bg-surface-sunken px-1.5 py-0.5 font-sans text-[10px] font-bold tracking-[0.02em] text-muted-foreground sm:block"
           >
             /
           </kbd>
@@ -188,7 +188,7 @@ export function SegmentedControl<T extends string>({
     <div
       role="group"
       className={cn(
-        "inline-flex items-center gap-0.5 rounded-sm border border-[#e6e6e6] bg-[#fafafa] p-0.5",
+        "inline-flex items-center gap-0.5 rounded-sm border border-hairline bg-surface-sunken p-0.5",
         className
       )}
     >
@@ -205,13 +205,13 @@ export function SegmentedControl<T extends string>({
               "transition-colors duration-150",
               size === "sm" ? "h-7 px-2.5 text-[12px]" : "h-8 px-3 text-[12.5px]",
               selected
-                ? "bg-[#0d0d0d] text-white"
-                : "text-[#6b6b6b] hover:bg-white hover:text-[#0d0d0d]"
+                ? "bg-primary text-primary-foreground"
+                : "text-muted-foreground hover:bg-card hover:text-foreground"
             )}
           >
             {opt.label}
             {opt.count != null ? (
-              <span className={cn("tabular-nums", selected ? "text-white/55" : "text-[#b0b0b0]")}>
+              <span className={cn("tabular-nums", selected ? "text-primary-foreground/60" : "text-muted-foreground/60")}>
                 {opt.count}
               </span>
             ) : null}

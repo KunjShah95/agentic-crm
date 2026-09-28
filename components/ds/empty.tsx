@@ -32,17 +32,17 @@ export function EmptyPlate({ className }: { className?: string }) {
       aria-hidden
       className={cn(
         "relative flex size-14 items-center justify-center rounded-md",
-        "border border-[#e0e0e0] bg-[#fafafa]",
+        "border border-hairline bg-surface-sunken",
         className
       )}
     >
       {/* corner rule */}
-      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="#c4c4c4" strokeWidth="1.4">
+      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="var(--muted-foreground)" strokeOpacity="0.55" strokeWidth="1.4">
         <path d="M4 8.5V6a2 2 0 0 1 2-2h2.5" strokeLinecap="round" />
         <path d="M20 15.5V18a2 2 0 0 1-2 2h-2.5" strokeLinecap="round" />
       </svg>
       {/* the dot that has not been placed yet */}
-      <span className="absolute size-[7px] rounded-full bg-[#dcdcdc]" />
+      <span className="absolute size-[7px] rounded-full bg-muted-foreground/40" />
     </span>
   )
 }
@@ -82,14 +82,14 @@ export function EmptyState({
       <div className="max-w-[42ch] space-y-1.5">
         <p
           className={cn(
-            "font-bold tracking-[-0.02em] text-[#0d0d0d] text-balance",
+            "font-bold tracking-[-0.02em] text-foreground text-balance",
             compact ? "text-[13px]" : "text-[15px]"
           )}
         >
           {title}
         </p>
         {description ? (
-          <p className="text-[13px] leading-relaxed tracking-[-0.005em] text-[#787878] text-pretty">
+          <p className="text-[13px] leading-relaxed tracking-[-0.005em] text-muted-foreground text-pretty">
             {description}
           </p>
         ) : null}
@@ -137,18 +137,18 @@ export function NoResultsState({
     <div className={cn("flex w-full flex-col items-center gap-3 px-4 py-14 text-center", className)}>
       <span
         aria-hidden
-        className="flex size-10 items-center justify-center rounded-full border border-dashed border-[#d8d8d8]"
+        className="flex size-10 items-center justify-center rounded-full border border-dashed border-hairline"
       >
-        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="#b0b0b0" strokeWidth="1.8">
+        <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="var(--muted-foreground)" strokeOpacity="0.7" strokeWidth="1.8">
           <circle cx="11" cy="11" r="6.5" />
           <path d="m16 16 4 4" strokeLinecap="round" />
         </svg>
       </span>
       <div className="max-w-[40ch] space-y-1">
-        <p className="text-[13.5px] font-bold tracking-[-0.02em] text-[#0d0d0d]">
+        <p className="text-[13.5px] font-bold tracking-[-0.02em] text-foreground">
           {query ? <>No matches for &ldquo;{query}&rdquo;</> : "Nothing here yet"}
         </p>
-        <p className="text-[12.5px] leading-relaxed text-[#8a8a8a]">
+        <p className="text-[12.5px] leading-relaxed text-muted-foreground">
           {query
             ? "Check the spelling, or clear the search to see everything."
             : "Records will appear here once they exist."}

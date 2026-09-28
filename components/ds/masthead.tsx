@@ -52,7 +52,7 @@ export function Masthead({
     <div
       className={cn(
         "overflow-hidden rounded-md",
-        ink ? "bg-[#0d0d0d] text-white" : "border border-[#e6e6e6] bg-white text-[#0d0d0d]",
+        ink ? "bg-foreground text-background" : "border border-hairline bg-card text-foreground",
         className
       )}
     >
@@ -63,7 +63,14 @@ export function Masthead({
               <div
                 className={cn(
                   "flex items-center gap-2 text-[10px] leading-4 font-bold tracking-[0.13em] uppercase",
-                  ink ? "text-white/45" : "text-[#8a8a8a]"
+                  /*
+                   * Muted *relative to the band's own colour*, not to the page.
+                   * On the ink tone the wrapper already sets `text-background`,
+                   * so `text-muted-foreground` here would put page-foreground
+                   * grey on a foreground-coloured band and the label would
+                   * vanish in dark mode. Each tone mutes what it sits on.
+                   */
+                  ink ? "text-background/60" : "text-muted-foreground"
                 )}
               >
                 {eyebrow}
@@ -82,7 +89,7 @@ export function Masthead({
               <p
                 className={cn(
                   "max-w-[62ch] text-[13px] leading-relaxed tracking-[-0.005em] text-pretty",
-                  ink ? "text-white/55" : "text-[#787878]"
+                  ink ? "text-background/60" : "text-muted-foreground"
                 )}
               >
                 {description}
@@ -103,7 +110,7 @@ export function Masthead({
             // `gap-px` on a coloured background draws the dividers with the
             // container's own colour showing through the gap. One rule, no
             // per-cell borders, and no 1px seams where borders would meet.
-            ink ? "border-white/12 bg-white/12" : "border-[#ededed] bg-[#ededed]"
+            ink ? "border-background/15 bg-background/15" : "border-hairline bg-hairline"
           )}
         >
           {figures.map((f) => {
@@ -112,24 +119,22 @@ export function Masthead({
                 <span
                   className={cn(
                     "text-[10px] leading-4 font-bold tracking-[0.12em] uppercase",
-                    ink ? "text-white/40" : "text-[#9a9a9a]"
+                    ink ? "text-background/55" : "text-muted-foreground"
                   )}
                 >
                   {f.label}
                 </span>
-                <span
-                  className={cn(
-                    "mt-1 block text-[24px] leading-none font-bold tracking-[-0.03em] tabular-nums",
-                    ink ? "text-white" : "text-[#0d0d0d]"
-                  )}
-                >
+                {/* No colour class: the numeral inherits the band's, which is
+                    the whole point of the figure row. Forcing `text-foreground`
+                    here put near-white on a near-white band in dark mode. */}
+                <span className="mt-1 block text-[24px] leading-none font-bold tracking-[-0.03em] tabular-nums">
                   {f.value}
                 </span>
                 {f.sub ? (
                   <span
                     className={cn(
                       "mt-1.5 block text-[11.5px] leading-4 tracking-[-0.005em]",
-                      ink ? "text-white/40" : "text-[#8a8a8a]"
+                      ink ? "text-background/55" : "text-muted-foreground"
                     )}
                   >
                     {f.sub}
@@ -140,7 +145,7 @@ export function Masthead({
 
             const cellClass = cn(
               "block px-4 py-3.5 transition-colors duration-150 md:px-5",
-              ink ? "hover:bg-white/[0.06]" : "hover:bg-[#fcfcfc]"
+              ink ? "hover:bg-background/10" : "hover:bg-muted"
             )
 
             return f.href ? (

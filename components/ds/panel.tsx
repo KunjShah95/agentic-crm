@@ -40,7 +40,7 @@ export function Panel({
      */
     <As
       className={cn(
-        "flex flex-col overflow-hidden rounded-md border border-[#e6e6e6] bg-white",
+        "flex flex-col overflow-hidden rounded-md border border-hairline bg-card",
         className
       )}
     >
@@ -71,14 +71,14 @@ export function PanelHeader({
   return (
     <div
       className={cn(
-        "flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-1 border-b border-[#ededed] px-4 py-2.5",
+        "flex min-h-[44px] flex-wrap items-center gap-x-3 gap-y-1 border-b border-hairline px-4 py-2.5",
         className
       )}
     >
       <div className="flex min-w-0 items-baseline gap-2.5">
-        <h2 className="label-caps shrink-0 text-[#0d0d0d]">{label}</h2>
+        <h2 className="label-caps shrink-0 text-foreground">{label}</h2>
         {hint ? (
-          <span className="truncate text-[12px] tracking-[-0.01em] text-[#8a8a8a]">{hint}</span>
+          <span className="truncate text-[12px] tracking-[-0.01em] text-muted-foreground">{hint}</span>
         ) : null}
       </div>
       {actions ? (
@@ -99,7 +99,7 @@ export function PanelFooter({
   return (
     <div
       className={cn(
-        "flex min-h-[40px] flex-wrap items-center gap-x-5 gap-y-1 border-t border-[#ededed] bg-[#fcfcfc] px-4 py-2",
+        "flex min-h-[40px] flex-wrap items-center gap-x-5 gap-y-1 border-t border-hairline bg-surface-sunken px-4 py-2",
         className
       )}
     >
@@ -125,10 +125,10 @@ export function FooterMetric({
 }) {
   return (
     <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-      <span className="text-[12.5px] font-bold tracking-[-0.01em] tabular-nums text-[#0d0d0d]">
+      <span className="text-[12.5px] font-bold tracking-[-0.01em] tabular-nums text-foreground">
         {value}
       </span>
-      <span className={cn("text-[12px] tracking-[-0.005em]", emphasis ? "text-[#0d0d0d]" : "text-[#8a8a8a]")}>
+      <span className={cn("text-[12px] tracking-[-0.005em]", emphasis ? "text-foreground" : "text-muted-foreground")}>
         {label}
       </span>
     </span>
@@ -137,5 +137,5 @@ export function FooterMetric({
 
 /** A plain hairline-divided row list — the default for feeds and key/value tables. */
 export function RowList({ className, children }: { className?: string; children: React.ReactNode }) {
-  return <div className={cn("divide-y divide-[#f0f0f0]", className)}>{children}</div>
+  return <div className={cn("divide-y divide-hairline", className)}>{children}</div>
 }

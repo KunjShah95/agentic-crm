@@ -70,13 +70,13 @@ export function ProjectListing({
 
   if (projects.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-4 rounded-md border border-[#e6e6e6] bg-white px-6 py-16 text-center">
+      <div className="flex flex-col items-center gap-4 rounded-md border border-hairline bg-card px-6 py-16 text-center">
         <EmptyProjectPlate />
         <div className="max-w-[42ch] space-y-1.5">
-          <p className="text-[15px] font-bold tracking-[-0.02em] text-[#0d0d0d] text-balance">
+          <p className="text-[15px] font-bold tracking-[-0.02em] text-foreground text-balance">
             No projects yet
           </p>
-          <p className="text-[13px] leading-relaxed text-[#787878] text-pretty">
+          <p className="text-[13px] leading-relaxed text-muted-foreground text-pretty">
             A project holds your towers, units, prices, and payment plans. Add one
             and inventory becomes bookable.
           </p>
@@ -101,16 +101,16 @@ export function ProjectListing({
       ) : null}
 
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-[#e0e0e0] bg-[#fcfcfc] px-6 py-14 text-center">
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="#b0b0b0" strokeWidth="1.7" aria-hidden>
+        <div className="flex flex-col items-center gap-3 rounded-md border border-dashed border-hairline bg-surface-sunken px-6 py-14 text-center">
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="var(--muted-foreground)" strokeOpacity="0.7" strokeWidth="1.7" aria-hidden>
             <circle cx="11" cy="11" r="6.5" />
             <path d="m16 16 4 4" strokeLinecap="round" />
           </svg>
           <div className="max-w-[38ch] space-y-1">
-            <p className="text-[13.5px] font-bold tracking-[-0.02em] text-[#0d0d0d]">
+            <p className="text-[13.5px] font-bold tracking-[-0.02em] text-foreground">
               No projects match &ldquo;{query.trim()}&rdquo;
             </p>
-            <p className="text-[12.5px] leading-relaxed text-[#8a8a8a]">
+            <p className="text-[12.5px] leading-relaxed text-muted-foreground">
               Check the spelling, or clear the search to see all {projects.length}.
             </p>
           </div>
@@ -150,14 +150,14 @@ function ProjectCard({
           : undefined
       }
       className={cn(
-        "group relative block overflow-hidden rounded-md border border-[#e6e6e6] bg-white",
+        "group relative block overflow-hidden rounded-md border border-hairline bg-card",
         "transition-[border-color,transform] duration-150 [transition-timing-function:var(--ease-out)]",
         // No shadow on hover. The lift is a 1px rise plus a border that goes
         // from #e6e6e6 to the text colour — a card that gains a shadow on hover
         // reads as being lifted *off the page*, which is wrong for something
         // you are navigating to. This reads as being pressed *into* focus.
-        "hover:-translate-y-px hover:border-[#0d0d0d] active:translate-y-0",
-        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0d0d0d]"
+        "hover:-translate-y-px hover:border-foreground active:translate-y-0",
+        "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       )}
     >
       {/* The 2px black rail on the left edge, revealed on hover. It is the
@@ -165,24 +165,24 @@ function ProjectCard({
           filing system rather than a set of thumbnails. */}
       <span
         aria-hidden
-        className="absolute inset-y-0 left-0 w-[2px] scale-y-0 bg-[#0d0d0d] transition-transform duration-150 [transition-timing-function:var(--ease-out)] group-hover:scale-y-100"
+        className="absolute inset-y-0 left-0 w-[2px] scale-y-0 bg-foreground transition-transform duration-150 [transition-timing-function:var(--ease-out)] group-hover:scale-y-100"
       />
 
       <div className="px-4 py-4">
         <div className="flex items-start justify-between gap-3">
-          <h3 className="text-[17px] leading-[1.2] font-bold tracking-[-0.028em] text-[#0d0d0d] text-pretty">
+          <h3 className="text-[17px] leading-[1.2] font-bold tracking-[-0.028em] text-foreground text-pretty">
             {project.name}
           </h3>
           <ArrowUpRight
             aria-hidden
             strokeWidth={2}
-            className="mt-0.5 size-4 shrink-0 text-[#c4c4c4] transition-[color,transform] duration-150 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-[#0d0d0d]"
+            className="mt-0.5 size-4 shrink-0 text-muted-foreground/60 transition-[color,transform] duration-150 group-hover:-translate-y-px group-hover:translate-x-px group-hover:text-foreground"
           />
         </div>
 
         {/* Ruled fact line. `divide-x` rather than gap + borders so the rules
             stay exactly 1px and cannot double up at the edges. */}
-        <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[12px] text-[#6b6b6b]">
+        <div className="mt-3.5 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-[12px] text-muted-foreground">
           <span className="inline-flex min-w-0 items-center gap-1.5">
             <ReraMark registered={Boolean(project.reraNo)} />
             {/*
@@ -198,14 +198,14 @@ function ProjectCard({
               {shortRera(project.reraNo) ?? "RERA pending"}
             </span>
           </span>
-          <span aria-hidden className="h-3 w-px bg-[#e6e6e6]" />
+          <span aria-hidden className="h-3 w-px bg-hairline" />
           <span className="inline-flex items-center gap-1.5">
             <Layers aria-hidden className="size-3.5" strokeWidth={1.7} />
             {project.unitCount} {project.unitCount === 1 ? "unit" : "units"}
           </span>
           {project.city ? (
             <>
-              <span aria-hidden className="h-3 w-px bg-[#e6e6e6]" />
+              <span aria-hidden className="h-3 w-px bg-hairline" />
               <span className="inline-flex items-center gap-1.5">
                 <MapPin aria-hidden className="size-3.5" strokeWidth={1.7} />
                 {project.city}
@@ -236,11 +236,11 @@ function shortRera(reraNo: string | null): string | null {
 function ReraMark({ registered }: { registered: boolean }) {
   return registered ? (
     <svg viewBox="0 0 12 12" className="size-3 shrink-0" aria-hidden>
-      <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.5" fill="#0d0d0d" />
+      <rect x="0.75" y="0.75" width="10.5" height="10.5" rx="2.5" fill="currentColor" />
       <path
         d="m3.4 6.2 1.8 1.8 3.4-3.6"
         fill="none"
-        stroke="#fff"
+        stroke="var(--card)"
         strokeWidth="1.6"
         strokeLinecap="round"
         strokeLinejoin="round"
@@ -255,7 +255,8 @@ function ReraMark({ registered }: { registered: boolean }) {
         height="10.5"
         rx="2.5"
         fill="none"
-        stroke="#c4c4c4"
+        stroke="var(--muted-foreground)"
+        strokeOpacity="0.5"
         strokeWidth="1.4"
         strokeDasharray="2.2 1.8"
       />
@@ -267,13 +268,13 @@ function EmptyProjectPlate() {
   return (
     <span
       aria-hidden
-      className="relative flex size-14 items-center justify-center rounded-md border border-[#e0e0e0] bg-[#fafafa]"
+      className="relative flex size-14 items-center justify-center rounded-md border border-hairline bg-surface-sunken"
     >
-      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="#c4c4c4" strokeWidth="1.4">
+      <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="var(--muted-foreground)" strokeOpacity="0.55" strokeWidth="1.4">
         <path d="M4 20V8.5L12 4l8 4.5V20" strokeLinecap="round" strokeLinejoin="round" />
         <path d="M9.5 20v-6h5v6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
-      <span className="absolute size-[7px] rounded-full bg-[#dcdcdc]" />
+      <span className="absolute size-[7px] rounded-full bg-muted-foreground/40" />
     </span>
   )
 }

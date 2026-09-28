@@ -61,7 +61,7 @@ export function PipelineTable({
         actions={
           <Link
             href={`${hrefBase}/deals?view=table`}
-            className="inline-flex items-center gap-1 text-[12px] font-bold tracking-[-0.01em] text-[#0d0d0d] transition-opacity duration-150 hover:opacity-60"
+            className="inline-flex items-center gap-1 text-[12px] font-bold tracking-[-0.01em] text-foreground transition-opacity duration-150 hover:opacity-60"
           >
             All deals
             <ArrowUpRight className="size-3.5" strokeWidth={2} />
@@ -85,7 +85,7 @@ export function PipelineTable({
           <div className="overflow-x-auto">
             <table className="w-full min-w-[560px] border-collapse text-left">
               <thead>
-                <tr className="border-b border-[#ededed]">
+                <tr className="border-b border-hairline">
                   <Th className="pl-4">Deal</Th>
                   <Th>Stage</Th>
                   <Th className="hidden lg:table-cell">Owner</Th>
@@ -101,7 +101,7 @@ export function PipelineTable({
                     key={deal.id}
                     style={rowEnter(i)}
                     className={cn(
-                      "group/row border-b border-[#f4f4f4] transition-colors duration-150 last:border-0 hover:bg-[#fcfcfc]",
+                      "group/row border-b border-hairline transition-colors duration-150 last:border-0 hover:bg-surface-sunken",
                       // The class and the delay travel together, so a row past
                       // the cap gets neither — a row that animated with no delay
                       // would still fire, just all at once.
@@ -111,11 +111,11 @@ export function PipelineTable({
                     <td className="py-2.5 pr-3 pl-4 align-middle">
                       <Link
                         href={`${hrefBase}/deals/${deal.id}`}
-                        className="block truncate text-[13px] font-bold tracking-[-0.012em] text-[#0d0d0d] underline-offset-4 hover:underline"
+                        className="block truncate text-[13px] font-bold tracking-[-0.012em] text-foreground underline-offset-4 hover:underline"
                       >
                         {deal.title}
                       </Link>
-                      <span className="mt-0.5 block truncate text-[11.5px] text-[#9a9a9a]">
+                      <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
                         {deal.organization?.name ??
                           (deal.contact
                             ? `${deal.contact.firstName} ${deal.contact.lastName}`.trim()
@@ -124,7 +124,7 @@ export function PipelineTable({
                     </td>
 
                     <td className="py-2.5 pr-3 align-middle">
-                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[12.5px] text-[#4a4a4a]">
+                      <span className="inline-flex items-center gap-1.5 whitespace-nowrap text-[12.5px] text-foreground">
                         <span
                           aria-hidden
                           className="size-[7px] shrink-0 rounded-full"
@@ -136,21 +136,21 @@ export function PipelineTable({
 
                     <td className="hidden py-2.5 pr-3 align-middle lg:table-cell">
                       {deal.owner ? (
-                        <span className="inline-flex items-center gap-1.5 text-[12.5px] text-[#6b6b6b]">
+                        <span className="inline-flex items-center gap-1.5 text-[12.5px] text-muted-foreground">
                           <span
                             aria-hidden
-                            className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-[#f0f0f0] text-[8.5px] font-bold text-[#6b6b6b]"
+                            className="flex size-[18px] shrink-0 items-center justify-center rounded-full bg-muted text-[8.5px] font-bold text-muted-foreground"
                           >
                             {initials(deal.owner.name)}
                           </span>
                           <span className="max-w-[110px] truncate">{deal.owner.name}</span>
                         </span>
                       ) : (
-                        <span className="text-[12.5px] text-[#c4c4c4]">—</span>
+                        <span className="text-[12.5px] text-muted-foreground/60">—</span>
                       )}
                     </td>
 
-                    <td className="py-2.5 pr-3 text-right align-middle text-[13px] font-bold tabular-nums tracking-[-0.015em] whitespace-nowrap text-[#0d0d0d]">
+                    <td className="py-2.5 pr-3 text-right align-middle text-[13px] font-bold tabular-nums tracking-[-0.015em] whitespace-nowrap text-foreground">
                       {formatMoneyShort(deal.value, deal.currency)}
                     </td>
 
@@ -189,18 +189,18 @@ export function PipelineTable({
  */
 function ProbabilityCell({ value }: { value: number | null }) {
   if (value == null) {
-    return <span className="text-[12px] text-[#c4c4c4]">Not set</span>
+    return <span className="text-[12px] text-muted-foreground/60">Not set</span>
   }
 
   return (
     <span className="inline-flex items-center justify-end gap-2">
-      <span aria-hidden className="hidden h-[3px] w-6 overflow-hidden rounded-full bg-[#ededed] sm:block">
+      <span aria-hidden className="hidden h-[3px] w-6 overflow-hidden rounded-full bg-muted sm:block">
         <span
-          className={cn("block h-full rounded-full", value >= 70 ? "bg-[#0d0d0d]" : "bg-[#8a8a8a]")}
+          className={cn("block h-full rounded-full", value >= 70 ? "bg-foreground" : "bg-muted-foreground")}
           style={{ width: `${Math.max(4, Math.min(100, value))}%` }}
         />
       </span>
-      <span className="w-8 text-right text-[12.5px] font-bold tabular-nums text-[#0d0d0d]">
+      <span className="w-8 text-right text-[12.5px] font-bold tabular-nums text-foreground">
         {value}%
       </span>
     </span>
@@ -220,7 +220,7 @@ function Th({
     <th
       scope="col"
       className={cn(
-        "px-3 py-2 text-[10px] leading-4 font-bold tracking-[0.12em] uppercase text-[#9a9a9a] whitespace-nowrap",
+        "px-3 py-2 text-[10px] leading-4 font-bold tracking-[0.12em] uppercase text-muted-foreground whitespace-nowrap",
         align === "right" && "text-right",
         className
       )}
@@ -270,7 +270,7 @@ export function ActivityFeed({
           description="Add contacts or create deals and every call, note, and stage change will land here."
         />
       ) : (
-        <ul className="divide-y divide-[#f4f4f4]">
+        <ul className="divide-y divide-hairline">
           {items.map((item, i) => (
             <li
               key={item.id}
@@ -280,15 +280,15 @@ export function ActivityFeed({
                 i < ROW_STAGGER_CAP && "animate-row-in"
               )}
             >
-              <span className="w-[52px] shrink-0 text-[9.5px] leading-4 font-bold tracking-[0.11em] uppercase text-[#a8a8a8]">
+              <span className="w-[52px] shrink-0 text-[9.5px] leading-4 font-bold tracking-[0.11em] uppercase text-muted-foreground">
                 {item.type}
               </span>
-              <span className="min-w-0 flex-1 truncate text-[12.5px] leading-5 tracking-[-0.005em] text-[#4a4a4a]">
+              <span className="min-w-0 flex-1 truncate text-[12.5px] leading-5 tracking-[-0.005em] text-foreground">
                 {item.body || item.type}
               </span>
               <time
                 dateTime={item.createdAt.toISOString()}
-                className="shrink-0 text-[11px] whitespace-nowrap text-[#b4b4b4]"
+                className="shrink-0 text-[11px] whitespace-nowrap text-muted-foreground"
               >
                 {relativeTime(item.createdAt)}
               </time>
