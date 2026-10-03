@@ -13,6 +13,46 @@
   - Reports: `?format=pdf` on the reports export route + PDF/Excel buttons in the reports UI.
 - [x] **`.env.example`** documents `PUPPETEER_EXECUTABLE_PATH` for local dev.
 
+## Search (2026-10-03)
+
+Search was broken four ways at once, and three of them were invisible to CI.
+
+| Defect | Symptom | Fix |
+| --- | --- | --- |
+| Stale-response guard compared the *trimmed* query against the *raw* one | Typing a trailing space left the palette on "Searching…" forever — no results, no error, unrecoverable without reopening | `queryRef` holds the trimmed query; `setSearching(false)` moved inside the same guard as the results write |
+| `plainto_tsquery` matches whole lexemes only | `"anj"` found nothing while `"anjali"` worked — indistinguishable from a broken feature | `prefix_tsquery()` stems each term with the same `english` config the vectors use, then applies `:*` |
+| `phone` absent from `contact_search_tsv` | The one lookup a sales team actually needs was impossible | Phone indexed digits-only under `simple`, in **both** the full and national forms — `+91 98250 12345` is otherwise three lexemes, and indexing only the digits as stored hid the number as written on a card |
+| e2e "search" test asserted `<body>` was visible; unit test mocked the DB | Nothing could fail | `tests/e2e/search.spec.ts` — six real-browser tests |
+
+Migration `20261003120000_search_phone_prefix`. The GIN index is defined over the
+function call, so the signature change required `DROP INDEX` + `CREATE INDEX`;
+`CREATE INDEX IF NOT EXISTS` would have silently kept the stale index.
+
+## Schema / client / database drift
+
+This failure mode cost real time and is worth naming, because **nothing warns
+you**:
+
+```
+Unknown field `wonAt` for select statement on model `Deal`
+```
+
+A field is added to `prisma/schema.prisma` and used in a query, and the app
+500s on *every* page render behind the dev overlay — while `tsc` passes, because
+the generated client is a dependency rather than an input. It presents as "the
+search box is dead", since the whole shell fails to mount.
+
+Two structural guards now exist:
+
+- `predev` / `prebuild` run `prisma generate`, so the client cannot be stale in
+  any normal path.
+- `npm run db:verify-sync` compares the schema, the applied migrations and the
+  live database, and names the specific field or migration responsible. It
+  honours `@map()` and `@@map()`, so `brokerId @map("cpId")` and
+  `model Broker @@map("ChannelPartner")` are not reported as drift.
+
+Run it after any schema edit and before a demo.
+
 ## Lead-ingress hardening (2026-10-03)
 
 The lead pipeline is the product. It was also the least defended surface in
@@ -49,6 +89,7 @@ second customer costs the same as the first. Two scripts:
 | --- | --- |
 | `npx tsx scripts/provision-pilot.ts --client … --slug … --owner-email … --inventory …` | Creates the workspace, owner login, the six-stage pipeline, imports inventory CSV, mints the ingest secret, prints a handoff sheet. Idempotent. |
 | `npx tsx scripts/verify-ingress.ts [base-url]` | 13 checks over real HTTP against the real DB: unauthenticated refused, wrong key refused, nothing written by refused calls, authenticated lands a scored+routed lead, no outbound while auto-ack is off, dedupe holds, outbound on once opted in. Creates and deletes its own workspace. |
+| `npm run db:verify-sync` | Compares schema.prisma, `_prisma_migrations` and the live database; names the specific field or migration responsible. Run after any schema edit. |
 
 Run `pilot:verify` after touching ingress code, before any demo, and whenever a
 customer reports leads not arriving — it separates their portal's problem from

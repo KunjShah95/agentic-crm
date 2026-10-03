@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "prebuild": "tsx scripts/write-llms-txt.ts",
+    "predev": "prisma generate",
+    "prebuild": "prisma generate && tsx scripts/write-llms-txt.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -22,7 +23,9 @@
     "setup": "prisma migrate dev && prisma db seed",
     "seo:llms": "tsx scripts/write-llms-txt.ts",
     "pilot:provision": "tsx scripts/provision-pilot.ts",
-    "pilot:verify": "tsx scripts/verify-ingress.ts"
+    "pilot:verify": "tsx scripts/verify-ingress.ts",
+    "db:verify-sync": "tsx scripts/verify-schema-sync.ts",
+    "check:duplicates": "tsx scripts/check-duplicates.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
