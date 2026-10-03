@@ -1,4 +1,14 @@
 import { defineConfig, devices } from "@playwright/test"
+import { config as loadEnv } from "dotenv"
+
+// Load .env into the test process.
+//
+// Without this, DATABASE_URL is undefined here, every spec's `hasDb` guard is
+// false, and the whole e2e suite skips — reporting green while testing nothing.
+// That is how three real defects in ⌘K search shipped: the suite's only search
+// test asserted a <body> was visible, and it was never even running.
+loadEnv({ path: ".env" })
+loadEnv({ path: ".env.local", override: true })
 
 export default defineConfig({
   testDir: "./tests/e2e",
