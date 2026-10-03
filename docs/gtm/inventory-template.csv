@@ -1,0 +1,12 @@
+project,tower,floor,unitNo,config,carpet,builtUp,facing,price,status
+Skyline Residences,Tower A,12,A-1201,BHK2,855,1105,West,6700000,AVAILABLE
+Skyline Residences,Tower A,12,A-1202,BHK3,1285,1620,East,9850000,AVAILABLE
+Skyline Residences,Tower A,12,A-1203,BHK3,1290,1625,North,10100000,SOLD
+Skyline Residences,Tower A,11,A-1101,BHK2,860,1110,East,6800000,AVAILABLE
+Skyline Residences,Tower B,8,B-804,BHK4,1760,2210,West,14500000,HOLD
+Shilp Serenity,,,SS-207,BHK1,620,810,West,4150000,AVAILABLE
+Shilp Serenity,,,SS-1102,BHK3,1320,1680,East,11500000,AVAILABLE
+Shilp Serenity,,,SS-1201,3 BHK,1290,1650,North,10900000,BOOKED
+Shilp Heights,,,SH-405,BHK2,880,1140,East,6450000,AVAILABLE
+Shilp Heights,,,SH-302,BHK3,1240,1590,North,9300000,AVAILABLE
+Shilp Heights,,,SH-601,SHOP,640,640,West,8900000,AVAILABLE

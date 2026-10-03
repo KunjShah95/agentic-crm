@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { processLead } from "@/modules/leadIngest/worker"
+import { requireIngressAuth } from "@/modules/leadIngest/ingress"
+import { hitRateLimit, getClientIp } from "@/modules/web-contact/rate-limit"
 
 export const dynamic = "force-dynamic"
 
@@ -17,10 +19,18 @@ async function resolveSource(params: RouteParams): Promise<string> {
 }
 
 /**
- * Thin lead ingress. Verifies source + resolves workspace, then materializes
- * the lead. Always returns 200 after basic validation so the portal never
- * retries into a storm; failures are recorded on WebhookEvent for replay.
- * Workspace resolved via ?workspace=<slug> (portals configure per-tenant URL).
+ * Lead ingress for server-to-server callers (Meta lead forms, portal
+ * exporters, Zapier). Authenticated, rate limited, workspace-resolved, then
+ * materializes the lead.
+ *
+ * The workspace slug in the query is a routing hint, not a credential — it is
+ * visible in public micro-site URLs. The `x-estate360-ingest-key` header is
+ * the credential, checked before anything is written. See `./ingress`.
+ *
+ * After basic validation this always returns 200 so the portal never retries
+ * into a storm; failures are recorded on WebhookEvent for replay. Auth and rate
+ * limit failures are the exception — they return their own status so a
+ * misconfigured integration is visible instead of silently swallowed.
  */
 export async function POST(req: Request, { params }: { params: RouteParams }) {
   const source = await resolveSource(params)
@@ -34,6 +44,46 @@ export async function POST(req: Request, { params }: { params: RouteParams }) {
     return NextResponse.json({ error: "Missing ?workspace=<slug>" }, { status: 400 })
   }
 
+  const ws = await db.workspace.findUnique({
+    where: { slug },
+    select: { id: true },
+  })
+  if (!ws) {
+    return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
+  }
+
+  // Per-IP limit first: it must run before the credential check, so an
+  // anonymous caller cannot use the endpoint as a hash oracle, and it bounds
+  // the DB work they can cause.
+  const ipLimit = await hitRateLimit(`leads:ip:${getClientIp(req.headers)}`, {
+    max: 120,
+    windowMs: 60_000,
+  })
+  if (!ipLimit.ok) {
+    return NextResponse.json(
+      { error: "Too many lead webhook requests" },
+      { status: 429, headers: { "retry-after": String(ipLimit.retryAfterSec) } }
+    )
+  }
+
+  // Per workspace+source, so one misconfigured portal retry loop cannot exhaust
+  // every other source's budget.
+  const wsLimit = await hitRateLimit(`leads:ws:${ws.id}:${source}`, {
+    max: 600,
+    windowMs: 60_000,
+  })
+  if (!wsLimit.ok) {
+    return NextResponse.json(
+      { error: `Rate limit exceeded for source ${source}` },
+      { status: 429, headers: { "retry-after": String(wsLimit.retryAfterSec) } }
+    )
+  }
+
+  const auth = await requireIngressAuth(req, ws.id)
+  if (!auth.ok) {
+    return NextResponse.json({ error: auth.error }, { status: auth.status })
+  }
+
   let body: unknown = {}
   try {
     const raw = await req.text()
@@ -42,13 +92,15 @@ export async function POST(req: Request, { params }: { params: RouteParams }) {
     body = {}
   }
 
-  const ws = await db.workspace.findUnique({ where: { slug }, select: { id: true } })
-  if (!ws) {
-    return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
-  }
-
   try {
-    const result = await processLead({ workspaceId: ws.id, source, payload: body })
+    // Ingress was authenticated, so this lead may trigger the workspace's
+    // opted-in WhatsApp auto-ack.
+    const result = await processLead({
+      workspaceId: ws.id,
+      source,
+      payload: body,
+      trusted: true,
+    })
     return NextResponse.json({ received: true, ...result }, { status: 200 })
   } catch (e) {
     console.error(`[webhook:leads:${source}] process error`, e)

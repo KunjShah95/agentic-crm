@@ -20,7 +20,9 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "setup": "prisma migrate dev && prisma db seed",
-    "seo:llms": "tsx scripts/write-llms-txt.ts"
+    "seo:llms": "tsx scripts/write-llms-txt.ts",
+    "pilot:provision": "tsx scripts/provision-pilot.ts",
+    "pilot:verify": "tsx scripts/verify-ingress.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",

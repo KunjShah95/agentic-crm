@@ -1,7 +1,13 @@
 /**
- * Per-IP sliding rate limit for public web endpoints (contact form etc.).
+ * Fixed-window rate limit for public, unauthenticated endpoints.
  * Follows the modules/social/queue.ts pattern: Upstash REST → Redis → in-memory.
  * Throws RateLimitedError with retryAfter seconds when the limit is exceeded.
+ *
+ * Shared, not web-contact specific: the contact form, the public project
+ * micro-site enquiry (`/api/sites/enquiry`) and the lead webhook ingress
+ * (`/api/webhooks/leads/[source]`) all rate limit through here. Those ingress
+ * endpoints were previously unlimited, which let a stranger POST unlimited
+ * leads into any workspace whose slug they had seen.
  */
 
 export class RateLimitedError extends Error {
@@ -19,6 +25,14 @@ const memoryWindows = new Map<string, WindowState>()
 
 export const CONTACT_FORM_WINDOW_MS = 60_000
 export const CONTACT_FORM_MAX_PER_WINDOW = 5
+
+/**
+ * Ceiling on tracked keys. An attacker rotating IPs must not be able to grow
+ * this Map without limit — past the cap we drop the bucket that would have
+ * expired soonest, so the limiter degrades toward "ignore this key" rather
+ * than toward "reject everything".
+ */
+const MAX_MEMORY_BUCKETS = 10_000
 
 /** Best-effort client IP from proxy headers (x-forwarded-for first hop wins). */
 export function getClientIp(headers: { get(name: string): string | null }): string {
@@ -92,10 +106,25 @@ export async function hitRateLimit(
   if (state.count > max) {
     return { ok: false, retryAfterSec: Math.ceil((state.resetAt - now) / 1000) }
   }
-  // Opportunistic cleanup so the Map doesn't grow unbounded
-  if (memoryWindows.size > 10_000) {
+  // Opportunistic cleanup so the Map doesn't grow unbounded. Sweeping expired
+  // buckets is not enough on its own: an attacker who keeps every key alive
+  // would leave nothing to collect, so fall back to evicting the soonest
+  // expiry once the map is still over the cap.
+  if (memoryWindows.size > MAX_MEMORY_BUCKETS) {
     for (const [k, v] of memoryWindows) {
       if (now >= v.resetAt) memoryWindows.delete(k)
+    }
+    while (memoryWindows.size >= MAX_MEMORY_BUCKETS) {
+      let oldestKey: string | undefined
+      let oldestAt = Number.POSITIVE_INFINITY
+      for (const [k, v] of memoryWindows) {
+        if (v.resetAt < oldestAt) {
+          oldestAt = v.resetAt
+          oldestKey = k
+        }
+      }
+      if (oldestKey === undefined) break
+      memoryWindows.delete(oldestKey)
     }
   }
   return { ok: true }

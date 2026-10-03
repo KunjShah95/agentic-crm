@@ -30,6 +30,11 @@ function read(rel: string) {
   return fs.readFileSync(path.join(REPO_ROOT, rel), "utf8")
 }
 
+/** CRLF → LF, so text comparisons do not depend on the checkout platform. */
+function normalizeEol(s: string) {
+  return s.replace(/\r\n/g, "\n")
+}
+
 function marketingPages() {
   return PAGES.filter((p) => p.index)
 }
@@ -217,10 +222,15 @@ describe("llms.txt (GEO)", () => {
   it("is generated into public/ by the build, and the checked-in copy is current", () => {
     // A stale llms.txt is worse than none: a model will confidently cite the
     // old version while the page it describes has moved on.
-    const onDisk = read("public/llms.txt")
-    const onDiskFull = read("public/llms-full.txt")
-    expect(onDisk).toBe(short)
-    expect(onDiskFull).toBe(full)
+    //
+    // Compared with line endings normalized. `git config core.autocrlf=true`
+    // checks these files out with CRLF on Windows while the generator emits
+    // LF, so a raw byte compare fails on a Windows dev box and passes in CI
+    // for the same correct content — a platform bug masquerading as drift.
+    const onDisk = normalizeEol(read("public/llms.txt"))
+    const onDiskFull = normalizeEol(read("public/llms-full.txt"))
+    expect(onDisk).toBe(normalizeEol(short))
+    expect(onDiskFull).toBe(normalizeEol(full))
   })
 
   it("is wired into the build so it cannot drift", () => {

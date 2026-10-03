@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getPublicProject } from "@/modules/sites/queries"
+import { autoAckFromSettings } from "@/modules/leadIngest/ingress"
 import { t, type Locale } from "@/lib/i18n"
 import { SITE_URL } from "@/components/landing/site-config"
 import { JsonLd } from "@/components/seo/json-ld"
@@ -47,14 +48,18 @@ export default async function PublicSitePage({
   searchParams,
 }: {
   params: Promise<{ workspace: string; project: string }>
-  searchParams: Promise<{ lang?: string; ok?: string }>
+  searchParams: Promise<{ lang?: string; ok?: string; err?: string }>
 }) {
   const { workspace, project } = await params
-  const { lang, ok } = await searchParams
+  const { lang, ok, err } = await searchParams
   const locale = (lang === "gu" || lang === "hi" ? lang : "en") as Locale
   const data = await getPublicProject(workspace, project)
   if (!data) notFound()
   const { project: proj, units, workspace: ws } = data
+  // Only promise the acknowledgement if this workspace actually has it on —
+  // otherwise the page would promise an auto-ack that the ingress gate
+  // suppresses.
+  const autoAck = autoAckFromSettings(ws.settingsJson)
 
   const jsonLd = [
     {
@@ -99,6 +104,7 @@ export default async function PublicSitePage({
       </div>
 
       {ok ? <div className="rounded-xl border bg-emerald-50 px-4 py-3 text-sm text-emerald-900">{t(locale, "enquiry_ok")}</div> : null}
+      {err ? <div className="rounded-xl border bg-amber-50 px-4 py-3 text-sm text-amber-900">We could not record that enquiry. Please try again, or message us on WhatsApp.</div> : null}
 
       <div className="grid md:grid-cols-3 gap-3">
         {units.map((u) => (
@@ -122,6 +128,13 @@ export default async function PublicSitePage({
             <input type="hidden" name="workspaceSlug" value={ws.slug} />
             <input type="hidden" name="projectId" value={proj.id} />
             <input type="hidden" name="locale" value={locale} />
+            {/* Honeypot. Hidden from people, irresistible to bots. A submission
+                with this filled in is dropped with a success response, so the
+                bot learns nothing. See /api/sites/enquiry. */}
+            <div aria-hidden className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="company">Company</label>
+              <input id="company" name="company" type="text" tabIndex={-1} autoComplete="off" />
+            </div>
             <div className="grid md:grid-cols-2 gap-3">
               <div className="space-y-1"><Label>Name</Label><Input name="name" required placeholder="Asha Patel" /></div>
               <div className="space-y-1"><Label>Phone</Label><Input name="phone" required placeholder="+91 98..." /></div>
@@ -129,7 +142,10 @@ export default async function PublicSitePage({
               <div className="space-y-1"><Label>BHK</Label><Input name="bhk" placeholder="BHK2" /></div>
             </div>
             <Button type="submit" className="rounded-full">Submit enquiry → scored lead (WEBSITE)</Button>
-            <p className="text-xs text-muted-foreground">Source WEBSITE → scored lead, auto-routed, WhatsApp ack in &lt;4 min.</p>
+            <p className="text-xs text-muted-foreground">
+              Source WEBSITE → scored lead, auto-routed to a salesperson
+              {autoAck ? ", with a WhatsApp acknowledgement" : ""}.
+            </p>
           </form>
         </CardContent>
       </Card>

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { describe, it, expect, vi, beforeEach } from "vitest"
 
 const env = { UPSTASH_REDIS_REST_URL: undefined as string | undefined, UPSTASH_REDIS_REST_TOKEN: undefined as string | undefined }
 
@@ -51,5 +51,17 @@ describe("web-contact rate limit (memory fallback)", () => {
     const h = new Headers({ "x-forwarded-for": "9.9.9.9, 10.0.0.1", "x-real-ip": "8.8.8.8" })
     expect(getClientIp(h)).toBe("9.9.9.9")
     expect(getClientIp(new Headers())).toBe("unknown")
+  })
+
+  it("bounds the memory map when a caller rotates keys faster than they expire", async () => {
+    // A rotating-IP attacker must not be able to turn the limiter into a memory
+    // leak. Every window here is long, so the expiry sweep frees nothing and
+    // the eviction path is the only thing keeping the map bounded.
+    for (let i = 0; i < 10_050; i++) {
+      await hitRateLimit(`rotator-${i}`, { windowMs: 600_000, max: 1 })
+    }
+    // Still enforcing, and still accepting new keys — bounded, not wedged.
+    expect((await hitRateLimit("rotator-0")).ok).toBe(true)
+    expect((await hitRateLimit("fresh-after-flood")).ok).toBe(true)
   })
 })

@@ -3,12 +3,17 @@
  * into Contact + Deal + Activity, workspace-scoped, with dedupe + scoring +
  * routing + consent audit. Called by the queue consumer or synchronously in
  * dev. Never throws to the provider; failures are recorded on WebhookEvent.
+ *
+ * Outbound messaging (the WhatsApp auto-ack) is gated on two things the caller
+ * must supply or satisfy: a `trusted` ingress and a workspace opt-in. See
+ * `./ingress` and the gate at step 6b.
  */
 
 import { db } from "@/lib/db"
 import { normalizeLead } from "./normalize"
 import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
+import { isAutoAckEnabled } from "./ingress"
 import { sendWhatsApp, renderWaTemplate } from "@/modules/whatsapp/adapter"
 
 export type ProcessLeadInput = {
@@ -16,6 +21,16 @@ export type ProcessLeadInput = {
   source: string
   payload: unknown
   strategy?: RoutingStrategy
+  /**
+   * Whether the ingress path was authenticated, or passed the anti-spam
+   * gates (rate limit + honeypot) for a path that cannot carry a secret.
+   *
+   * This gates the WhatsApp auto-ack. The enqueue/replay route
+   * (`app/api/admin/leads/replay`) passes nothing: a replay of historical
+   * events must never turn into outbound messaging, because the contacts in
+   * those payloads were captured before consent was recorded.
+   */
+  trusted?: boolean
 }
 
 export type ProcessLeadResult = {
@@ -23,6 +38,7 @@ export type ProcessLeadResult = {
   contactId?: string
   dealId?: string
   score?: number
+  acked?: boolean
 }
 
 export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadResult> {
@@ -123,11 +139,21 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
       },
     })
 
-    // 6b. Auto-ack via WhatsApp for brand-new leads with a phone (opt-in gate).
-    // Best-effort: a lead must still be captured if WhatsApp is unconfigured or
-    // the send fails, so this never propagates out of processLead.
+    // 6b. Auto-ack via WhatsApp for brand-new leads with a phone.
+    //
+    // Two gates, both required. `trusted` says the lead came through an
+    // authenticated or anti-spam-gated ingress rather than an open endpoint,
+    // and the workspace opt-in says someone chose to receive outbound
+    // messages. Without both, a third party could otherwise make a customer's
+    // WhatsApp number message arbitrary phone numbers, which is a policy ban
+    // on that customer's account.
+    //
+    // Best-effort: a lead must still be captured if WhatsApp is unconfigured
+    // or the send fails, so this never propagates out of processLead.
+    const autoAckAllowed =
+      input.trusted === true && (await isAutoAckEnabled(workspaceId))
     let acked = false
-    if (isNewContact && lead.phone && !contact.optedOut) {
+    if (isNewContact && lead.phone && !contact.optedOut && autoAckAllowed) {
       const body = renderWaTemplate("lead_ack", {
         name: lead.firstName,
         project: lead.project ?? "our project",
@@ -165,16 +191,21 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
           },
         })
       }
-      void acked
     }
 
     // 7. Consent audit trail (DPDP) — logged as a system Activity on the timeline.
+    //
+    // States the actual basis rather than asserting "Consent recorded"
+    // unconditionally. The lawful basis here is the enquirer submitting their
+    // own number for an enquiry, not marketing consent; and it is recorded
+    // separately from whether we messaged them, so an auditor can tell those
+    // two things apart.
     await db.activity.create({
       data: {
         workspaceId,
         type: "NOTE",
         contactId: contact.id,
-        body: `Consent recorded · lead ingested from ${lead.source}`,
+        body: `Contact basis recorded · number submitted via ${lead.source} enquiry · outbound WhatsApp ${acked ? "sent" : "not sent"}`,
         source: "system",
         channel: "AUDIT",
         createdBy: "system",
@@ -185,7 +216,7 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     //    processedAt means the event can be safely replayed).
     await db.webhookEvent.update({ where: { dedupeKey: lead.dedupeKey }, data: { processedAt: new Date(), workspaceId } })
 
-    return { deduped: false, contactId: contact.id, dealId, score }
+    return { deduped: false, contactId: contact.id, dealId, score, acked }
   } catch (err) {
     // Leave processedAt null so the event is replayable; nothing else to persist.
     throw err

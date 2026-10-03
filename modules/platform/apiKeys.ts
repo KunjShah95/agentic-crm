@@ -1,5 +1,13 @@
 import { db } from "@/lib/db"
-import crypto from "crypto"
+import crypto, { timingSafeEqual } from "crypto"
+
+/** Constant-time compare of two hex digests of equal expected length. */
+function safeEqualHex(a: string, b: string): boolean {
+  const bufA = Buffer.from(a, "hex")
+  const bufB = Buffer.from(b, "hex")
+  if (bufA.length !== bufB.length || bufA.length === 0) return false
+  return timingSafeEqual(bufA, bufB)
+}
 
 export async function createApiKey(workspaceId: string, userId: string, name: string) {
   const key = `sk_${crypto.randomBytes(24).toString("hex")}`
@@ -18,5 +26,5 @@ export async function verifyApiKey(workspaceId: string, key: string): Promise<bo
   const hash = crypto.createHash("sha256").update(key).digest("hex")
   const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { settingsJson: true } })
   const keys = ((ws?.settingsJson as Record<string, unknown> | null)?.apiKeys as Array<{ hash: string }> | undefined) ?? []
-  return keys.some((k) => k.hash === hash)
+  return keys.some((k) => safeEqualHex(k.hash, hash))
 }
