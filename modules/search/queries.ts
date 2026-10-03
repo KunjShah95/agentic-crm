@@ -22,6 +22,13 @@ type RawHit = {
  * index-backed by GIN expression indexes. Do NOT reference stored "searchVector"
  * columns — those were dropped in 20260902060046 and a missing column is a hard
  * 42703 error (COALESCE cannot "fall back" past it).
+ *
+ * `prefix_tsquery` (migration 20261003120000_search_phone_prefix) replaces
+ * plainto_tsquery. Two reasons, both found by driving the palette against real
+ * data: plainto_tsquery matches whole lexemes only, so "anj" found nothing
+ * while "anjali" worked — indistinguishable from a broken feature; and phone
+ * was never in the vector at all, so the one lookup a sales team actually
+ * needs could not be performed.
  */
 export async function searchWorkspace(
   workspaceId: string,
@@ -35,11 +42,11 @@ export async function searchWorkspace(
       SELECT "id", "firstName" || ' ' || "lastName" AS name, COALESCE("email", '') AS subtitle
       FROM "Contact"
       WHERE "workspaceId" = ${workspaceId}
-        AND contact_search_tsv("firstName", "lastName", "email", "jobTitle")
-            @@ plainto_tsquery('english', ${q})
+        AND contact_search_tsv("firstName", "lastName", "email", "jobTitle", "phone")
+            @@ prefix_tsquery(${q})
       ORDER BY ts_rank(
-          contact_search_tsv("firstName", "lastName", "email", "jobTitle"),
-          plainto_tsquery('english', ${q})
+          contact_search_tsv("firstName", "lastName", "email", "jobTitle", "phone"),
+          prefix_tsquery(${q})
         ) DESC
       LIMIT 8
     `,
@@ -48,10 +55,10 @@ export async function searchWorkspace(
       FROM "Organization"
       WHERE "workspaceId" = ${workspaceId}
         AND organization_search_tsv("name", "domain", "industry")
-            @@ plainto_tsquery('english', ${q})
+            @@ prefix_tsquery(${q})
       ORDER BY ts_rank(
           organization_search_tsv("name", "domain", "industry"),
-          plainto_tsquery('english', ${q})
+          prefix_tsquery(${q})
         ) DESC
       LIMIT 8
     `,
@@ -59,8 +66,8 @@ export async function searchWorkspace(
       SELECT "id", "title" AS name, COALESCE("currency", 'INR') AS subtitle
       FROM "Deal"
       WHERE "workspaceId" = ${workspaceId}
-        AND deal_search_tsv("title") @@ plainto_tsquery('english', ${q})
-      ORDER BY ts_rank(deal_search_tsv("title"), plainto_tsquery('english', ${q})) DESC
+        AND deal_search_tsv("title") @@ prefix_tsquery(${q})
+      ORDER BY ts_rank(deal_search_tsv("title"), prefix_tsquery(${q})) DESC
       LIMIT 8
     `,
   ])

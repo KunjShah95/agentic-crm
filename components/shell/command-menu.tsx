@@ -84,8 +84,8 @@ export function CommandMenu({
   const [searchError, setSearchError] = React.useState<string | null>(null)
   const trimmed = query.trim()
 
-  /** Mirrors `query` so the async callback can detect that it was superseded. */
-  const queryRef = React.useRef(query)
+  /** Mirrors the *trimmed* query so the async callback can detect that it was superseded. */
+  const queryRef = React.useRef("")
 
   /*
    * Reset on close, driven from the change handler rather than an effect.
@@ -130,6 +130,13 @@ export function CommandMenu({
    * either in `onQueryChange` (the cause of the search) or in the async
    * callback (its consequence) — never synchronously in the effect body, which
    * would cascade a render on every keystroke.
+   *
+   * `queryRef` holds the **trimmed** query, not the raw one, because it is
+   * compared against `requested`, which is also trimmed. It previously held the
+   * raw string, so typing a trailing space made `"anjali "` !== `"anjali"`,
+   * the callback bailed before setting results *and* before clearing
+   * `searching` — leaving the palette spinning on "Searching…" forever with no
+   * results and no error. A space is not an unusual thing to type.
    */
   React.useEffect(() => {
     if (!open || trimmed.length < 2) return
@@ -139,15 +146,16 @@ export function CommandMenu({
     const requested = trimmed
     const timer = setTimeout(async () => {
       const res = await globalSearchAction(workspaceSlug, requested)
-      if (requested !== queryRef.current) return
-      if (res.error) {
-        setSearchError(res.error)
-        setResults(EMPTY)
-      } else {
-        setSearchError(null)
-        setResults(res.data ?? EMPTY)
+      if (requested === queryRef.current) {
+        if (res.error) {
+          setSearchError(res.error)
+          setResults(EMPTY)
+        } else {
+          setSearchError(null)
+          setResults(res.data ?? EMPTY)
+        }
+        setSearching(false)
       }
-      setSearching(false)
     }, 250)
     return () => clearTimeout(timer)
   }, [trimmed, workspaceSlug, open])
@@ -164,7 +172,7 @@ export function CommandMenu({
    */
   function onQueryChange(next: string) {
     setQuery(next)
-    queryRef.current = next
+    queryRef.current = next.trim()
     if (next.trim().length < 2) {
       setResults(EMPTY)
       setSearching(false)

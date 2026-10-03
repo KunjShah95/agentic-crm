@@ -38,8 +38,35 @@ describe("searchWorkspace", () => {
       // Tagged-template: chunks are split around ${} placeholders — join them
       const sql = (call[0] as unknown as string[]).join(" ? ")
       expect(sql).not.toContain("searchVector")
-      expect(sql).toContain(" plainto_tsquery")
     }
+  })
+
+  it("uses prefix_tsquery, not plainto_tsquery", async () => {
+    db.$queryRaw.mockResolvedValue([])
+    await searchWorkspace("w1", "test")
+
+    for (const call of db.$queryRaw.mock.calls) {
+      const sql = (call[0] as unknown as string[]).join(" ? ")
+      // Prefix matching is the point: plainto_tsquery matches whole lexemes
+      // only, so "anj" returned nothing while "anjali" worked, which is
+      // indistinguishable from a broken search box.
+      expect(sql).toContain(" prefix_tsquery")
+      expect(sql).not.toContain("plainto_tsquery")
+    }
+  })
+
+  it("includes phone in the contact search vector", async () => {
+    db.$queryRaw.mockResolvedValue([])
+    await searchWorkspace("w1", "98250")
+
+    // A sales team looks people up by the number that called, not by name.
+    // Phone was absent from contact_search_tsv entirely until migration
+    // 20261003120000_search_phone_prefix.
+    //
+    // Join the chunks: it is a tagged template, so `"phone"` lands in a chunk
+    // after the ${workspaceId} interpolation rather than in chunks[0].
+    const chunks = db.$queryRaw.mock.calls[0][0] as unknown as string[]
+    expect(chunks.join(" ? ")).toContain('"phone"')
   })
 
   it("scopes every query to the workspaceId", async () => {
