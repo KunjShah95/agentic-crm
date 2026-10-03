@@ -13,8 +13,6 @@ import {
   Tag,
   Users,
   CreditCard,
-  Check,
-  Copy,
   Radio,
   Share2,
 } from "lucide-react"
@@ -28,6 +26,7 @@ import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form"
 import { DeleteWorkspaceButton } from "@/components/settings/delete-workspace-button"
+import { LeadIngestSettings } from "@/components/settings/lead-ingest-settings"
 
 export function ExtendedSettingsTabs({
   workspace,
@@ -40,18 +39,9 @@ export function ExtendedSettingsTabs({
   isOwner: boolean
   whatsappEnabled?: boolean
 }) {
-  const [copied, setCopied] = useState(false)
-  const [apiKey] = useState(() => "est_live_" + Math.random().toString(36).substring(2, 12))
   const [holdDays, setHoldDays] = useState("7")
   const [clpEnabled, setClpEnabled] = useState(true)
   const [autoAssign, setAutoAssign] = useState(true)
-
-  function copyApiKey() {
-    navigator.clipboard.writeText(apiKey)
-    setCopied(true)
-    toast.success("API key copied to clipboard")
-    setTimeout(() => setCopied(false), 2000)
-  }
 
   function handleSave(section: string) {
     toast.success(`${section} settings saved successfully`)
@@ -250,35 +240,16 @@ export function ExtendedSettingsTabs({
 
       {/* API & Webhooks */}
       <TabsContent value="api" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg font-semibold">API Access & Developer Webhooks</CardTitle>
-            <CardDescription>Generate secret API keys and configure HTTP webhooks for custom integrations.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">Secret Workspace API Key</Label>
-              <div className="flex max-w-md items-center gap-2">
-                <Input value={apiKey} readOnly data-mono="secret" className="font-mono text-xs focus-visible:ring-brand" />
-                <Button variant="outline" size="sm" onClick={copyApiKey}>
-                  {copied ? <Check className="size-3.5 text-status-positive-fg" /> : <Copy className="size-3.5" />}
-                  {copied ? "Copied" : "Copy"}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">Keep this key confidential. Use in <code data-mono="secret" className="font-mono bg-muted px-1 py-0.5 rounded text-[11px]">Authorization: Bearer</code> header.</p>
-            </div>
-
-            <div className="grid gap-2 border-t pt-4">
-              <Label className="text-sm font-medium">Inbound Lead Webhook Endpoint</Label>
-              <Input
-                value={`https://${slug}.estate360.vercel.com/api/webhooks/leads`}
-                readOnly
-                className="max-w-md bg-muted font-mono text-xs" data-mono="url"
-              />
-              <p className="text-xs text-muted-foreground">POST JSON lead payloads to this URL to trigger instant lead creation and AI qualification.</p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Replaced a placeholder that generated a client-side "est_live_…"
+            string with Math.random() and showed a webhook URL missing the
+            required ?workspace= query — i.e. a key that authenticated nothing
+            and an endpoint that 400'd. LeadIngestSettings uses the real
+            ADMIN-gated server actions and shows the secret exactly once. */}
+        <LeadIngestSettings
+          workspaceId={workspace.id}
+          workspaceSlug={slug}
+          canManage={isOwner}
+        />
       </TabsContent>
 
       {/* Tags */}
