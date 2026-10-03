@@ -32,6 +32,11 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...and this is the opt-in: .env.example is the setup template the README
+# tells you to copy. Ignored, it is unshared — so every machine hand-writes its
+# env, which is how NEXT_PUBLIC_SITE_URL ended up unset on every one of them
+# and the whole SEO surface pointed at a dead fallback domain.
+!.env.example
 
 # vercel
 .vercel
