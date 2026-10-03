@@ -12,6 +12,17 @@ import { chunkText, detectLang } from "./chunk";
 import { enqueueIngest } from "./queue";
 import { invalidateDocuments } from "./cache";
 import { semanticCache } from "./semantic-cache";
+import { clearEmbeddingsFor, findChunksForReingest } from "./pgvector";
+import type { Prisma } from "@/lib/generated/prisma/client";
+
+/**
+ * A JSON column is `Prisma.JsonValue`, which may hold a scalar or an array — so
+ * it is not assignable to `Record<string, unknown>`. Callers that want a keyed
+ * bag get an empty object instead of a cast that would let a non-object through
+ * and fail on the first property access.
+ */
+const asObject = (v: Prisma.JsonValue | null | undefined): Record<string, unknown> =>
+  v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
 
 const MAX_BYTES = Number(process.env.RAG_MAX_FILE_BYTES || 50 * 1024 * 1024);
 
@@ -267,11 +278,12 @@ const incrementalReingest = async ({
   const next = chunk(parsed.text);
   if (!next.length) throw new AppError("NO_TEXT", "No extractable text in file", 422);
 
-  const oldChunks = await (db as any).ragChunk.findMany({
-    where: { tenantId, documentId },
-    select: { id: true, chunkHash: true, content: true, embedding: true, model: true, dim: true, metadata: true },
-    orderBy: { chunkIndex: "asc" },
-  });
+  /* The old chunks, read through the pgvector accessor rather than
+     `(db as any).ragChunk`: the `embedding` column is `Unsupported(...)` in the
+     Prisma schema, so it cannot be selected through the typed client. See
+     modules/rag/pgvector.ts for why that gap is real and why it is contained
+     there instead of being cast away at 27 call sites. */
+  const oldChunks = await findChunksForReingest(tenantId, documentId);
 
   const nextVersion = baseVersion + 1;
   await (db as any).ragDocument.update({
@@ -297,8 +309,15 @@ const incrementalReingest = async ({
 
   const oldByHash = new Map<string, Array<{ id: string; chunkHash: string | null; embedding: Buffer | null; metadata: Record<string, unknown> }>>();
   for (const oc of oldChunks) {
-    if (!oldByHash.has(oc.chunkHash || "")) oldByHash.set(oc.chunkHash || "", []);
-    oldByHash.get(oc.chunkHash || "")!.push(oc);
+    /* `metadata` arrives as `Prisma.JsonValue`, which is not assignable to
+       `Record<string, unknown>` because a JSON column may legitimately hold a
+       scalar or an array. Narrowing here rather than casting means a document
+       whose metadata is not an object degrades to "no metadata" instead of
+       throwing partway through the diff loop with a partially applied update. */
+    const key = oc.chunkHash || "";
+    const shaped = { ...oc, metadata: asObject(oc.metadata) };
+    if (!oldByHash.has(key)) oldByHash.set(key, []);
+    oldByHash.get(key)!.push(shaped);
   }
 
   const keepIds = new Set<string>();
@@ -456,10 +475,13 @@ export const reindexTenant = async ({ tenantId }: { tenantId: string }) => {
   let queued = 0;
   for (const d of docs) {
     if (d.status === "PROCESSING") continue;
-    await (db as any).ragChunk.updateMany({
-      where: { tenantId, documentId: d.id },
-      data: { embedding: null },
-    });
+    /* Re-dirty the vectors so the queue re-embeds them. Through the pgvector
+       accessor rather than `(db as any).ragChunk.updateMany`, because `embedding`
+       is an `Unsupported` column — and because clearing a vector is not a generic
+       "update many", it is a specific operation with a name that says what it
+       does and clears `model` and `dim` alongside it. Leaving `model` set while
+       the vector is null is what made the provenance column lie. */
+    await clearEmbeddingsFor(tenantId, d.id);
     await (db as any).ragDocument.update({
       where: { id: d.id, tenantId },
       data: { status: "PROCESSING", updatedAt: new Date() },

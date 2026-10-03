@@ -52,15 +52,15 @@ const FIT = "h-full aspect-auto"
 const AXIS = { fontSize: 10, fontWeight: 700 } as const
 const GRID = "var(--hairline)"
 
-/** Rupee → short form, for axis ticks. `formatMoneyShort` gives ₹4.2 Cr / ₹35 L. */
-const moneyTick = (value: number) => formatMoneyShort(value)
-
 /* ── Won revenue, six months ─────────────────────────────────────────────── */
 
 export function WonRevenueChart({
   data,
+  currency = "INR",
 }: {
   data: { label: string; value: number; count: number }[]
+  /** The reporting currency the series is denominated in. */
+  currency?: string
 }) {
   // A flat-zero series is the one case where a chart actively misleads: a
   // filled area along the floor implies "we tracked this and it was zero",
@@ -102,7 +102,10 @@ export function WonRevenueChart({
           axisLine={false}
           tickMargin={8}
           width={52}
-          tickFormatter={moneyTick}
+          // Bound per render rather than hoisted: the axis must format in the
+          // same currency the rollup summed in, or a CAD workspace grows a
+          // rupee-denominated axis over dollar data.
+          tickFormatter={(value: number) => formatMoneyShort(value, currency)}
           tick={{ ...AXIS, fill: "var(--muted-foreground)" }}
         />
         <EvilAreaChart.Area
@@ -117,7 +120,14 @@ export function WonRevenueChart({
         >
           <EvilAreaChart.Dot variant="border" />
         </EvilAreaChart.Area>
-        <EvilAreaChart.Tooltip cursor />
+        <EvilAreaChart.Tooltip
+          cursor
+          // Same formatter as the axis. Without this the tooltip renders the raw
+          // series value — `107600000` — directly under an axis reading
+          // `₹10.8 Cr`, so hovering appears to report a different figure than
+          // the chart does.
+          valueFormatter={(value) => formatMoneyShort(value, currency)}
+        />
       </EvilAreaChart>
     </div>
   )

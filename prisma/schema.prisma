@@ -53,6 +53,24 @@ enum DocumentKind {
   POSSESSION
 }
 
+/**
+ * What a pipeline stage *means*, as opposed to what it is called.
+ *
+ * A stage name is a label the user is free to change — renaming "Won" to
+ * "Closed Won" is a reasonable thing to want and used to silently break every
+ * revenue calculation, because the dashboard and the action layer both compared
+ * `stage.name` against the literal "Won". `kind` is set once, survives renames,
+ * and is what the code branches on. Display still uses `name`.
+ *
+ * `OPEN` is the default because a newly created stage is a working stage, and a
+ * brand-new stage defaulting to WON would silently start reporting revenue.
+ */
+enum StageKind {
+  OPEN
+  WON
+  LOST
+}
+
 model Workspace {
   id        String   @id @default(cuid())
   name      String
@@ -452,12 +470,15 @@ model Organization {
 }
 
 model PipelineStage {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   workspaceId String
   name        String
   order       Int
-  color       String   @default("#6366f1")
-  createdAt   DateTime @default(now())
+  color       String    @default("#6366f1")
+  // Decides revenue, win probability and pipeline arithmetic. Never derived
+  // from `name` at read time.
+  kind        StageKind @default(OPEN)
+  createdAt   DateTime  @default(now())
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   deals     Deal[]
@@ -476,6 +497,13 @@ model Deal {
   value             Float?
   currency          String    @default("INR")
   probability       Int?
+  // When the deal entered the Won stage. Set by the action layer on every stage
+  // transition and cleared when a deal leaves Won, so it is the authoritative
+  // revenue date rather than `updatedAt` — which moves every time the deal is
+  // edited, including long after it closed. Nullable because the column did not
+  // exist before this migration and `updatedAt` is the only signal available for
+  // deals already closed; the dashboard reads `wonAt ?? updatedAt`.
+  wonAt             DateTime?
   expectedCloseDate DateTime?
   ownerId           String
   createdAt         DateTime  @default(now())
@@ -514,6 +542,7 @@ model Deal {
   @@index([contactId])
   @@index([ownerId])
   @@index([brokerId])
+  @@index([workspaceId, wonAt])
   @@index([createdAt])
 }
 

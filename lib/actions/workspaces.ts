@@ -5,15 +5,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { AppError } from "@/lib/errors"
 import { slugify } from "@/lib/format"
-
-const DEFAULT_STAGES = [
-  { name: "Enquiry", color: "#64748b" },
-  { name: "Site Visit", color: "#3b82f6" },
-  { name: "Hold", color: "#8b5cf6" },
-  { name: "Booking", color: "#f59e0b" },
-  { name: "Won", color: "#10b981" },
-  { name: "Lost", color: "#ef4444" },
-]
+import { DEFAULT_STAGES_REAL_ESTATE as DEFAULT_STAGES } from "@/lib/default-stages"
 
 async function uniqueSlug(base: string) {
   const slug = slugify(base) || "workspace"

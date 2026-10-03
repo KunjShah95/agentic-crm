@@ -9,6 +9,21 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default: "bg-primary text-primary-foreground hover:bg-primary/80",
+        /**
+         * The conversion action. `bg-primary` is near-black, which is correct for
+         * a neutral tool button but wrong for the one thing on a page whose whole
+         * job is to be clicked: it puts the single most important element in the
+         * least distinctive colour in the palette.
+         *
+         * `brand` is hue 68 — the one accent the design system declares, and
+         * therefore the most saturated thing on any page it appears on. Every
+         * primary CTA uses this so that "Start free" is recognisably the same
+         * button in the header, the hero, the pricing cards and the closer. Do not
+         * hand-roll `bg-brand` at a call site; that is how the four CTAs drifted
+         * into three different appearances in the first place.
+         */
+        brand:
+          "bg-brand-solid text-brand-foreground hover:bg-brand-solid/90 focus-visible:border-brand focus-visible:ring-brand/30",
         outline:
           "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:

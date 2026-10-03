@@ -337,6 +337,8 @@ export async function submitPublicContactAction(input: {
   message: string
   /** Honeypot — must be empty; bots fill it. */
   website?: string
+  /** First-touch ad attribution captured in the browser. */
+  utm?: Record<string, string | undefined>
 }): Promise<Result<{ contactId: string }>> {
   return handleAction(async () => {
     // Honeypot: pretend success without writing anything.
@@ -432,7 +434,21 @@ export async function submitPublicContactAction(input: {
         })
 
     // Log inbound activity so the workspace team can read & reply to it in the CRM Inbox
-    const activityBody = `Inbound Contact Form Submission:\n\nCompany/Project: ${company || "N/A"}\nPhone: ${phone || "N/A"}\nMessage:\n${message}`
+    // Attribution rides along on the activity + notification email; it is not
+    // PII, and keeping it in the timeline means a reporting page can source it
+    // without a schema migration.
+    const utm = input?.utm && typeof input.utm === "object" ? input.utm : undefined
+    const attribution = utm
+      ? Object.entries(utm)
+          .filter((entry): entry is [string, string] => typeof entry[1] === "string" && entry[1] !== "")
+          .map(([k, v]) => `${k}: ${v.replace(/[\r\n]+/g, " ").slice(0, 120)}`)
+          .join(", ")
+      : ""
+
+    const activityBody =
+      `Inbound Contact Form Submission:\n\nCompany/Project: ${company || "N/A"}\nPhone: ${phone || "N/A"}` +
+      (attribution ? `\nAttribution: ${attribution}` : "") +
+      `\nMessage:\n${message}`
     await db.activity.create({
       data: {
         workspaceId: workspace.id,
@@ -458,6 +474,7 @@ export async function submitPublicContactAction(input: {
             <li><strong>Phone:</strong> ${phone || "—"}</li>
             <li><strong>Company/Project:</strong> ${company || "—"}</li>
           </ul>
+          ${attribution ? `<p><strong>Attribution:</strong> ${attribution.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!))}</p>` : ""}
           <p>${message.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]!))}</p>
           <p><em>Reply from the CRM Inbox: this message is stored on the contact's timeline.</em></p>
         `,

@@ -1,8 +1,11 @@
+"use client"
+
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { SectionHeader } from "@/components/landing/section-header"
 import { cn } from "@/lib/utils"
 import { ArrowRight, Check, CreditCard } from "lucide-react"
+import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
 
 /**
  * Pricing.
@@ -79,10 +82,10 @@ export function PricingSection({
             <div
               key={p.name}
               className={cn(
-                "relative flex min-w-0 flex-col rounded-md border p-6 transition-transform duration-200",
+                "relative flex min-w-0 flex-col rounded-md border p-6",
                 p.featured
                   ? "border-foreground bg-foreground text-background lg:-translate-y-3"
-                  : "border-border/70 bg-card hover:-translate-y-1"
+                  : "border-border/70 bg-card"
               )}
             >
               {p.featured ? (
@@ -147,13 +150,19 @@ export function PricingSection({
               </ul>
 
               <Button
-                className={cn(
-                  "mt-7 w-full gap-1.5",
-                  p.featured && "bg-background text-foreground hover:bg-background/90"
-                )}
-                render={<Link href={cta} />}
-              >
-                Start free
+                variant="brand"
+                className="mt-7 w-full gap-1.5"
+                 render={
+                   <Link
+                     href={cta}
+                     onClick={() =>
+                       !isAuthed &&
+                       trackEvent(GTM_EVENTS.pricingStartFree, { plan: p.name })
+                     }
+                   />
+                 }
+               >
+                 Start free
                 <ArrowRight
                   className="size-4 transition-transform group-hover:translate-x-0.5"
                   aria-hidden

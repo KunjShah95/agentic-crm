@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { SectionHeader } from "@/components/landing/section-header"
-import { TrendingUp, Package, ClipboardCheck, FileText } from "lucide-react"
+import { TrendingUp, Package, ClipboardCheck, FileText, ArrowRight } from "lucide-react"
 
 /**
  * A figure in the daily-brief grid.
@@ -10,9 +10,13 @@ import { TrendingUp, Package, ClipboardCheck, FileText } from "lucide-react"
  * Two of the six sample metrics are money and four are plain counts, so the
  * face has to be chosen per item rather than per column. Money takes JetBrains
  * Mono with tabular figures — the sanctioned use, and the right call because
- * the currency column has to align on the decimal. Counts take Fraunces, which
- * is the numeral face the rest of the app uses, so a count never reads as a
- * currency amount and vice versa.
+ * the currency column has to align on the decimal. Counts take Fraunces, so a
+ * count never reads as a currency amount and vice versa.
+ *
+ * Fraunces here is an explicit opt-in: inside `.app-scope` the display token is
+ * remapped back to the sans, because a serif over a dense table of figures
+ * reads as a fault. This is a landing-page figure at 19px, not a table row, so
+ * it keeps the editorial numeral.
  *
  * The `data-mono` marker rides the same branch. That is deliberate: a blanket
  * marker on the grid would put four counts into the money typeface and assert
@@ -151,6 +155,23 @@ export function WinsSection({
               opens with it.
             </p>
           </div>
+        </div>
+
+        {/* The single primary action, repeated. This section already built the
+            desire — it shows the shape of a working day — which is exactly where
+            a reader is deciding, so it is where the CTA belongs. It was missing:
+            the href and the Button import were both here, unused, which is the
+            signature of a call-to-action that got dropped in an edit and never
+            noticed because nothing errored on an unused variable. */}
+        <div className="mt-10 flex flex-col items-start gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="max-w-[42ch] text-[15px] leading-7 text-muted-foreground text-pretty">
+            Your first brief builds itself from whatever you import. Bring a real
+            project and see it by tomorrow morning.
+          </p>
+          <Button variant="brand" size="lg" className="h-11 shrink-0 gap-2 px-6" render={<Link href={cta} />}>
+            {isAuthed ? "Open your workspace" : "Start free"}
+            <ArrowRight className="size-4" aria-hidden />
+          </Button>
         </div>
       </div>
     </section>

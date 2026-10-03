@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 
 import { SignupForm } from "@/components/auth/signup-form"
+import { pageMetadata } from "@/components/landing/site-config"
 import {
   Card,
   CardContent,
@@ -10,12 +11,10 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 
-export const metadata: Metadata = {
-  title: "Create account",
-  description: "Start your 14-day Estate360 trial — workspace-scoped CRM for founders and small sales teams.",
-  robots: { index: false, follow: true },
-  alternates: { canonical: "/signup" },
-}
+// Resolved from content/marketing.ts like every other indexable page — the
+// spec says /signup is indexable (priority 0.8), and the previous hand-written
+// block contradicted it with index:false and no keyword focus.
+export const metadata: Metadata = pageMetadata({ path: "/signup" })
 
 export default function SignupPage() {
   return (
@@ -32,7 +31,7 @@ export default function SignupPage() {
           Already have an account?{" "}
           <Link
             href="/login"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
+            className="tap-target font-medium text-foreground underline-offset-4 hover:underline"
           >
             Sign in
           </Link>

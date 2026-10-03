@@ -50,13 +50,22 @@ export function CommandBarSection() {
   return (
     <section className="border-y border-border/70 bg-surface-sunken">
       <div className="mx-auto max-w-[1280px] px-6 py-20 lg:px-8 lg:py-28">
+        {/* `min-w-0` on both grid children is load-bearing. A CSS grid item
+            defaults to `min-width: auto`, which means it refuses to shrink below
+            its own min-content width — and the command panel's min-content width
+            is set by the longest unbreakable string inside it. At 375px that
+            pushed the whole grid 16px past the viewport and gave the document a
+            horizontal scrollbar, which on a phone means the entire page can be
+            dragged sideways. `min-w-0` lets the panel shrink and lets its own
+            inner `truncate` do the work it was written to do. */}
         <div className="grid gap-12 lg:grid-cols-[0.85fr_1.15fr] lg:items-center lg:gap-16">
           <SectionHeader
+            className="min-w-0"
             title="Ask in plain English."
             body="Estate360 finds the lead, drafts the message, books the visit or pulls the demand letter. No drilling through menus to find the button that does it."
           />
 
-          <div className="rounded-md border border-border/70 bg-card p-5 shadow-e2">
+          <div className="min-w-0 rounded-md border border-border/70 bg-card p-5 shadow-e2">
             <div className="flex items-center gap-2 border-b border-border/60 pb-4">
               <Kbd className="text-[10px]">⌘</Kbd>
               <Kbd className="text-[10px]">K</Kbd>
@@ -90,6 +99,11 @@ export function CommandBarSection() {
                           className="flex items-center gap-2.5 py-2 text-[13px] text-muted-foreground transition-colors hover:text-foreground"
                         >
                           <Icon className="size-3.5 shrink-0" aria-hidden />
+                          {/* Truncates rather than wraps. These are illustrative
+                              prompt strings inside a fixed-width panel; letting
+                              them wrap to three lines each would double the panel
+                              height and break the `lg:items-center` composition
+                              this section is built on. */}
                           <span className="min-w-0 flex-1 truncate">{item.text}</span>
                         </li>
                       )

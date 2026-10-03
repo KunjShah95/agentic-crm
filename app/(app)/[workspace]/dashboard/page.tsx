@@ -26,6 +26,34 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
 
   const data = await getDashboardData(ws.id)
   const { counts } = data
+  const money = (value: number | null | undefined) => formatMoneyShort(value, data.currency)
+
+  /*
+   * The Won figure's sub-line used to read `wonByMonth.at(-1)` — the *current*
+   * month bucket — which is `₹0` for any workspace that has not closed a deal
+   * in the current calendar month, and "₹0 this month" is indistinguishable
+   * from "we track this and it is genuinely nothing" when what it actually
+   * means is "the seed data was written in September".
+   *
+   * So it names the most recent month that *has* a value, and says plainly when
+   * the six-month window has none. The big number above stays all-time; the two
+   * lines deliberately say different things.
+   */
+  const lastWon = [...data.wonByMonth].reverse().find((m) => m.value > 0)
+  const wonSub =
+    counts.wonDeals === 0
+      ? "nothing closed yet"
+      : lastWon
+        ? `${money(lastWon.value)} in ${lastWon.label}`
+        : "no wins in the last 6 months"
+
+  // Deals held in another currency cannot be summed into the totals above
+  // without an FX rate this codebase does not have, so they are excluded from
+  // the money and disclosed here instead of quietly vanishing from the count.
+  const currencyNote =
+    data.foreignCurrencyDeals > 0
+      ? `${data.foreignCurrencyDeals} open deal${data.foreignCurrencyDeals === 1 ? "" : "s"} held outside ${data.currency} and excluded from these totals`
+      : null
 
   // The date goes in the eyebrow rather than in a "Last updated: …" line. A
   // fresh-workspace reading of a timestamp makes people distrust the numbers
@@ -39,14 +67,14 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const figures: MastheadFigure[] = [
     {
       label: "Open pipeline",
-      value: formatMoneyShort(data.openPipeline),
+      value: money(data.openPipeline),
       sub: `${counts.openDeals} ${counts.openDeals === 1 ? "deal" : "deals"} in play`,
       href: `/${slug}/deals?view=board`,
     },
     {
       label: "Won",
       value: counts.wonDeals,
-      sub: `all time, ${formatMoneyShort(data.wonByMonth.at(-1)?.value ?? 0)} this month`,
+      sub: `all time, ${wonSub}`,
       href: `/${slug}/deals`,
     },
     {
@@ -58,7 +86,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
     {
       label: "Projects",
       value: counts.projects,
-      sub: `${data.projects.reduce((s, p) => s + p._count.units, 0)} units listed`,
+      sub: `${counts.units} units listed`,
       href: `/${slug}/projects`,
     },
     {
@@ -112,7 +140,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         <Panel className="lg:col-span-2">
           <PanelHeader
             label="Won value"
-            hint="Last 6 months, by month the deal was last touched in Won"
+            hint="Last 6 months, by the month each deal was won"
             actions={
               <span className="text-[11.5px] tabular-nums text-[#a8a8a8]">
                 {data.wonByMonth.reduce((s, m) => s + m.count, 0)} deals
@@ -125,7 +153,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
               between the axis and the panel edge empty. The floor keeps the
               plot area from collapsing to nothing on a short row. */}
           <div className="min-h-[232px] flex-1 px-2 pt-4 pb-3">
-            <WonRevenueChart data={data.wonByMonth} />
+            <WonRevenueChart data={data.wonByMonth} currency={data.currency} />
           </div>
         </Panel>
 
@@ -151,7 +179,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
             hint="Open and closed deals per stage"
             actions={
               <span className="text-[11.5px] tabular-nums text-[#a8a8a8]">
-                {formatMoneyShort(data.openPipeline)} open
+                {money(data.openPipeline)} open
               </span>
             }
           />
@@ -166,6 +194,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
           <div className="min-h-[214px] flex-1 px-2 pt-4 pb-3">
             <PipelineByStageChart data={data.stages} />
           </div>
+          {currencyNote ? (
+            <p className="border-t border-[#f0f0f0] px-4 py-2.5 text-[11.5px] leading-relaxed text-[#8a8a8a]">
+              {currencyNote}
+            </p>
+          ) : null}
         </Panel>
 
         <Panel>
@@ -185,6 +218,7 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
         hrefBase={`/${slug}`}
         openDeals={counts.openDeals}
         openPipeline={data.openPipeline}
+        currency={data.currency}
         avgProbability={data.winProbability}
       />
 

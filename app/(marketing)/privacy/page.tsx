@@ -43,7 +43,7 @@ const SECTIONS: { h: string; p: string[] }[] = [
     h: "Cookies",
     p: [
       "Essential cookies keep you signed in and protect against CSRF.",
-      "Optional analytics cookies help us understand product usage. You can choose “Essential only” in the cookie banner; your choice is stored locally as loop-cookie-consent.",
+      "Optional analytics cookies help us understand product usage. You can choose “Essential only” in the cookie banner; your choice is stored locally as estate360-cookie-consent.",
     ],
   },
   {

@@ -350,20 +350,32 @@ export function CommandMenu({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "group flex h-8 w-full max-w-64 items-center gap-2 rounded-sm border bg-surface-raised px-2.5",
+          /* `max-w-64` was a fixed 256px, and the header row on a 390px phone is
+             workspace name + this trigger + theme toggle + avatar. The trigger
+             lost the argument, the label wrapped onto three lines
+             ("search / or jump / to…"), and the button grew taller than the 64px
+             header it sits in — so it was visibly broken on every app screen, not
+             just cramped.
+
+             Now: `shrink` + `min-w-0` on the trigger so it yields space, the
+             label truncates instead of wrapping, and the ⌘K hint is dropped below
+             `sm` where there is no room for it and no keyboard to press. The hint
+             is still the only affordance that teaches the shortcut, so it is kept
+             wherever a keyboard is plausible — see the note below. */
+          "group flex h-8 w-full max-w-64 min-w-0 items-center gap-2 rounded-sm border bg-surface-raised px-2.5",
           "text-sm text-muted-foreground transition-colors duration-150",
           "hover:border-foreground/15 hover:bg-accent hover:text-foreground"
         )}
       >
         <Search className="size-4 shrink-0" aria-hidden />
-        <span className="flex-1 text-left">Search or jump to…</span>
+        <span className="min-w-0 flex-1 truncate text-left">Search or jump to…</span>
         {/*
           `Kbd`, not a hand-rolled <kbd>. The primitive is sans on purpose — a
           keyboard hint is chrome, and the token policy reserves mono for money,
           identifiers, and secrets. It also carries the 20px hit-target height
           and the tooltip-inversion variants the ad-hoc copy kept missing.
         */}
-        <Kbd className="border">
+        <Kbd className="hidden shrink-0 border sm:inline-flex">
           <span aria-hidden>⌘</span>K
         </Kbd>
       </button>

@@ -45,12 +45,20 @@ export function PipelineTable({
   hrefBase,
   openDeals,
   openPipeline,
+  currency,
   avgProbability,
 }: {
   rows: DealRow[]
   hrefBase: string
   openDeals: number
   openPipeline: number
+  /**
+   * The reporting currency `openPipeline` is denominated in. It has to be the
+   * same code the rollup used — each row already formats with its own
+   * `deal.currency`, so a footer that defaulted to INR would print a rupee
+   * total directly beneath Canadian dollar rows.
+   */
+  currency: string
   avgProbability: number | null
 }) {
   return (
@@ -111,7 +119,10 @@ export function PipelineTable({
                     <td className="py-2.5 pr-3 pl-4 align-middle">
                       <Link
                         href={`${hrefBase}/deals/${deal.id}`}
-                        className="block truncate text-[13px] font-bold tracking-[-0.012em] text-foreground underline-offset-4 hover:underline"
+                        /* `.tap-target` for the 24px AA floor on a 13px link. The
+                           dashboard is the first screen a sales lead sees on a
+                           phone, and this row title is how they open a deal. */
+                        className="tap-target block truncate text-[13px] font-bold tracking-[-0.012em] text-foreground underline-offset-4 hover:underline"
                       >
                         {deal.title}
                       </Link>
@@ -165,7 +176,7 @@ export function PipelineTable({
 
           <PanelFooter>
             <FooterMetric label="open deals" value={openDeals} emphasis />
-            <FooterMetric label="in pipeline" value={formatMoneyShort(openPipeline)} emphasis />
+            <FooterMetric label="in pipeline" value={formatMoneyShort(openPipeline, currency)} emphasis />
             <FooterMetric
               label="weighted win"
               value={avgProbability == null ? "—" : `${avgProbability}%`}

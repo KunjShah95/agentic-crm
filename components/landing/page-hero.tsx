@@ -1,6 +1,6 @@
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowUpRight } from "lucide-react"
+import { ArrowRight } from "lucide-react"
 
 type Props = {
   eyebrow?: string
@@ -34,7 +34,9 @@ export function PageHero({ eyebrow, title, description, primaryCta, secondaryCta
 
       <div className="relative mx-auto max-w-[880px] px-6 pb-16 pt-16 lg:pb-24 lg:pt-20">
         {eyebrow ? (
-          <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand">
+          /* 11px text on the light canvas — needs `--brand-solid` for AA, see
+             the note on the same eyebrow in section-header.tsx. */
+          <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand-solid">
             <span className="h-px w-6 bg-brand/50" aria-hidden />
             {eyebrow}
           </p>
@@ -52,13 +54,19 @@ export function PageHero({ eyebrow, title, description, primaryCta, secondaryCta
           <div className="mt-8 flex flex-wrap items-center gap-3">
             {primaryCta ? (
               <Button
+                variant="brand"
                 size="lg"
                 className="group h-11 gap-2 px-7"
                 render={<Link href={primaryCta.href} />}
               >
                 {primaryCta.label}
-                <ArrowUpRight
-                  className="size-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+                {/* ArrowRight, not ArrowUpRight: every caller passes an internal
+                    href (`/signup`, `/{slug}/dashboard`, `#contact-form`), and the
+                    "leaves the site" glyph was asserting otherwise. The nudge is
+                    horizontal only — the old diagonal also moved the glyph up,
+                    which reads as a bounce rather than a direction. */}
+                <ArrowRight
+                  className="size-4 transition-transform group-hover:translate-x-0.5"
                   aria-hidden
                 />
               </Button>

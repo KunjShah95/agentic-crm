@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation"
 import { LoaderCircle } from "lucide-react"
 
 import { signupAction } from "@/lib/actions/auth"
+import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
+import { getUtm } from "@/lib/utm"
 import { Button } from "@/components/ui/button"
 import {
   Field,
@@ -42,6 +44,12 @@ export function SignupForm({
         setError(result.error.message)
         return
       }
+      const utm = getUtm()
+      trackEvent(GTM_EVENTS.signupCompleted, {
+        invite: !!inviteToken,
+        utm_source: utm.utm_source ?? null,
+        utm_campaign: utm.utm_campaign ?? null,
+      })
       router.push(result.data?.redirectTo ?? "/")
       router.refresh()
     })
@@ -98,7 +106,7 @@ export function SignupForm({
 
       {error && <Alert variant="destructive">{error}</Alert>}
 
-      <Button type="submit" disabled={isPending} className="w-full">
+      <Button type="submit" variant="brand" disabled={isPending} className="w-full">
         {isPending && (
           <LoaderCircle data-icon="inline-start" className="animate-spin" />
         )}

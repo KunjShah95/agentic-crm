@@ -95,7 +95,10 @@ export default async function WorkspaceLayout({
             keyframe rather than a transition.
           */}
           <div className="mx-auto w-full max-w-7xl p-4 md:p-6">
-            <div className="space-y-6 [&>*]:animate-rise-in motion-reduce:[&>*]:animate-none">
+            {/* No `motion-reduce:` variant here: globals.css already zeroes
+                `animation` on every element under `prefers-reduced-motion`, so a
+                second opt-out at this level was unreachable. */}
+            <div className="space-y-6 [&>*]:animate-rise-in">
               <ErrorBoundary>{children}</ErrorBoundary>
             </div>
           </div>

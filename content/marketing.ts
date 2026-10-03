@@ -19,8 +19,44 @@
  * synonyms and long-tail the same page can honestly satisfy.
  */
 
-export const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://estate360.vercel.com"
+/**
+ * Canonical origin for the whole product.
+ *
+ * Everything absolute derives from this: per-page canonicals, sitemap.xml
+ * entries, the robots host, every link inside llms.txt, Open Graph images, and
+ * the public micro-site URLs handed to prospects.
+ *
+ * The old default was `https://estate360.vercel.com`, which returns 404 — and
+ * it was a *silent* default, so the entire SEO/AEO surface advertised a domain
+ * that does not exist. A sitemap of 404s, canonicals pointing nowhere, and an
+ * llms.txt whose every link 404s. Nothing failed, because a wrong-but-
+ * well-formed absolute URL is still a valid string, and the marketing-seo tests
+ * only compare the generated file against the checked-in one — both wrong
+ * identically.
+ *
+ * So: unset is warned about loudly at build time, and resolved to localhost so
+ * local dev works with no configuration. It is deliberately NOT fatal — the
+ * domain is a decision, not a bug, and failing every build over it would be
+ * hostile. `resolveBaseUrl` is exported so the behaviour is directly testable.
+ */
+export function resolveBaseUrl(
+  env: { NEXT_PUBLIC_SITE_URL?: string; NODE_ENV?: string } = process.env
+): string {
+  const configured = env.NEXT_PUBLIC_SITE_URL?.trim()
+  if (configured) return configured.replace(/\/+$/, "")
+
+  if (env.NODE_ENV === "production") {
+    console.warn(
+      "[marketing] NEXT_PUBLIC_SITE_URL is not set. Every absolute URL in the product " +
+        "(canonicals, sitemap.xml, robots host, llms.txt links, Open Graph images, " +
+        "public micro-site links) falls back to localhost and will be wrong in " +
+        "production. Set it to the deployed origin."
+    )
+  }
+  return "http://localhost:3000"
+}
+
+export const BASE_URL = resolveBaseUrl()
 
 export const BRAND = {
   name: "Estate360",
@@ -151,6 +187,39 @@ export const PAGES: PageSpec[] = [
     index: false,
     changefreq: "yearly",
     priority: 0.1,
+  },
+  {
+    path: "/compare",
+    title: "Estate360 vs Excel vs Generic CRMs | Estate360",
+    description:
+      "Honest comparisons for Indian real-estate teams deciding between Excel, a generic CRM, and a builder-first CRM like Estate360.",
+    primary: "real estate crm comparison",
+    secondary: ["builder crm vs excel", "real estate crm vs generic crm"],
+    index: true,
+    changefreq: "monthly",
+    priority: 0.7,
+  },
+  {
+    path: "/compare/excel",
+    title: "Estate360 vs Excel + WhatsApp for Builders | Estate360",
+    description:
+      "Where an Excel inventory and WhatsApp groups stop working for a sales team: audit trail, broker scoping, GPS site visits, and CLP collections.",
+    primary: "builder crm vs excel",
+    secondary: ["excel inventory management real estate", "site visit excel alternative"],
+    index: true,
+    changefreq: "monthly",
+    priority: 0.7,
+  },
+  {
+    path: "/compare/generic-crm",
+    title: "Estate360 vs a Generic CRM for Real Estate | Estate360",
+    description:
+      "Generic CRMs model contacts and deals; Estate360 models units, cost sheets, CLP milestones and RERA documents — built for Indian residential sales.",
+    primary: "real estate crm vs generic crm",
+    secondary: ["crm for builders india", "hubspot alternative real estate india"],
+    index: true,
+    changefreq: "monthly",
+    priority: 0.7,
   },
   {
     path: "/signup",

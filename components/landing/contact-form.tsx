@@ -10,6 +10,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { ArrowRight, Loader2 } from "lucide-react"
 
 import { submitPublicContactAction } from "@/lib/actions/contacts"
+import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
+import { getUtm } from "@/lib/utm"
 
 type FieldErrors = Partial<Record<"name" | "email" | "company" | "message", string>>
 
@@ -69,7 +71,7 @@ export function ContactForm() {
 
     startTransition(async () => {
       try {
-        const res = await submitPublicContactAction(values)
+        const res = await submitPublicContactAction({ ...values, utm: getUtm() })
         if (res.error) {
           setFormError(
             res.error.code === "RATE_LIMITED"
@@ -78,10 +80,16 @@ export function ContactForm() {
           )
           return
         }
+        const utm = getUtm()
         sessionStorage.setItem(
-          "loop-contact-lead",
-          JSON.stringify({ ...values, submittedAt: new Date().toISOString() })
+          "estate360-contact-lead",
+          JSON.stringify({ ...values, utm, submittedAt: new Date().toISOString() })
         )
+        trackEvent(GTM_EVENTS.contactSubmit, {
+          company: values.company.slice(0, 60),
+          utm_source: utm.utm_source ?? null,
+          utm_campaign: utm.utm_campaign ?? null,
+        })
         router.push("/thank-you")
       } catch {
         setFormError("Something went wrong. Please try again or email hello@estate360.in.")
@@ -190,7 +198,13 @@ export function ContactForm() {
         />
       </div>
 
-      <Button type="submit" size="lg" className="h-11 w-full gap-2 rounded-md sm:w-auto" disabled={pending}>
+      <Button
+        type="submit"
+        variant="brand"
+        size="lg"
+        className="h-11 w-full gap-2 sm:w-auto"
+        disabled={pending}
+      >
         {pending ? (
           <>
             <Loader2 className="size-4 animate-spin" aria-hidden />

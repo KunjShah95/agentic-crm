@@ -49,7 +49,11 @@ export function BottomNav({ workspaceSlug }: { workspaceSlug: string }) {
               className={cn(
                 "flex min-h-14 flex-col items-center justify-center gap-1 py-2",
                 "text-[10.5px] font-medium transition-colors duration-150",
-                active ? "text-brand" : "text-muted-foreground hover:text-foreground"
+                /* A 10.5px label is real text, so it takes `--brand-solid`:
+                   `--brand` on the app canvas is 4.23:1, under the 4.5:1 AA
+                   needs. This is the current-page indicator, so it has to be
+                   readable, not merely tinted. */
+                active ? "text-brand-solid" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {/*

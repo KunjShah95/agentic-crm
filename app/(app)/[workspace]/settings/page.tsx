@@ -43,7 +43,7 @@ export default async function WorkspaceSettingsPage({
       <PageHeader
         title="Workspace Settings"
         description={<>Manage preferences, integrations, pipeline parameters, and security for {workspace.name.replace(/\.*$/, "")}.</>}
-        badge={<Badge className="bg-brand text-brand-foreground capitalize">{workspace.plan} Plan</Badge>}
+        badge={<Badge className="bg-brand-solid text-brand-foreground capitalize">{workspace.plan} Plan</Badge>}
       />
 
       <ExtendedSettingsTabs workspace={workspace} slug={slug} isOwner={isOwner} whatsappEnabled={whatsappEnabled()} />

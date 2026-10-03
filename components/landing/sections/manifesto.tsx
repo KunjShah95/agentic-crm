@@ -66,7 +66,7 @@ export function ManifestoSection({
               Currently running across Ahmedabad NAAR associations
             </p>
 
-            <Button className="mt-8 gap-2 px-6" size="lg" render={<Link href={cta} />}>
+            <Button variant="brand" className="mt-8 gap-2 px-6" size="lg" render={<Link href={cta} />}>
               Start free
               <ArrowRight className="size-4" aria-hidden />
             </Button>

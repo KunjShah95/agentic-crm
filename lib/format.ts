@@ -39,7 +39,13 @@ export function formatMoney(value: number | null | undefined, currency = "INR") 
 export function formatMoneyShort(value: number | null | undefined, currency = "INR") {
   if (value == null) return "—"
   if (currency === "INR") {
-    if (value >= 10_00_00_000) return `₹${(value / 10_00_00_000).toFixed(1).replace(/\.0$/, "")} Cr`
+    // `1_00_00_000` is 10,000,000 — one crore. This constant has to be spelled
+    // with the Indian 2-2-3 grouping or it silently becomes 100,000,000, which
+    // reads as a real number and understates every crore figure by 10x while
+    // leaving the lakh figures below it untouched — so an axis reads
+    // "300 L / 600 L / 900 L / 1.2 Cr" across four identical steps.
+    // `modules/ai/analyze.ts` is the reference for the same unit.
+    if (value >= 1_00_00_000) return `₹${(value / 1_00_00_000).toFixed(1).replace(/\.0$/, "")} Cr`
     if (value >= 1_00_000) return `₹${(value / 1_00_000).toFixed(1).replace(/\.0$/, "")} L`
     return formatMoney(value, currency)
   }
@@ -81,6 +87,38 @@ export function relativeTime(date: Date | string) {
   const days = Math.round(hours / 24)
   if (days < 30) return `${days}d ago`
   return formatDate(d)
+}
+
+/**
+ * Forward-looking duration, for the deadlines that actually run this product:
+ * unit hold expiry (`Unit.holdUntil`), milestone due dates, follow-up tasks.
+ * `relativeTime` above is past-only and reads "3h ago", which is wrong for a
+ * hold that has not lapsed yet — "in 3h" and "3h ago" are different facts and
+ * the tile has to show the right one.
+ *
+ * Deliberately NOT a ticking clock. A per-second countdown in a list of forty
+ * units is motion that carries no information a static string doesn't, and it
+ * costs a timer, a re-render per tile and visible battery. The urgency is
+ * expressed by the treatment the caller picks, not by the number moving.
+ */
+export function timeUntil(date: Date | string) {
+  const d = typeof date === "string" ? new Date(date) : date
+  const diff = d.getTime() - Date.now()
+  const overdue = diff < 0
+  const mins = Math.abs(Math.round(diff / 60_000))
+  let out: string
+  if (mins < 1) out = "under a minute"
+  else if (mins < 60) out = `${mins} min`
+  else if (mins < 60 * 24) {
+    const h = Math.floor(mins / 60)
+    const m = mins % 60
+    out = m ? `${h}h ${m}m` : `${h}h`
+  } else {
+    const days = Math.floor(mins / (60 * 24))
+    const h = Math.floor((mins % (60 * 24)) / 60)
+    out = h ? `${days}d ${h}h` : `${days}d`
+  }
+  return overdue ? `${out} ago` : `in ${out}`
 }
 
 export function slugify(input: string) {

@@ -5,7 +5,27 @@ import { db } from "@/lib/db"
 import { handleAction, type Result } from "@/lib/actions"
 import { AppError } from "@/lib/errors"
 import { canManageData, requireWorkspaceMember } from "@/lib/permissions"
+import { isWonKind, type StageKind } from "@/lib/pipeline-stages"
 import { dealSchema, pipelineStageSchema, reorderStagesSchema, bulkMoveDealsSchema, bulkAssignDealsSchema, bulkTagDealsSchema } from "@/lib/validators"
+
+/**
+ * The `wonAt` value for a deal whose stage is becoming `kind`.
+ *
+ * Entering Won stamps `now` — that is the whole point of the column, and it is
+ * the only place the timestamp is captured. Leaving Won clears it to `null`,
+ * which matters twice over: a reopened deal must not keep contributing to
+ * revenue history, and if it is won again the next transition stamps a fresh
+ * date rather than inheriting the original.
+ *
+ * Every stage write in this file routes through here. A `wonAt` that is set on
+ * one path and not the others is worse than no column at all, because the
+ * dashboard would then trust it and be wrong for whichever path was missed.
+ *
+ * Branches on `kind`, never on the stage name — see `lib/pipeline-stages.ts`.
+ */
+function wonAtForStage(kind: StageKind) {
+  return isWonKind(kind) ? new Date() : null
+}
 
 function clean(input: Record<string, unknown>) {
   const data: Record<string, unknown> = {}
@@ -37,7 +57,7 @@ export async function createDealAction(
 
     const stage = await db.pipelineStage.findFirst({
       where: { id: data.stageId as string, workspaceId },
-      select: { id: true },
+      select: { id: true, kind: true },
     })
     if (!stage) throw new AppError("NOT_FOUND", "Pick a valid stage.", 404)
 
@@ -46,6 +66,11 @@ export async function createDealAction(
         workspaceId,
         title: data.title as string,
         stageId: data.stageId as string,
+        // A deal created straight into Won is won now, not at some earlier
+        // moment — without this a deal created in the Won stage would have a
+        // null `wonAt` and fall back to `updatedAt`, which is the bug this
+        // column replaced.
+        wonAt: wonAtForStage(stage.kind),
         contactId: data.contactId as string | null,
         organizationId: data.organizationId as string | null,
         value: (data.value as number | null) || null,
@@ -77,7 +102,9 @@ export async function bulkMoveDealsAction(
 
     const target = await db.pipelineStage.findFirst({
       where: { id: parsed.data.stageId, workspaceId },
-      select: { id: true, name: true },
+      // `name` is for the activity log; `kind` is the only thing that decides
+      // whether `wonAt` is stamped.
+      select: { id: true, name: true, kind: true },
     })
     if (!target) throw new AppError("NOT_FOUND", "Stage not found.", 404)
 
@@ -89,7 +116,9 @@ export async function bulkMoveDealsAction(
     await db.$transaction([
       db.deal.updateMany({
         where: { id: { in: parsed.data.dealIds }, workspaceId },
-        data: { stageId: parsed.data.stageId },
+        // Bulk move shares the single-move rule, so dragging 40 cards into Won
+        // stamps the same date on each as dropping one card would.
+        data: { stageId: parsed.data.stageId, wonAt: wonAtForStage(target.kind) },
       }),
       ...deals.map((d) =>
         db.activity.create({
@@ -172,11 +201,21 @@ export async function updateDealAction(
     })
     if (!deal) throw new AppError("NOT_FOUND", "Deal not found.", 404)
 
+    // The edit form carries a stage selector, so an edit can move a deal into or
+    // out of Won just as a drag does. Resolving the stage name here is what
+    // keeps that path from being the one that forgot to stamp `wonAt`.
+    const stage = await db.pipelineStage.findFirst({
+      where: { id: data.stageId as string, workspaceId },
+      select: { id: true, kind: true },
+    })
+    if (!stage) throw new AppError("NOT_FOUND", "Pick a valid stage.", 404)
+
     await db.deal.update({
       where: { id: dealId },
       data: {
         title: data.title as string,
         stageId: data.stageId as string,
+        wonAt: wonAtForStage(stage.kind),
         contactId: data.contactId as string | null,
         organizationId: data.organizationId as string | null,
         value: (data.value as number | null) || null,
@@ -289,14 +328,18 @@ export async function moveDealStageAction(
 
     const target = await db.pipelineStage.findFirst({
       where: { id: stageId, workspaceId },
-      select: { id: true, name: true },
+      // `name` for the activity log, `kind` for the wonAt decision.
+      select: { id: true, name: true, kind: true },
     })
     if (!target) throw new AppError("NOT_FOUND", "Stage not found.", 404)
 
     if (deal.stageId === target.id) return { ok: true }
 
     await db.$transaction([
-      db.deal.update({ where: { id: dealId }, data: { stageId: target.id } }),
+      db.deal.update({
+        where: { id: dealId },
+        data: { stageId: target.id, wonAt: wonAtForStage(target.kind) },
+      }),
       db.activity.create({
         data: {
           workspaceId,
@@ -338,6 +381,7 @@ export async function createStageAction(
         workspaceId,
         name: parsed.data.name,
         color: parsed.data.color,
+        kind: parsed.data.kind,
         order: (max._max.order ?? -1) + 1,
       },
     })
@@ -368,7 +412,9 @@ export async function updateStageAction(
 
     await db.pipelineStage.update({
       where: { id: stageId },
-      data: { name: parsed.data.name, color: parsed.data.color },
+      // `kind` is editable, but it is an explicit choice — not something that
+      // drifts when the name is retyped, which is the whole point of the column.
+      data: { name: parsed.data.name, color: parsed.data.color, kind: parsed.data.kind },
     })
     return { ok: true }
   })

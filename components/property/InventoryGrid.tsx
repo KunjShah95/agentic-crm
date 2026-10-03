@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Search } from "lucide-react"
-import { formatMoneyShort } from "@/lib/format"
+import { formatMoneyShort, timeUntil } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
@@ -22,6 +22,12 @@ type Unit = {
   config: string
   price?: number | null
   status: string
+  /** The fields below are all in the Prisma `Unit` model; optional here because
+      callers pass projections. When present the tile shows them, because they
+      are the questions this market actually asks. */
+  carpetArea?: number | null
+  facing?: string | null
+  holdUntil?: string | Date | null
 }
 
 export function InventoryGrid({
@@ -33,6 +39,14 @@ export function InventoryGrid({
 }) {
   const [query, setQuery] = React.useState("")
   const [statusFilter, setStatusFilter] = React.useState<string>("ALL")
+
+  /* "Now" is captured once per mount and never recomputed. Reading `Date.now()`
+     in the render body is an impure read — it makes the output depend on when
+     React happened to render, which is exactly the class of bug that shows up as
+     a hydration mismatch and as tiles that disagree with each other. The hold
+     treatment is not a live clock (see `timeUntil`); it only needs a stable
+     reference point for the life of this view. */
+  const [now] = React.useState(() => Date.now())
 
   const filtered = React.useMemo(() => {
     return units.filter((unit) => {
@@ -88,27 +102,75 @@ export function InventoryGrid({
             No units match your search.
           </div>
         )}
-        {filtered.map((unit) => (
+        {filtered.map((unit) => {
+          // The hold is the only deadline attached to a unit, and it is the one
+          // thing on this card that can change on its own while the user is
+          // looking at it. Two states, not a colour gradient: lapsed holds are
+          // recoverable (release it), imminent ones are not (act now).
+          const hold = unit.holdUntil ? new Date(unit.holdUntil).getTime() : null
+          const msToLapse = hold === null ? null : hold - now
+          const holdLapsed = msToLapse !== null && msToLapse <= 0
+          const holdImminent = msToLapse !== null && msToLapse > 0 && msToLapse < 2 * 60 * 60 * 1000
+
+          return (
           <button
             key={unit.id}
             type="button"
             onClick={() => onSelect?.(unit)}
             className={cn(
-              "flex flex-col gap-1 rounded-md border p-3 text-left transition-all",
+              // `.pressable` supplies the press half of the trigger→feedback
+              // pair. A raw <button> gets none of the Button primitive's
+              // `active:` treatment, so before this the only acknowledgement of
+              // a tap was the click landing — on a 40-tile grid that reads as
+              // an unresponsive surface.
+              "pressable flex flex-col gap-1.5 rounded-md border p-3 text-left transition-[border-color,box-shadow]",
               onSelect ? "cursor-pointer hover:border-primary hover:shadow-sm" : "cursor-default"
             )}
           >
-            <span className="text-sm font-semibold">{unit.unitNo}</span>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-sm font-semibold">{unit.unitNo}</span>
+              <span
+                className={`inline-flex w-fit shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_COLOR[unit.status] ?? "bg-status-neutral-bg text-status-neutral-fg"}`}
+              >
+                {unit.status}
+              </span>
+            </div>
+
             <span className="text-xs text-muted-foreground">
-              {unit.config} · {formatMoneyShort(unit.price)}
+              {unit.config}
+              {/* Carpet area, not a bare "area". In Indian residential the
+                  built-up figure is what gets advertised and the carpet figure
+                  is what the buyer actually gets, and the gap between them is a
+                  routine source of disputes — so the tile shows the one the
+                  sales conversation needs. */}
+              {unit.carpetArea ? ` · ${unit.carpetArea} sq.ft carpet` : ""}
+              {/* Facing decides resale value in this market and is the second
+                  most-asked question after price. */}
+              {unit.facing ? ` · ${unit.facing}` : ""}
             </span>
-            <span
-              className={`inline-flex w-fit rounded px-1.5 py-0.5 text-[10px] font-medium ${STATUS_COLOR[unit.status] ?? "bg-status-neutral-bg text-status-neutral-fg"}`}
-            >
-              {unit.status}
-            </span>
+
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-sm font-medium tabular-nums">
+                {formatMoneyShort(unit.price)}
+              </span>
+              {unit.status === "HOLD" && unit.holdUntil ? (
+                <span
+                  className={cn(
+                    "text-[11px] tabular-nums",
+                    holdLapsed
+                      ? "font-medium text-status-critical-fg"
+                      : holdImminent
+                        ? "font-medium text-status-caution-fg"
+                        : "text-muted-foreground"
+                  )}
+                >
+                  {holdLapsed ? `Hold lapsed ${timeUntil(unit.holdUntil)}` : `Hold ${timeUntil(unit.holdUntil)}`}
+                </span>
+              ) : null}
+            </div>
           </button>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

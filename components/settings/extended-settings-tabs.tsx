@@ -49,23 +49,29 @@ export function ExtendedSettingsTabs({
 
   return (
     <Tabs defaultValue="general" className="w-full space-y-6">
+      {/* `min-h-9` (36px) on the triggers. The base TabsTrigger sizes itself from
+          the trigger's own height minus 1px, and at `text-xs` on a `h-auto` list
+          that resolved to 21px — under the 24px AA floor, and these are the only
+          route to Integrations, API & Webhooks and Tags. Setting a min-height
+          here rather than in the primitive keeps the change local: the primitive
+          is vendored and its compact sizing is deliberate everywhere else. */}
       <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
-        <TabsTrigger value="general" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="general" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Building2 className="mr-1.5 size-3.5" /> General
         </TabsTrigger>
-        <TabsTrigger value="pipeline" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="pipeline" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Sliders className="mr-1.5 size-3.5" /> Pipeline & RERA
         </TabsTrigger>
-        <TabsTrigger value="localization" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="localization" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Globe className="mr-1.5 size-3.5" /> Localization
         </TabsTrigger>
-        <TabsTrigger value="integrations" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="integrations" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <BellRing className="mr-1.5 size-3.5" /> Integrations
         </TabsTrigger>
-        <TabsTrigger value="api" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="api" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Key className="mr-1.5 size-3.5" /> API & Webhooks
         </TabsTrigger>
-        <TabsTrigger value="tags" className="rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="tags" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Tag className="mr-1.5 size-3.5" /> Tags
         </TabsTrigger>
       </TabsList>
@@ -87,7 +93,7 @@ export function ExtendedSettingsTabs({
             />
             <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-xs text-muted-foreground">
               <span>Subscription Plan:</span>
-              <Badge className="bg-brand text-brand-foreground capitalize">{workspace.plan}</Badge>
+              <Badge className="bg-brand-solid text-brand-foreground capitalize">{workspace.plan}</Badge>
               <span>· {workspace._count.members} workspace member{workspace._count.members !== 1 ? "s" : ""}</span>
               <div className="ml-auto flex gap-2">
                 <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/members`} />}>
@@ -159,7 +165,7 @@ export function ExtendedSettingsTabs({
               <Switch checked={autoAssign} onCheckedChange={setAutoAssign} />
             </div>
 
-            <Button onClick={() => handleSave("Pipeline")} className="bg-brand text-brand-foreground hover:bg-brand/90 font-medium">
+            <Button variant="brand" onClick={() => handleSave("Pipeline")} className="font-medium">
               Save Pipeline Settings
             </Button>
           </CardContent>

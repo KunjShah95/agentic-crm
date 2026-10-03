@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { isOpenKind, isWonKind } from "@/lib/pipeline-stages"
 import {
   effectiveCommissionPct,
   expectedCommission,
@@ -72,7 +73,11 @@ export async function pipelineStats(workspaceId: string) {
       value: true,
       dealType: true,
       urgency: true,
-      stage: { select: { name: true } },
+      // `kind`, not `name`: this filter decides whether a deal counts toward
+      // pipeline and whether its value is revenue, and it used to compare
+      // `stage.name` against "Won"/"Lost" — so renaming either stage silently
+      // moved money between "Total pipeline" and "Won".
+      stage: { select: { name: true, kind: true } },
       unit: {
         select: {
           config: true,
@@ -82,11 +87,8 @@ export async function pipelineStats(workspaceId: string) {
       commissionRules: { select: { amount: true, pct: true, status: true } },
     },
   })
-  // A stage is "closed" once it's Won or Lost — those deals are no longer part
-  // of the active pipeline. The stage name is load-bearing (see prisma/seed.ts).
-  const isClosed = (name: string) => name === "Won" || name === "Lost"
-  const openDeals = deals.filter((d) => !isClosed(d.stage.name))
-  const wonDeals = deals.filter((d) => d.stage.name === "Won")
+  const openDeals = deals.filter((d) => isOpenKind(d.stage.kind))
+  const wonDeals = deals.filter((d) => isWonKind(d.stage.kind))
 
   // Open pipeline only: never fold Won/Lost deals into "Total pipeline".
   const total = openDeals.reduce((sum, d) => sum + (d.value ?? 0), 0)

@@ -3,6 +3,7 @@ import { SiteFooter } from "@/components/landing/sections/site-footer"
 import { HeroSection } from "@/components/landing/sections/hero"
 import { StorySection } from "@/components/landing/sections/story"
 import { WorkflowsSection } from "@/components/landing/sections/workflows"
+import { InventorySection } from "@/components/landing/sections/inventory"
 import { CommandBarSection } from "@/components/landing/sections/command-bar"
 import { StaffSection } from "@/components/landing/sections/staff"
 import { WinsSection } from "@/components/landing/sections/wins"
@@ -15,6 +16,7 @@ import { ManifestoSection } from "@/components/landing/sections/manifesto"
  *   Hero       what it is, in one line
  *   Story      what a day looks like — the part a generic CRM cannot show
  *   Workflows  which work the product removes
+ *   Inventory  the thing being sold, as a record rather than a feature
  *   Command    how you talk to it
  *   Staff      one loop, every role
  *   Wins       the morning brief, and the honesty about sample data
@@ -34,6 +36,7 @@ export default function Home({ workspaceSlug, isAuthed }: Props) {
       <HeroSection isAuthed={isAuthed} workspaceSlug={workspaceSlug} />
       <StorySection />
       <WorkflowsSection />
+      <InventorySection />
       <CommandBarSection />
       <StaffSection />
       <WinsSection isAuthed={isAuthed} workspaceSlug={workspaceSlug} />

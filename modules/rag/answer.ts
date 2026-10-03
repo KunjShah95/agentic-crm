@@ -211,8 +211,8 @@ export const answerQuery = async ({
   }
 
   const t0 = Date.now();
-  let allScored: Array<Record<string, unknown>> = [];
-  let allDocMeta: Record<string, unknown> = {};
+  const allScored: Array<Record<string, unknown>> = [];
+  const allDocMeta: Record<string, unknown> = {};
   let lastConf = { topConfidence: 0, threshold: 0.65, passed: false };
   let tRetrieve = 0;
   let totalAttempts = 0;

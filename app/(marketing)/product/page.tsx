@@ -150,7 +150,11 @@ export default async function ProductPage() {
           {CAPABILITIES.map((c) => (
             <article
               key={c.title}
-              className="rounded-md border bg-card p-4 transition-[border-color,transform] duration-150 [transition-timing-function:var(--ease-out)] hover:-translate-y-0.5 hover:border-foreground/15"
+              /* Border-only hover. These cards are not links, so the lift that
+                 the clickable cards elsewhere in the app use would be a lie —
+                 it promises an action there is none of. The border step is
+                 enough to lift them off the row without pretending. */
+              className="rounded-md border bg-card p-4 transition-colors duration-200 hover:border-foreground/20"
             >
               <span className="inline-flex size-8 items-center justify-center rounded-sm bg-foreground text-background">
                 <c.icon className="size-4" aria-hidden />
@@ -175,13 +179,18 @@ export default async function ProductPage() {
           pipeline holds up.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
-          <Button size="lg" className="h-11 rounded-full px-7" render={<Link href={cta} />}>
+          <Button
+            variant="brand"
+            size="lg"
+            className="h-11 px-7"
+            render={<Link href={cta} />}
+          >
             {isAuthed ? "Open workspace" : "Start free"}
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="h-11 rounded-full px-6"
+            className="h-11 px-6"
             render={<Link href="/contact" />}
           >
             Talk to sales

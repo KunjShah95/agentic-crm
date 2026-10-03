@@ -5,9 +5,10 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { ModeToggle } from "@/components/shell/mode-toggle"
-import { ArrowRight, ArrowUpRight, Layers, Menu, X } from "lucide-react"
+import { ArrowRight, Layers, Menu, X } from "lucide-react"
 import { NAV_LINKS } from "@/components/landing/site-config"
 import { cn } from "@/lib/utils"
+import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
 
 type Props = {
   isAuthed: boolean
@@ -39,7 +40,20 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
                 key={link.href}
                 href={link.href}
                 className={cn(
-                  "relative pb-1 transition-colors",
+                  /* `py-2 -my-2` rather than `pb-1`. The old padding gave a
+                     13px label a ~23.5px hit box, which is fractionally under the
+                     24px AA floor and reads as "nearly fine" right up until
+                     someone on a touch screen misses it. Negative margin pulls
+                     the extra padding back out so the optical position and the
+                     64px header height are unchanged — only the target grows.
+
+                     Real padding rather than `.tap-target` here, because this link
+                     owns its own `::after` for the active underline and the two
+                     pseudo-elements would collide. The underline stays anchored to
+                     the text because `after:bottom-0` resolves against the padding
+                     box, which `-my-2` has already pulled back to its original
+                     place. */
+                  "relative -my-2 py-2 transition-colors",
                   active
                     ? "text-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-[2px] after:rounded-full after:bg-brand after:content-['']"
                     : "text-muted-foreground hover:text-foreground"
@@ -58,11 +72,17 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
                 Sign in
               </Button>
               <Button
+                variant="brand"
                 size="sm"
-                className="gap-1.5 rounded-md border-0 text-[13px] bg-brand text-brand-foreground hover:bg-brand/90"
-                render={<Link href="/signup" />}
+                className="gap-1.5 rounded-md text-[13px]"
+                render={
+                  <Link
+                    href="/signup"
+                    onClick={() => trackEvent(GTM_EVENTS.headerStartFree, { location: "header" })}
+                  />
+                }
               >
-                Start free <ArrowUpRight className="size-3.5" aria-hidden />
+                Start free <ArrowRight className="size-3.5" aria-hidden />
               </Button>
             </>
           ) : (
@@ -100,7 +120,8 @@ export function SiteHeader({ isAuthed, workspaceSlug, compact }: Props) {
               </Link>
             ))}
             <Button
-              className="mt-3 rounded-md border-0 bg-brand text-brand-foreground hover:bg-brand/90"
+              variant="brand"
+              className="mt-3 rounded-md"
               render={<Link href={primaryHref} onClick={() => setMobileOpen(false)} />}
             >
               {isAuthed ? "Open workspace" : "Start free"}

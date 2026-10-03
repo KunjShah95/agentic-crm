@@ -87,7 +87,7 @@ export default async function AIPage({
         <CardContent className="space-y-4">
           <form className="flex gap-2">
             <Input name="q" defaultValue={q ?? ""} placeholder="Ask — e.g. overdue payments" className="flex-1 focus-visible:ring-brand" />
-            <Button type="submit" className="rounded-sm bg-brand text-brand-foreground hover:bg-brand/90">Ask</Button>
+            <Button type="submit" variant="brand" className="rounded-sm">Ask</Button>
           </form>
           {askResult ? (
             <div className="rounded-md border bg-muted/30 p-4 space-y-2">

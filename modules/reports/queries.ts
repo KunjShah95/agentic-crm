@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { brokerScopeFilter } from "@/lib/permissions"
+import { isWonKind } from "@/lib/pipeline-stages"
 import type { Role } from "@/lib/generated/prisma/client"
 import { collections, funnel, inventoryHealth, sourceROI, teamVsTarget } from "./aggregate"
 
@@ -189,7 +190,9 @@ export async function getDealsByOwner(workspaceId: string) {
 export async function getWinRateByDealType(workspaceId: string) {
   const deals = await db.deal.findMany({
     where: { workspaceId },
-    select: { dealType: true, stage: { select: { name: true } } },
+    // `kind`, not `name` — a win rate that reads 0% because someone renamed the
+    // Won stage is a chart nobody can debug.
+    select: { dealType: true, stage: { select: { kind: true } } },
   })
 
   const byType = new Map<string, { total: number; won: number }>()
@@ -197,7 +200,7 @@ export async function getWinRateByDealType(workspaceId: string) {
     const type = deal.dealType ?? "UNCLASSIFIED"
     const existing = byType.get(type) ?? { total: 0, won: 0 }
     existing.total++
-    if (deal.stage.name === "Won") existing.won++
+    if (isWonKind(deal.stage.kind)) existing.won++
     byType.set(type, existing)
   }
 

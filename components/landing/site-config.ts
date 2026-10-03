@@ -24,17 +24,28 @@ export const NAV_LINKS = [
   { href: "/contact", label: "Contact" },
 ] as const
 
+/* Footer navigation. These are DESTINATIONS, not actions — the primary call to
+   action is the button in the brand column, and it is the only one.
+
+   "/signup · Start free" used to sit at the end of the product column as a bare
+   text link. Once the brand column gained a real button it became a second
+   "Start free" on the same screen, which is the opposite of a single dominant
+   CTA repeated: it is the same action offered twice in two different visual
+   registers, and the eye cannot tell which one is the real button.
+
+   "/contact" also appeared in BOTH columns, so it rendered three times on the
+   page (product nav, legal nav, bottom bar). Contact is not a legal document;
+   it belongs in the product destinations and nowhere else. */
 export const FOOTER_PRODUCT_LINKS = [
   { href: "/product", label: "Features" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/compare", label: "Compare" },
   { href: "/contact", label: "Contact" },
-  { href: "/signup", label: "Start free" },
 ] as const
 
 export const FOOTER_LEGAL_LINKS = [
   { href: "/privacy", label: "Privacy" },
   { href: "/terms", label: "Terms" },
-  { href: "/contact", label: "Contact" },
 ] as const
 
 /**

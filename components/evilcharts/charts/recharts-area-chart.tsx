@@ -490,13 +490,21 @@ type TooltipProps = {
   roundness?: TooltipRoundness; // border-radius of the tooltip
   defaultIndex?: number; // data index shown by default with no hover
   cursor?: boolean; // whether the vertical cursor line follows the pointer
+  /**
+   * Formats each row's value. `ChartTooltipContent` renders `value.toLocaleString()`
+   * without this, which is right for a plain count and wrong for money — a
+   * rupee series shows up as `107600000` in the tooltip and `₹1.1 Cr` on the
+   * axis two inches away, so the hover reads as a different number than the
+   * chart it is hovering.
+   */
+  valueFormatter?: (value: number, name: string) => string;
 };
 
 /**
  * The hover tooltip. Reads the chart's selection from context so its content
  * dims unselected series. Hidden automatically while the chart is loading.
  */
-function Tooltip({ variant, roundness, defaultIndex, cursor = true }: TooltipProps) {
+function Tooltip({ variant, roundness, defaultIndex, cursor = true, valueFormatter }: TooltipProps) {
   const { isLoading, selectedDataKey } = useAreaChart();
 
   if (isLoading) return null;
@@ -506,7 +514,20 @@ function Tooltip({ variant, roundness, defaultIndex, cursor = true }: TooltipPro
       defaultIndex={defaultIndex}
       cursor={cursor ? { strokeDasharray: "3 3", strokeWidth: STROKE_WIDTH } : false}
       content={
-        <ChartTooltipContent selected={selectedDataKey} roundness={roundness} variant={variant} />
+        <ChartTooltipContent
+          selected={selectedDataKey}
+          roundness={roundness}
+          variant={variant}
+          formatter={
+            valueFormatter
+              ? (value, name) => (
+                  <span className="text-foreground font-mono font-medium tabular-nums">
+                    {valueFormatter(Number(value), String(name))}
+                  </span>
+                )
+              : undefined
+          }
+        />
       }
     />
   );

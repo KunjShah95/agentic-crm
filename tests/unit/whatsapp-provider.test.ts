@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import { createHmac } from "node:crypto"
 import { WhatsAppProvider } from "@/modules/social/providers/whatsapp"
 import { normalizePhone, phoneLookupKey } from "@/modules/social/ingest"
+
+/** Meta signs with HMAC-SHA256 over the raw body; the provider compares digests. */
+function sign(raw: string, secret = "test-app-secret") {
+  return "sha256=" + createHmac("sha256", secret).update(raw).digest("hex")
+}
 
 const CREDENTIALS = {
   WHATSAPP_TOKEN: "test-token",
@@ -87,9 +93,8 @@ describe("WhatsAppProvider.verifyWebhook", () => {
 
   it("accepts a correctly signed POST", () => {
     configured()
-    const crypto = require("crypto")
     const raw = JSON.stringify(batch())
-    const sig = "sha256=" + crypto.createHmac("sha256", "test-app-secret").update(raw).digest("hex")
+    const sig = sign(raw)
     const p = new WhatsAppProvider()
     expect(p.verifyWebhook({ headers: { "x-hub-signature-256": sig }, rawBody: raw })).toBe(true)
   })
@@ -98,8 +103,7 @@ describe("WhatsAppProvider.verifyWebhook", () => {
     configured()
     const p = new WhatsAppProvider()
     const raw = JSON.stringify(batch())
-    const crypto = require("crypto")
-    const sig = "sha256=" + crypto.createHmac("sha256", "test-app-secret").update(raw).digest("hex")
+    const sig = sign(raw)
     expect(p.verifyWebhook({ headers: { "x-hub-signature-256": sig }, rawBody: raw + " " })).toBe(false)
     expect(p.verifyWebhook({ headers: {}, rawBody: raw })).toBe(false)
   })

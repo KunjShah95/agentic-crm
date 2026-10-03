@@ -6,6 +6,7 @@
 
 import { db } from "@/lib/db";
 import { embed, embeddingModel } from "./providers/embeddings";
+import { findChunksNeedingEmbedding, setEmbedding } from "./pgvector";
 import { logger } from "@/lib/logger";
 
 interface QueueItem {
@@ -80,11 +81,14 @@ async function processItem(item: QueueItem) {
       return;
     }
 
-    const chunks = await db.ragChunk.findMany({
-      where: { tenantId, documentId, embedding: null } as any,
-      select: { id: true, content: true, chunkIndex: true },
-      orderBy: { chunkIndex: "asc" },
-    });
+    /* `embedding IS NULL` is the pending-worklist filter and the vector write are
+       both pgvector operations that Prisma's typed client cannot express —
+       `embedding` is `Unsupported("vector(1024)")` in the schema. Both now go
+       through the typed accessor in ./pgvector, which also checks the embedding
+       dimension and rejects non-finite values before they reach the database,
+       instead of letting a malformed vector fail as an opaque pgvector error
+       halfway through a batch. */
+    const chunks = await findChunksNeedingEmbedding(tenantId, documentId);
     if (!chunks.length) {
       await db.ragDocument.update({
         where: { id: documentId, tenantId },
@@ -95,19 +99,13 @@ async function processItem(item: QueueItem) {
     }
 
     const model = embeddingModel();
-    const dim = 1024;
     for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
       const batch = chunks.slice(i, i + BATCH_SIZE);
       const texts = batch.map((c) => c.content);
       const { vectors } = await embed(texts, { taskType: "passage" as const });
 
       await Promise.all(
-        batch.map((c, j) =>
-          db.ragChunk.update({
-            where: { id: c.id, tenantId },
-            data: { embedding: vectors[j], model, dim } as any,
-          })
-        )
+        batch.map((c, j) => setEmbedding(tenantId, c.id, vectors[j], model))
       );
     }
 

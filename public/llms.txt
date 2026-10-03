@@ -20,6 +20,9 @@ Key facts:
 - [Contact](https://estate360.vercel.com/contact): : Questions about Estate360, pricing, or a pilot for your sales team? Reach us on WhatsApp, email, or phone. We reply within one working day.
 - [Privacy Policy](https://estate360.vercel.com/privacy): : How Estate360 collects, uses, stores and deletes personal data, including DPDP Act 2023 rights and where your data is stored.
 - [Terms of Service](https://estate360.vercel.com/terms): : The terms governing your use of Estate360, including acceptable use, data ownership, subscriptions, and termination.
+- [Estate360 vs Excel vs Generic CRMs](https://estate360.vercel.com/compare): : Honest comparisons for Indian real-estate teams deciding between Excel, a generic CRM, and a builder-first CRM like Estate360.
+- [Estate360 vs Excel + WhatsApp for Builders](https://estate360.vercel.com/compare/excel): : Where an Excel inventory and WhatsApp groups stop working for a sales team: audit trail, broker scoping, GPS site visits, and CLP collections.
+- [Estate360 vs a Generic CRM for Real Estate](https://estate360.vercel.com/compare/generic-crm): : Generic CRMs model contacts and deals; Estate360 models units, cost sheets, CLP milestones and RERA documents — built for Indian residential sales.
 - [Start Free](https://estate360.vercel.com/signup): : Create your workspace and start tracking leads, inventory and bookings. Fourteen days free, no card required, export your data any time.
 
 ## Reference

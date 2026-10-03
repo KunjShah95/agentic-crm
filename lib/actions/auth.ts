@@ -12,15 +12,7 @@ import { acceptInviteSchema, loginSchema, signupSchema } from "@/lib/validators"
 import type { Role } from "@/lib/generated/prisma/client"
 import { hitRateLimit, RateLimitedError } from "@/modules/web-contact/rate-limit"
 import { headers } from "next/headers"
-
-const DEFAULT_STAGES = [
-  { name: "Lead", color: "#64748b" },
-  { name: "Qualified", color: "#3b82f6" },
-  { name: "Proposal", color: "#8b5cf6" },
-  { name: "Negotiation", color: "#f59e0b" },
-  { name: "Won", color: "#10b981" },
-  { name: "Lost", color: "#ef4444" },
-]
+import { DEFAULT_STAGES_GENERIC as DEFAULT_STAGES } from "@/lib/default-stages"
 
 async function uniqueSlug(base: string) {
   const slug = slugify(base) || "workspace"

@@ -15,7 +15,7 @@ export default async function BuyerPortalPage({ params }: { params: Promise<{ to
   const { access, deals, docs } = data
   const contact = access.contact
   return (
-    <div className="mx-auto max-w-4xl p-6 space-y-6">
+    <div className="app-scope mx-auto max-w-4xl space-y-6 p-6">
       <div>
         <h1 className="text-2xl font-display font-semibold">Buyer Portal — {contact.firstName} {contact.lastName}</h1>
         <p className="text-sm text-muted-foreground">Magic link · expires <span className="tabular-nums">{access.expiresAt.toLocaleDateString("en-IN")}</span> · {access.workspace.name}</p>

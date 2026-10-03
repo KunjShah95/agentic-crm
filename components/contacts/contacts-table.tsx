@@ -371,7 +371,7 @@ export function ContactsTable({
             <Filter className="size-3.5" />
             Filters
             {activeFilterCount > 0 ? (
-              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand px-1 text-[10px] font-semibold tabular-nums text-brand-foreground">
+              <span className="inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-brand-solid px-1 text-[10px] font-semibold tabular-nums text-brand-foreground">
                 {activeFilterCount}
               </span>
             ) : null}
@@ -621,7 +621,7 @@ export function ContactsTable({
                         <div className="min-w-0">
                           <Link
                             href={`/${workspaceSlug}/contacts/${contact.id}`}
-                            className="truncate text-sm font-medium hover:underline"
+                            className="tap-target truncate text-sm font-medium hover:underline"
                           >
                             {fullName(contact.firstName, contact.lastName)}
                           </Link>
@@ -636,7 +636,7 @@ export function ContactsTable({
                         <a
                           href={`tel:${contact.phone}`}
                           onClick={(e) => e.stopPropagation()}
-                          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-brand transition-colors"
+                          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-brand-solid transition-colors"
                         >
                           <Phone className="size-3.5" />
                           {contact.phone}

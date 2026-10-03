@@ -224,7 +224,13 @@ export function KanbanBoard({
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
-                              className={`rounded-md border bg-card p-3 shadow-xs transition-all ${
+                              /* Named properties, never `transition-all` — an
+                                 all-property transition picks up layout-affecting
+                                 properties the moment anything in the card tree
+                                 changes size, which on a drag surface is how a
+                                 card starts jittering. See the same rule in
+                                 components/shell/sidebar.tsx. */
+                              className={`rounded-md border bg-card p-3 shadow-xs transition-[box-shadow,border-color] ${
                                 dragSnapshot.isDragging
                                   ? "shadow-md ring-2 ring-brand/40"
                                   : "hover:border-border/80 hover:shadow-xs"
@@ -233,7 +239,13 @@ export function KanbanBoard({
                               <div className="flex items-start justify-between gap-2">
                                 <Link
                                   href={`/${workspaceSlug}/deals/${deal.id}`}
-                                  className="text-sm font-medium leading-snug hover:underline hover:text-brand transition-colors"
+                                  /* No `.tap-target` here: this link is inside a
+                                     dnd-kit drag handle, and an ::after overlay on
+                                     the dragged element is how a drag turns into a
+                                     mis-tap. The card itself is the touch target
+                                     here, and the title link is the keyboard and
+                                     pointer path into it. */
+                                  className="text-sm font-medium leading-snug hover:underline hover:text-brand-solid transition-colors"
                                 >
                                   {deal.title}
                                 </Link>

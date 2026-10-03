@@ -55,7 +55,14 @@ export function PageHeader({
             ) : null}
           </div>
           {actions ? (
-            <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+            /* Not `shrink-0`. On the deals page this row holds the Board/Table
+               switch, "+ Stage" and "+ New deal", and at 390px there is not
+               enough room beside the title for all of it — with `shrink-0` the
+               row refused to wrap and "+ New deal" bled off the right edge of
+               the screen. Letting it shrink means it wraps onto its own line
+               under the title instead, which is what `flex-wrap` on the parent
+               was already written to allow. */
+            <div className="flex min-w-0 flex-wrap items-center gap-2">{actions}</div>
           ) : null}
         </div>
         {stats ? (
@@ -65,8 +72,18 @@ export function PageHeader({
               `auto-rows-fr` holds every tile to the same height regardless of
               how much sub-text one of them carries, so a single tile with two
               lines of `sub` cannot make the stat band look ragged.
+
+              It is dropped below `sm`. At one column a row is a row, so equal
+              heights buy nothing and cost a lot: the deals page interleaves
+              `CompanyTakeCard` — a tall explanatory block — among plain
+              figures, and `auto-rows-fr` then stretched "Total pipeline" and
+              "Won" to match it. Measured on a 390px phone that left ~120px of
+              empty space under each figure, and the first screen of the page
+              showed two numbers and two holes. Two columns from `sm` up, where
+              the tiles genuinely sit side by side and the equalisation is the
+              point.
             */}
-            <div className="grid auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-4">
               {stats}
             </div>
           </>

@@ -7,6 +7,7 @@ import { Check, CheckCheck, Send, ShieldAlert } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { SendHint } from "@/components/ds/send-hint"
 import { sendWhatsAppMessage } from "@/modules/whatsapp/actions"
 
 export type TimelineItem = {
@@ -185,9 +186,10 @@ export function InboxComposer({
 
       <div className="mt-2 flex items-center justify-end gap-2">
         {context.optedOut ? <span className="text-[11px] font-medium text-destructive">Contact opted out</span> : null}
-        <Button size="sm" onClick={handleSend} disabled={blocked || pending || !body.trim()} className="gap-1">
+        <Button size="sm" onClick={handleSend} disabled={blocked || pending || !body.trim()} className="gap-1.5">
           <Send className="size-3.5" />
           {pending ? "Sending…" : "Send"}
+          <SendHint />
         </Button>
       </div>
     </div>

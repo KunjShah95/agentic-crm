@@ -83,14 +83,30 @@ export default async function PricingPage() {
             </div>
           ))}
         </dl>
+        <p className="mt-6 text-[14px] text-muted-foreground">
+          Comparing options first? See{" "}
+          <Link href="/compare/excel" className="font-medium text-foreground underline underline-offset-4">
+            Estate360 vs an Excel + WhatsApp setup
+          </Link>{" "}
+          or{" "}
+          <Link href="/compare/generic-crm" className="font-medium text-foreground underline underline-offset-4">
+            vs a generic CRM
+          </Link>
+          .
+        </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <Button size="lg" className="h-11 rounded-full px-7" render={<Link href={cta} />}>
+          <Button
+            variant="brand"
+            size="lg"
+            className="h-11 px-7"
+            render={<Link href={cta} />}
+          >
             {isAuthed ? "Open workspace" : "Start free"}
           </Button>
           <Button
             variant="outline"
             size="lg"
-            className="h-11 rounded-full px-6"
+            className="h-11 px-6"
             render={<Link href="/contact" />}
           >
             Ask a question

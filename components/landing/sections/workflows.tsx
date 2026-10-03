@@ -179,7 +179,13 @@ export function WorkflowsSection() {
 
 function Cell({ icon: Icon, title, detail }: Workflow) {
   return (
-    <div className="group rounded-md border border-border/70 bg-card p-5 transition-colors duration-200 hover:border-border sm:col-span-2">
+    /* Not a link, so no lift on hover — see the note on `CAPABILITIES` in
+       app/(marketing)/product/page.tsx. The accent work is done by the icon
+       chip, which flips to the brand fill and is the one element on the card
+       that is allowed to change. The border step was `hover:border-border` on a
+       base of `border-border/70`, a 30%-opacity change nobody can see; it now
+       matches every other non-interactive card on the site. */
+    <div className="group rounded-md border border-border/70 bg-card p-5 transition-colors duration-200 hover:border-foreground/20 sm:col-span-2">
       <span className="flex size-8 items-center justify-center rounded-sm bg-muted text-foreground transition-colors duration-200 group-hover:bg-brand group-hover:text-brand-foreground">
         <Icon className="size-4" aria-hidden />
       </span>

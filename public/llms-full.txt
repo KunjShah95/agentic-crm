@@ -38,8 +38,6 @@ It is not a generic CRM with real-estate fields bolted on. The primitives it is 
 
 ## Pricing
 
-## Pricing
-
 - **Builder** — ₹1,499 per month (price id 1499). For a single-project team.
 - **Team** — ₹3,999 per month (price id 3999). For multi-project sales teams with broker networks.
 - **Network** — ₹7,999 per month (price id 7999). For associations pooling leads and inventory.

@@ -28,6 +28,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import type { StageKind } from "@/lib/pipeline-stages"
 
 const STAGE_COLORS = [
   "#64748b",
@@ -44,15 +52,23 @@ export function StageManager({
   stages,
 }: {
   workspaceId: string
-  stages: { id: string; name: string; color: string; order: number; _count: { deals: number } }[]
+  stages: {
+    id: string
+    name: string
+    color: string
+    order: number
+    kind: StageKind
+    _count: { deals: number }
+  }[]
 }) {
   const router = useRouter()
   const [open, setOpen] = React.useState(false)
   const [editing, setEditing] = React.useState<
-    { id: string; name: string; color: string } | null
+    { id: string; name: string; color: string; kind: StageKind } | null
   >(null)
   const [name, setName] = React.useState("")
   const [color, setColor] = React.useState(STAGE_COLORS[4])
+  const [kind, setKind] = React.useState<StageKind>("OPEN")
   const [isPending, startTransition] = React.useTransition()
   const [localStages, setLocalStages] = React.useState(stages)
   const [prevStages, setPrevStages] = React.useState(stages)
@@ -65,13 +81,15 @@ export function StageManager({
     setEditing(null)
     setName("")
     setColor(STAGE_COLORS[4])
+    setKind("OPEN")
     setOpen(true)
   }
 
-  function openEdit(stage: { id: string; name: string; color: string }) {
+  function openEdit(stage: { id: string; name: string; color: string; kind: StageKind }) {
     setEditing(stage)
     setName(stage.name)
     setColor(stage.color)
+    setKind(stage.kind)
     setOpen(true)
   }
 
@@ -79,9 +97,10 @@ export function StageManager({
     event.preventDefault()
     if (!name.trim()) return
     startTransition(async () => {
+      const payload = { name: name.trim(), color, kind }
       const result = editing
-        ? await updateStageAction(workspaceId, editing.id, { name: name.trim(), color })
-        : await createStageAction(workspaceId, { name: name.trim(), color })
+        ? await updateStageAction(workspaceId, editing.id, payload)
+        : await createStageAction(workspaceId, payload)
       if (result.error) {
         toast.error(result.error.message)
         return
@@ -164,6 +183,15 @@ export function StageManager({
                           style={{ backgroundColor: stage.color }}
                         />
                         <span className="flex-1 text-sm font-medium">{stage.name}</span>
+                        {/* The kind is what the revenue maths reads, so it has to
+                            be visible here — a stage whose kind is wrong is
+                            otherwise invisible until a dashboard number looks
+                            off, with nothing pointing back at this setting. */}
+                        {stage.kind !== "OPEN" ? (
+                          <span className="rounded-xs border border-border px-1.5 py-0.5 text-[10px] font-bold tracking-[0.08em] uppercase text-muted-foreground">
+                            {stage.kind === "WON" ? "Won" : "Lost"}
+                          </span>
+                        ) : null}
                         <span className="text-xs text-muted-foreground">
                           {stage._count.deals} deal{stage._count.deals !== 1 ? "s" : ""}
                         </span>
@@ -225,6 +253,29 @@ export function StageManager({
                   />
                 ))}
               </div>
+            </Field>
+            <Field>
+              <FieldLabel htmlFor="stage-kind">Meaning</FieldLabel>
+              {/*
+                Set separately from the name on purpose. The name is free text and
+                the kind is what decides whether deals here count as revenue — so
+                renaming a stage can no longer change what it means, which is the
+                failure this replaces.
+              */}
+              <Select value={kind} onValueChange={(v) => setKind(v as StageKind)}>
+                <SelectTrigger id="stage-kind" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="OPEN">Open — still in play</SelectItem>
+                  <SelectItem value="WON">Won — closed as revenue</SelectItem>
+                  <SelectItem value="LOST">Lost — closed without revenue</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Deals in a Won stage are counted as revenue and dated by the day they moved
+                here. This is not affected by the name above.
+              </p>
             </Field>
           </FieldGroup>
           <DialogFooter>

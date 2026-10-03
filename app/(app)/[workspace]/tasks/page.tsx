@@ -78,7 +78,7 @@ export default async function TasksPage({
               */}
               <CardTitle>
                 Open
-                <span className="ml-1.5 inline-flex h-5 items-center rounded-full bg-brand px-2 text-[11px] font-medium tabular-nums text-brand-foreground">
+                <span className="ml-1.5 inline-flex h-5 items-center rounded-full bg-brand-solid px-2 text-[11px] font-medium tabular-nums text-brand-foreground">
                   {open.length}
                 </span>
               </CardTitle>

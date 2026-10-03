@@ -73,6 +73,9 @@ export const dealSchema = z.object({
 export const pipelineStageSchema = z.object({
   name: z.string().trim().min(1, "Stage name is required").max(80),
   color: z.string().trim().max(16).default("#6366f1"),
+  // What the stage *means*. Defaults to OPEN because a newly created stage is a
+  // working stage; defaulting to WON would make it start reporting revenue.
+  kind: z.enum(["OPEN", "WON", "LOST"]).default("OPEN"),
 })
 
 export const reorderStagesSchema = z.object({

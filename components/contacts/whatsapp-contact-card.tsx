@@ -7,6 +7,7 @@ import { MessageSquare, Send } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
+import { SendHint } from "@/components/ds/send-hint"
 import {
   Card,
   CardContent,
@@ -113,9 +114,10 @@ export function WhatsAppContactCard({
               }}
             />
             <div className="flex flex-col gap-1">
-              <Button size="sm" className="gap-1" onClick={handleSend} disabled={!body.trim() || sending}>
+              <Button size="sm" className="gap-1.5" onClick={handleSend} disabled={!body.trim() || sending}>
                 <Send className="size-3.5" />
                 {sending ? "Sending…" : "Send"}
+                <SendHint />
               </Button>
               <Button variant="ghost" size="sm" onClick={() => setOpen(false)} disabled={sending}>
                 Cancel

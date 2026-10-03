@@ -2,6 +2,9 @@ import "dotenv/config"
 import bcrypt from "bcryptjs"
 import { PrismaPg } from "@prisma/adapter-pg"
 import { PrismaClient } from "../lib/generated/prisma/client"
+// The same canonical pipeline new workspaces get. Previously a third literal
+// copy, with no `kind` on any of them.
+import { DEFAULT_STAGES_REAL_ESTATE as STAGES } from "../lib/default-stages"
 
 const connectionString = process.env.DATABASE_URL
 if (!connectionString) {
@@ -13,16 +16,12 @@ const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString }) })
 
 const DAY = 86_400_000
 
-// Pipeline stages — the real-estate sales loop. "Won"/"Lost" names are
-// load-bearing: modules/deals/queries.ts matches the stage literally on "Won".
-const STAGES = [
-  { name: "Enquiry", color: "#64748b" },
-  { name: "Site Visit", color: "#3b82f6" },
-  { name: "Hold", color: "#8b5cf6" },
-  { name: "Booking", color: "#f59e0b" },
-  { name: "Won", color: "#10b981" },
-  { name: "Lost", color: "#ef4444" },
-]
+// Pipeline stages — the real-estate sales loop.
+//
+// `kind` is what the revenue maths branches on; `name` is only a label. The
+// previous comment here said the "Won"/"Lost" *names* were load-bearing and that
+// queries matched them literally, which was true and was the fragility that
+// `PipelineStage.kind` exists to remove.
 
 // Mapping from the old generic-SaaS stage names to the real-estate ones.
 const STAGE_RENAMES: Record<string, string> = {
@@ -105,10 +104,22 @@ async function main() {
   for (let i = 0; i < STAGES.length; i++) {
     const found = current.find((s) => s.name === STAGES[i].name)
     if (found) {
-      await prisma.pipelineStage.update({ where: { id: found.id }, data: { color: STAGES[i].color, order: i } })
+      // `kind` is written on re-seed too, not just on create: it is what the
+      // revenue maths reads, so a seed that only set colours would leave a
+      // stale kind behind on an existing workspace.
+      await prisma.pipelineStage.update({
+        where: { id: found.id },
+        data: { color: STAGES[i].color, order: i, kind: STAGES[i].kind },
+      })
     } else {
       await prisma.pipelineStage.create({
-        data: { workspaceId: workspace.id, name: STAGES[i].name, color: STAGES[i].color, order: i },
+        data: {
+          workspaceId: workspace.id,
+          name: STAGES[i].name,
+          color: STAGES[i].color,
+          order: i,
+          kind: STAGES[i].kind,
+        },
       })
     }
   }
@@ -352,6 +363,11 @@ async function main() {
   ] as const
   const deals: Record<string, { id: string }> = {}
   for (const d of dealDefs) {
+    // Seeded Won deals get a real `wonAt` from the same `closeOffset` that
+    // drives `expectedCloseDate`, so a fresh install opens on a trend that
+    // matches the dates in the data instead of collapsing every won deal into
+    // whichever month the seed happened to run.
+    const wonAt = d.stage === "Won" ? new Date(Date.now() + d.closeOffset * DAY) : null
     const row = await prisma.deal.upsert({
       where: { id: d.id },
       update: {
@@ -361,6 +377,7 @@ async function main() {
         organizationId: d.organizationId,
         unitId: d.unitId,
         stageId: byName(d.stage).id,
+        wonAt,
         bookingStage: d.bookingStage,
         value: d.value,
         currency: "INR",
@@ -376,6 +393,7 @@ async function main() {
         organizationId: d.organizationId,
         unitId: d.unitId,
         stageId: byName(d.stage).id,
+        wonAt,
         bookingStage: d.bookingStage,
         value: d.value,
         currency: "INR",

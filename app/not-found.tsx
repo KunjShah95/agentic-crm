@@ -29,10 +29,10 @@ export default function NotFound() {
           The URL may have moved, or the unit never existed. Let&apos;s get you back to inventory that does.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <Button size="lg" className="h-11 gap-2 rounded-full px-7" render={<Link href="/" />}>
+          <Button variant="brand" size="lg" className="h-11 gap-2 px-7" render={<Link href="/" />}>
             Back home <ArrowRight className="size-4" aria-hidden />
           </Button>
-          <Button size="lg" variant="outline" className="h-11 rounded-full px-6" render={<Link href="/contact" />}>
+          <Button variant="outline" size="lg" className="h-11 px-6" render={<Link href="/contact" />}>
             Contact us
           </Button>
         </div>

@@ -43,7 +43,12 @@ export async function POST(req: Request) {
   if (!paymentId) return NextResponse.json({ error: "Missing paymentId" }, { status: 400 })
 
   try {
-    await handleUpiWebhook({ paymentId: String(paymentId), status: String(status), razorpayPaymentId: (body as any).razorpayPaymentId })
+    await handleUpiWebhook({
+      paymentId: String(paymentId),
+      status: String(status),
+      razorpayPaymentId:
+        typeof body.razorpayPaymentId === "string" ? body.razorpayPaymentId : undefined,
+    })
     return NextResponse.json({ ok: true }, { status: 200 })
   } catch (e) {
     console.error("[upi webhook]", e)

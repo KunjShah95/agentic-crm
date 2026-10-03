@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowUpRight, ArrowRight, Flame, CalendarClock, TriangleAlert } from "lucide-react"
+import { ArrowRight, Flame, CalendarClock, TriangleAlert } from "lucide-react"
+import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
 
 /**
  * Hero.
@@ -20,6 +21,12 @@ import { ArrowUpRight, ArrowRight, Flame, CalendarClock, TriangleAlert } from "l
  *
  * The visual is a real component preview — the actual Next Best Action row the
  * team sees on open — not an illustration of one.
+ *
+ * Hierarchy note: the second headline line used to be tinted `text-brand`. Now
+ * that the primary CTA carries hue 68, tinting the headline too put the accent
+ * on two elements and split the emphasis between them. The headline is the
+ * largest thing on the page and does not need colour to win; the button is the
+ * clickable thing and does. One accent, one job.
  */
 export function HeroSection({
   isAuthed,
@@ -43,7 +50,7 @@ export function HeroSection({
         <div className="grid items-center gap-12 pt-16 pb-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:pt-20 lg:pb-28">
           {/* ── LEFT: the claim ── */}
           <div>
-            <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand">
+            <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand-solid">
               <span className="h-px w-6 bg-brand/50" aria-hidden />
               For real-estate sales teams
             </p>
@@ -51,7 +58,7 @@ export function HeroSection({
             <h1 className="mt-6 font-display text-[40px] font-semibold leading-[1.03] tracking-[-0.035em] text-balance sm:text-[52px] lg:text-[60px]">
               Stop managing leads.
               <br />
-              <span className="text-brand">Start closing them.</span>
+              Start closing them.
             </h1>
 
             <p className="mt-6 max-w-[46ch] text-[17px] leading-8 text-pretty text-muted-foreground">
@@ -60,9 +67,21 @@ export function HeroSection({
             </p>
 
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button size="lg" className="h-11 gap-2 px-6" render={<Link href={primaryHref} />}>
+              <Button
+                variant="brand"
+                size="lg"
+                className="h-11 gap-2 px-6"
+                render={
+                  <Link
+                    href={primaryHref}
+                    onClick={() =>
+                      !isAuthed && trackEvent(GTM_EVENTS.heroStartFree, { location: "hero" })
+                    }
+                  />
+                }
+              >
                 {isAuthed ? "Open your workspace" : "Start free"}
-                <ArrowUpRight className="size-4" aria-hidden />
+                <ArrowRight className="size-4" aria-hidden />
               </Button>
               <Button
                 variant="outline"

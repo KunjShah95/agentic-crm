@@ -30,7 +30,7 @@ export default function LoginPage() {
           New here?{" "}
           <Link
             href="/signup"
-            className="font-medium text-foreground underline-offset-4 hover:underline"
+            className="tap-target font-medium text-foreground underline-offset-4 hover:underline"
           >
             Create an account
           </Link>

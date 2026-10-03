@@ -79,9 +79,21 @@ export function TaskList({
       {tasks.map((task) => {
         const done = !!task.completedAt
         return (
+          /* `flex-wrap` + the badge column going full-width below `sm`. The row is
+             three things in a line — checkbox, task text, badges — and on a 390px
+             card that is not enough width for all three. Forcing the badges to
+             keep their place beside the text either clipped them off the card
+             (`shrink-0`, with the Card's `overflow-hidden` eating them) or, once
+             they were allowed to shrink, squeezed the task text to one word per
+             line. Both were measured.
+
+             Letting the badge column take its own line on a phone is the honest
+             answer: the task text is the content, the badges are context about
+             the content, and context does not outrank content for width. From
+             `sm` up there is room and they sit inline again. */
           <div
             key={task.id}
-            className="flex items-start gap-3 rounded-md border bg-card px-3.5 py-3"
+            className="flex flex-wrap items-start gap-x-3 gap-y-2 rounded-md border bg-card px-3.5 py-3"
           >
             <Checkbox
               checked={done}
@@ -89,7 +101,7 @@ export function TaskList({
               className="mt-0.5"
               aria-label={done ? "Reopen task" : "Complete task"}
             />
-            <div className="min-w-0 flex-1">
+            <div className="min-w-0 flex-1 basis-40">
               <p
                 className={
                   done
@@ -113,17 +125,34 @@ export function TaskList({
                 <span>created {relativeTime(task.createdAt)}</span>
               </p>
             </div>
-            <div className="flex shrink-0 flex-wrap justify-end gap-1">
+            {/* `min-w-0` on this column, and `max-w-full` + `truncate` on the deal
+                badge. `shrink-0` here was the bug: it told the badge column never
+                to yield width, so on a 390px card the deal and contact badges
+                were pushed past the card's right edge and then silently clipped
+                away by the Card's `overflow-hidden`. A task's linked deal — the
+                context that makes the task mean anything — simply disappeared.
+
+                `flex-wrap` alone was not enough, because a flex child defaults to
+                `min-width: auto` and refuses to shrink below its content. The
+                column now yields, the badge truncates inside it, and the delete
+                button stays pinned because it is genuinely `shrink-0`. */}
+            <div className="flex min-w-0 basis-full flex-wrap items-start gap-1 sm:basis-auto sm:justify-end">
               {task.deal && (
-                <Link href={`/${workspaceSlug}/deals/${task.deal.id}`}>
-                  <Badge variant="secondary" className="text-[11px]">
+                <Link
+                  href={`/${workspaceSlug}/deals/${task.deal.id}`}
+                  className="min-w-0 max-w-full"
+                >
+                  <Badge variant="secondary" className="block max-w-full truncate text-[11px]">
                     {task.deal.title}
                   </Badge>
                 </Link>
               )}
               {task.contact && (
-                <Link href={`/${workspaceSlug}/contacts/${task.contact.id}`}>
-                  <Badge variant="outline" className="text-[11px]">
+                <Link
+                  href={`/${workspaceSlug}/contacts/${task.contact.id}`}
+                  className="min-w-0 max-w-full"
+                >
+                  <Badge variant="outline" className="block max-w-full truncate text-[11px]">
                     {task.contact.firstName} {task.contact.lastName}
                   </Badge>
                 </Link>
@@ -134,7 +163,7 @@ export function TaskList({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-7 text-muted-foreground hover:text-destructive"
+                      className="size-7 shrink-0 text-muted-foreground hover:text-destructive"
                       aria-label="Delete task"
                     >
                       <Trash2 className="size-3.5" />

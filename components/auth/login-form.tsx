@@ -78,7 +78,7 @@ export function LoginForm() {
         </Alert>
       )}
 
-      <Button type="submit" disabled={isPending} className="w-full bg-brand text-brand-foreground hover:bg-brand/90 font-medium">
+      <Button type="submit" variant="brand" disabled={isPending} className="w-full font-medium">
         {isPending && (
           <LoaderCircle data-icon="inline-start" className="animate-spin" />
         )}

@@ -1,8 +1,15 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import fs from "node:fs"
 import path from "node:path"
 import { REPO_ROOT } from "../helpers/source-scan"
-import { BASE_URL, BRAND, FAQ, PAGE_BY_PATH, PAGES } from "@/content/marketing"
+import {
+  BASE_URL,
+  BRAND,
+  FAQ,
+  PAGE_BY_PATH,
+  PAGES,
+  resolveBaseUrl,
+} from "@/content/marketing"
 import { llmsFullTxt, llmsTxt } from "@/content/llms-txt"
 import {
   breadcrumbLd,
@@ -35,9 +42,111 @@ function normalizeEol(s: string) {
   return s.replace(/\r\n/g, "\n")
 }
 
+/**
+ * Replace the origin of every absolute URL with a placeholder.
+ *
+ * `public/llms.txt` is a committed artifact containing absolute URLs, so it can
+ * only ever be correct for one domain — and which domain that is depends on
+ * NEXT_PUBLIC_SITE_URL at generation time. Comparing it verbatim therefore
+ * fails for reasons that have nothing to do with whether the *content* is
+ * current: it broke the moment the fallback origin changed, even though every
+ * page and every line was correct.
+ *
+ * What this test is actually for is content freshness — a new page added to
+ * PAGES, a changed price, a rewritten FAQ answer. Normalizing the origin keeps
+ * that guarantee and drops the environment coupling.
+ */
+function normalizeOrigin(s: string) {
+  return s.replace(/https?:\/\/[^\s)\]]+/g, (raw) => {
+    try {
+      // Drop scheme too: the committed file was generated against https and a
+      // local fallback is http, which is not a content difference.
+      return `<origin>${new URL(raw).pathname}`
+    } catch {
+      return raw
+    }
+  })
+}
+
 function marketingPages() {
   return PAGES.filter((p) => p.index)
 }
+
+/**
+ * The canonical origin.
+ *
+ * This used to default to `https://estate360.vercel.com`, which 404s, and
+ * because it was a *valid* string nothing noticed: the sitemap listed 404s,
+ * canonicals pointed nowhere, and every link inside llms.txt was dead. The
+ * whole GEO surface — the reason llms.txt, FAQPage and the AI-crawler rules in
+ * robots.ts exist — was addressed to a domain that does not resolve.
+ *
+ * The behaviour is pinned here rather than the specific domain, because the
+ * domain is a decision: what must not regress is that the env var is honoured
+ * and that an unset value degrades to something visibly local.
+ */
+describe("canonical origin (resolveBaseUrl)", () => {
+  it("uses NEXT_PUBLIC_SITE_URL when set", () => {
+    expect(resolveBaseUrl({ NEXT_PUBLIC_SITE_URL: "https://crm.example.com" })).toBe(
+      "https://crm.example.com"
+    )
+  })
+
+  it("strips a trailing slash so paths do not double up", () => {
+    expect(resolveBaseUrl({ NEXT_PUBLIC_SITE_URL: "https://crm.example.com/" })).toBe(
+      "https://crm.example.com"
+    )
+    expect(resolveBaseUrl({ NEXT_PUBLIC_SITE_URL: "https://crm.example.com///" })).toBe(
+      "https://crm.example.com"
+    )
+  })
+
+  it("ignores a blank value rather than emitting an empty origin", () => {
+    expect(resolveBaseUrl({ NEXT_PUBLIC_SITE_URL: "   " })).toBe(
+      "http://localhost:3000"
+    )
+  })
+
+  it("falls back to localhost, never to a guessed production domain", () => {
+    // The regression: a hardcoded fallback that happened to be a dead domain.
+    const fallback = resolveBaseUrl({})
+    expect(fallback).toBe("http://localhost:3000")
+    expect(fallback).not.toMatch(/vercel\.app|vercel\.com/)
+  })
+
+  it("warns when unset in production", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      resolveBaseUrl({ NODE_ENV: "production" })
+      expect(warn).toHaveBeenCalled()
+      expect(String(warn.mock.calls[0][0])).toMatch(/NEXT_PUBLIC_SITE_URL/)
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("does not warn in development", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {})
+    try {
+      resolveBaseUrl({ NODE_ENV: "development" })
+      expect(warn).not.toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
+  })
+
+  it("is a usable absolute origin, which every derived URL depends on", () => {
+    expect(() => new URL(`${BASE_URL}/pricing`)).not.toThrow()
+  })
+
+  it(".env.example does not ship a domain that is already dead", () => {
+    // The example file is what a new machine copies. Pointing it at a 404 is
+    // how this mistake gets made twice.
+    const example = read(".env.example")
+    expect(example).toContain("NEXT_PUBLIC_SITE_URL")
+    expect(example).not.toContain("estate360.vercel.com")
+  })
+})
 
 describe("keyword source of truth", () => {
   it("gives every page exactly one primary term", () => {
@@ -223,14 +332,15 @@ describe("llms.txt (GEO)", () => {
     // A stale llms.txt is worse than none: a model will confidently cite the
     // old version while the page it describes has moved on.
     //
-    // Compared with line endings normalized. `git config core.autocrlf=true`
-    // checks these files out with CRLF on Windows while the generator emits
-    // LF, so a raw byte compare fails on a Windows dev box and passes in CI
-    // for the same correct content — a platform bug masquerading as drift.
-    const onDisk = normalizeEol(read("public/llms.txt"))
-    const onDiskFull = normalizeEol(read("public/llms-full.txt"))
-    expect(onDisk).toBe(normalizeEol(short))
-    expect(onDiskFull).toBe(normalizeEol(full))
+    // Compared with line endings and origins normalized: `git config
+    // core.autocrlf=true` checks these out with CRLF on Windows while the
+    // generator emits LF, and the committed file's absolute URLs depend on
+    // whichever NEXT_PUBLIC_SITE_URL was set when it was generated. Neither is
+    // a content-staleness signal.
+    const onDisk = normalizeOrigin(normalizeEol(read("public/llms.txt")))
+    const onDiskFull = normalizeOrigin(normalizeEol(read("public/llms-full.txt")))
+    expect(onDisk).toBe(normalizeOrigin(normalizeEol(short)))
+    expect(onDiskFull).toBe(normalizeOrigin(normalizeEol(full)))
   })
 
   it("is wired into the build so it cannot drift", () => {

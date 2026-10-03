@@ -154,7 +154,12 @@ export function OrgsTable({
                       <div className="min-w-0">
                         <Link
                           href={`/${workspaceSlug}/organizations/${org.id}`}
-                          className="text-sm font-medium hover:underline"
+                          /* `.tap-target` rather than padding: a 14px link in a
+                             table row measured 17px tall, under the 24px AA floor,
+                             and it is the only route from the list into the org.
+                             The overlay grows the hit area to 24px without
+                             changing the row rhythm, which padding would. */
+                          className="tap-target text-sm font-medium hover:underline"
                         >
                           {org.name}
                         </Link>

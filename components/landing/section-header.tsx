@@ -40,7 +40,12 @@ export function SectionHeader({
       )}
     >
       {eyebrow ? (
-        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-brand">
+        /* `brand-solid`, not `brand`: this is an 11px text label, and `--brand`
+           on the light canvas measures 4.23:1 — under the 4.5:1 that WCAG AA
+           requires at this size. The two values are visually near-identical, so
+           the darker one costs nothing and makes the smallest text on the page
+           legible. Icons may keep plain `text-brand` (graphics only need 3:1). */
+        <p className="text-[11px] font-medium uppercase tracking-[0.16em] text-brand-solid">
           {eyebrow}
         </p>
       ) : null}

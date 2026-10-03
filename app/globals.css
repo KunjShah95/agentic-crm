@@ -9,7 +9,18 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
-  --font-heading: var(--font-display);
+  /* The UI title face — card, dialog, sheet, alert-dialog and empty-state
+     titles. It points at the SANS, not at `--font-display`, and that is the
+     whole reason it exists as a separate token: those five primitives are all
+     13–16px chrome, and a serif at 16px reads as a rendering fault rather than
+     a brand moment. Every one of them documents the expectation in a comment.
+
+     It used to alias `--font-display` and rely on `.app-scope` remapping that
+     back to the sans — which only worked inside the workspace app. On every
+     other surface (login, signup, invite, buyer portal, public project site)
+     dialog and card titles were silently rendering in Fraunces. Pointing at the
+     sans directly fixes all of them at once and removes the dependency on scope. */
+  --font-heading: var(--font-sans);
   --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -27,6 +38,7 @@
   --color-ring: var(--ring);
   --color-brand: var(--brand);
   --color-brand-foreground: var(--brand-foreground);
+  --color-brand-solid: var(--brand-solid);
   --color-brand-soft: var(--brand-soft);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -79,6 +91,30 @@
      the beige+brass premium default. */
   --brand: oklch(0.58 0.16 68);
   --brand-foreground: oklch(0.99 0.002 85);
+  /* The accent in its two sanctioned jobs. `--brand` is the raw hue and is for
+     GRAPHICS ONLY — icons, dots, rules, icon-chip fills with no text in them.
+     `--brand-solid` is the same hue stepped darker, and is what you use the
+     moment the accent carries TEXT or sits underneath text.
+
+     The split is a contrast requirement, not taste. Measured against this
+     canvas:
+         --brand        as text on --background   4.23:1   FAILS AA (needs 4.5)
+         --brand        under --brand-foreground  4.31:1   FAILS AA (needs 4.5)
+         --brand-solid  as text on --background   5.00:1   passes
+         --brand-solid  under --brand-foreground  5.09:1   passes
+     Non-text graphics only need 3:1, so plain `--brand` is correct on an icon
+     and wrong on an 11px label. The two values are close enough to be
+     indistinguishable side by side, so nothing is given up by using the darker
+     one for text.
+
+     ONE TRAP: this rule is for LIGHT grounds and it reverses on dark ones.
+     Measured against `--foreground` (#121417), `--brand` is 4.18:1 and
+     `--brand-solid` is only 3.54:1 — darkening an accent on a dark field loses
+     contrast rather than gaining it. So on a dark panel use `--brand` (or, if
+     the label must clear 4.5:1 at small sizes, a lighter amber still) and never
+     reach for `--brand-solid` just because the text is small. Check the ground
+     before choosing the token. */
+  --brand-solid: oklch(0.54 0.155 68);
   --brand-soft: oklch(0.95 0.03 68);
   --background: oklch(0.985 0.002 264);
   --foreground: oklch(0.19 0.008 264);
@@ -105,7 +141,13 @@
   --status-positive-bg: oklch(0.955 0.025 155);
   --status-positive-fg: oklch(0.52 0.11 155);
   --status-caution-bg: oklch(0.960 0.030 78);
-  --status-caution-fg: oklch(0.55 0.13 68);
+  /* Was oklch(0.55 0.13 68), which measures 4.44:1 on --status-caution-bg —
+     under the 4.5:1 AA requires, and it failed by enough to matter because this
+     pair is used for 10–11px badges (unit holds, overdue milestones, expiring
+     things) where there is no size allowance. One notch down clears it at 4.82:1
+     and stays legibly amber. Audited alongside the other status pairs: caution
+     was the only failure in the set. */
+  --status-caution-fg: oklch(0.53 0.13 68);
   --status-critical-bg: oklch(0.955 0.022 27);
   --status-critical-fg: oklch(0.55 0.19 27);
   --status-info-bg: oklch(0.955 0.020 245);
@@ -154,6 +196,12 @@
   /* Dark mode brand accent = warm copper amber. Hue 68, same as light. */
   --brand: oklch(0.68 0.16 68);
   --brand-foreground: oklch(0.14 0.006 60);
+  /* Dark mode inverts the pairing rather than re-stepping it: the accent is
+     lighter and the label on top of it is near-black. `--brand` measures 6.57:1
+     on this canvas and 5.43:1 against the near-black label, so both values clear
+     AA here and `--brand-solid` is just an alias. Keeping both names means a call
+     site never has to branch on theme. */
+  --brand-solid: oklch(0.68 0.16 68);
   --brand-soft: oklch(0.24 0.04 68);
   --background: oklch(0.155 0.006 264);
   --foreground: oklch(0.97 0.003 264);
@@ -231,26 +279,36 @@
 }
 
 /* ── App scope ──────────────────────────────────────────────────────────────
-   The workspace app runs on a single family: Inter, two weights, tight tracking.
-   This is scoped to `.app-scope` rather than set globally because the marketing
-   site under (marketing) keeps its display face — the two surfaces are designed
-   separately and a global swap would drag the landing page in with it.
+   `--font-display` is Fraunces site-wide: the marketing page h1/h2 are editorial
+   by design. Inside the workspace app it is remapped back to the sans, because a
+   30px serif over a dense table of numbers reads as a rendering fault rather
+   than a brand moment — and the app's own stat figures are the one place a serif
+   numeral was doing useful work, which is why `wins.tsx` opts in explicitly.
 
-   The weight remap below is the part that makes the "400 and 700 only" rule real.
-   Inter is loaded with exactly two static weights, so every `font-medium` and
-   `font-semibold` in the app would be *synthesised* by the browser — a faked
-   500 that sits optically between the two real weights and renders mushy at
-   13px. Remapping the utilities to the nearest real weight is sharper than the
-   synthetic and needs no per-call-site edits. */
+   This is now the ONLY thing `.app-scope` does. It used to also rewrite
+   `--font-sans`, because the sans used to differ between the two surfaces; with
+   a single shared sans that override was redundant load-bearing confusion, and it
+   had already leaked — `app/buyer/[token]` and `app/not-found.tsx` used
+   `font-display` outside `.app-scope` and rendered serif inside the product. */
 .app-scope {
-  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-inter);
+  --font-display: var(--font-sans);
 }
-.app-scope :where(.font-medium) {
+
+/* Inter is loaded with exactly two static weights, so every `font-medium` (500)
+   and `font-semibold` (600) would be *synthesised* by the browser — a faked
+   intermediate that sits optically between the two real weights and renders
+   mushy at 13px. Remapping the utilities to the nearest real weight is sharper
+   than the synthetic and needs no per-call-site edits.
+
+   This is global rather than `.app-scope`-scoped because Inter is now the only
+   sans on every surface. `:not(.font-mono)` keeps the remap off the data face —
+   JetBrains Mono is loaded at 400 AND 500, so its genuine 500 must survive. Every
+   call site that pairs a mono face with a weight puts both classes on the same
+   element, so the element-level selector is sufficient. */
+:where(.font-medium):not(.font-mono) {
   font-weight: 400;
 }
-.app-scope :where(.font-semibold) {
+:where(.font-semibold):not(.font-mono) {
   font-weight: 700;
 }
 
@@ -274,6 +332,52 @@
   background-color: var(--surface-sunken);
   border: 1px solid var(--hairline);
   border-radius: 8px;
+}
+
+/* ── Tap targets ──────────────────────────────────────────────────────────
+   WCAG 2.5.8 (Target Size Minimum, AA) asks for 24×24 CSS px. It is an AA
+   criterion, not an AAA one, so it is the bar here — WCAG 2.5.5 at 44×44 is AAA
+   and cannot be met by a run of links in a paragraph without wrecking the line
+   rhythm, which is why the footer nav, the legal strip and the inline prose
+   links were all shipping at 17–21px tall on a phone.
+
+   `.tap-target` adds the reach with an ::after overlay rather than padding, so
+   it enlarges the *hit area* without changing layout at all. Nothing moves: the
+   padding box is unchanged, only the clickable region grows, and it is allowed
+   to overlap a neighbour's margin, which is exactly what target spacing wants.
+
+   Both halves are load-bearing and getting either wrong fails silently:
+
+   `position: relative` anchors the overlay to the LINK. Without it the pseudo
+   resolves against whatever distant ancestor happens to be positioned — measured
+   at 810px tall on the footer links, i.e. a full-viewport sheet of invisible
+   click shield over the bottom of every page.
+
+   `z-index: 1` makes the overlay reachable. Without it the next sibling's
+   background paints over the extension, which is exactly the band the technique
+   exists to create.
+
+   `position: relative` does re-parent absolutely-positioned descendants, so this
+   is NOT safe on a link that positions its own content. Audited across every
+   route: no `.tap-target` in this codebase has an absolute/fixed descendant or a
+   pre-existing styled `::before`/`::after`. `site-header`'s nav links do use
+   `::after` for the active underline, and they deliberately use real padding
+   (`-my-2 py-2`) instead of this class, so the two pseudo-elements never collide.
+
+   Do not substitute padding here. Padding changes layout, which is the one thing
+   this utility exists to avoid. */
+.tap-target {
+  position: relative;
+}
+.tap-target::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: max(100%, 24px);
+  transform: translateY(-50%);
+  z-index: 1;
 }
 
 /* ── Motion ───────────────────────────────────────────────────────────────
@@ -337,7 +441,13 @@
   animation: fade-in-row var(--dur-base) var(--ease-out) backwards;
 }
 
-/* Interactive press feedback. `0.96`, never lower — below 0.95 reads as a toy. */
+/* Interactive press feedback. `0.96`, never lower — below 0.95 reads as a toy.
+
+   This exists for the surfaces the Button primitive does not cover: raw
+   <button> inventory tiles, draggable kanban cards, clickable list rows. Those
+   get no `active:` treatment from anywhere else, so before this their only
+   acknowledgement of a tap was the click silently landing. `Button` itself
+   already presses via its own `active:translate-y-px` and does NOT need this. */
 @keyframes press-in {
   50% {
     transform: scale(0.96);
@@ -351,6 +461,17 @@
 }
 .pressable:active {
   animation: press-in 220ms var(--ease-out);
+}
+
+/* The global `prefers-reduced-motion` block at the foot of this file zeroes
+   `animation` with `!important`, which does cover `.pressable:active`. This
+   local rule is what stops the *transition* half — the colour and border shift
+   on hover — from animating for users who asked for stillness. Both halves need
+   handling because they are declared through different properties. */
+@media (prefers-reduced-motion: reduce) {
+  .pressable {
+    transition: none;
+  }
 }
 
 /* Skeleton shimmer. Opacity-only so it composites on the GPU, and slow enough
@@ -400,15 +521,48 @@
   background: oklch(0.45 0.006 264);
 }
 
-/* Focus-visible ring for interactive elements */
-a:focus-visible,
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-[role="button"]:focus-visible {
+/* Focus ring — the safety net.
+   The primitives in components/ui (Button, Input, Textarea, Select, Checkbox,
+   Tabs…) each carry their OWN `focus-visible:ring-3 focus-visible:ring-ring/50`.
+   This rule is not that system and does not duplicate it — it exists for the
+   things no primitive styles: bare markup links in marketing prose, table rows
+   and list rows that behave as buttons, and the ARIA roles that @base-ui/react
+   emits on its own unstyled parts.
+
+   Two corrections over the previous version of this rule:
+
+   1. It no longer sets `border-radius`. Mutating geometry inside a focus state
+      is a layout change on the one interaction a keyboard user cannot opt out
+      of; every element this targets already carries a radius.
+   2. The selector list is built from the roles actually present in this
+      codebase plus the WAI-ARIA widget roles the primitives render, rather than
+      `button` alone — which left every tab, menuitem, option, switch, checkbox
+      and slider in a dialog or command menu with no visible focus at all. */
+:where(
+  a:focus-visible,
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  summary:focus-visible,
+  [tabindex]:focus-visible,
+  [role="button"]:focus-visible,
+  [role="link"]:focus-visible,
+  [role="checkbox"]:focus-visible,
+  [role="switch"]:focus-visible,
+  [role="radio"]:focus-visible,
+  [role="tab"]:focus-visible,
+  [role="menuitem"]:focus-visible,
+  [role="menuitemcheckbox"]:focus-visible,
+  [role="menuitemradio"]:focus-visible,
+  [role="option"]:focus-visible,
+  [role="listbox"]:focus-visible,
+  [role="combobox"]:focus-visible,
+  [role="slider"]:focus-visible,
+  [role="treeitem"]:focus-visible
+) {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
-  border-radius: var(--radius-sm);
 }
 
 /* TypeUI Premium: motion is transform/opacity, ≤250ms, and earns its place.
