@@ -3,7 +3,7 @@
  * Groq Whisper + HuggingFace fallback.
  */
 
-import { fetchJson, runPool } from "./http";
+import { runPool } from "./http";
 
 interface STTInput {
   audio: Blob;

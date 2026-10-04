@@ -13,14 +13,30 @@ import { processQuery } from "./query-processor";
 import { QueryEnhancer } from "./query-enhancer";
 import { recordUsage } from "@/lib/usage";
 import { extractClauseHint } from "./chunk";
+import { answerLanguage, wasRewritten } from "./language";
 import { db } from "@/lib/db";
-import { AppError } from "@/lib/errors";
+import type { DocMeta, QueryFilter, ScoredChunk } from "./types";
 
 const MAX_ATTEMPTS = 3;
 
-const enforceScope = (filter: Record<string, unknown> = {}, role: string | null = null) => {
-  const departments = [...(filter.departments as string[] || [])];
-  return { ...filter, departments: departments.length ? departments : filter.departments };
+/**
+ * Normalise the caller's filter into the shape `retrieve` and `cacheKey` expect.
+ *
+ * Typed as `QueryFilter` rather than `Record<string, unknown>`. The loose type
+ * is what forced a cast at each of the five places its result is read —
+ * `scopedFilter.departments as string[]`, `(scopedFilter as any).clause` — and
+ * the `as any` version of that last one sat inside the cache-scope string. A
+ * filter key that did not exist on `QueryFilter` would have been silently spread
+ * into the retrieval predicate, which is a data-scoping concern, not a typing
+ * one.
+ *
+ * `role` is accepted and deliberately unused. It was threaded here for symmetry
+ * with the SQL-level scope in `retrieve.ts`, which does apply it; keeping the
+ * parameter means the signature stays honest if this ever gains the behaviour.
+ */
+const enforceScope = (filter: QueryFilter = {}, _role: string | null = null): QueryFilter => {
+  const departments = filter.departments ? [...filter.departments] : undefined;
+  return { ...filter, departments: departments?.length ? departments : filter.departments };
 };
 
 const routeIntent = (query = "", context = ""): string => {
@@ -47,7 +63,12 @@ const rewriteQuery = async (query: string, context: string | null): Promise<stri
   }
 };
 
-const systemFor = (scope: string) =>
+/**
+ * @param scope      Restriction summary, so the model does not claim to have
+ *                   searched departments it was not given.
+ * @param language   Answer language, by name — see `./language`.
+ */
+const systemFor = (scope: string, language: string) =>
   `You are a citation-backed assistant. Answer using ONLY the provided Context sections${scope ? ` (scope: ${scope})` : ""}.
 Rules:
 1. Every claim must be supported by the Context.
@@ -56,27 +77,44 @@ Rules:
 4. Do NOT use outside/training knowledge to fill gaps.
 5. Do NOT speculate or infer beyond what the Context explicitly states.
 6. If a claim needs a specific clause (e.g. 4.2), cite the chunk whose clause_id matches.
-Answer in the same language as the question.`;
+7. Write the entire answer in ${language}, regardless of the language of the Context sections or the restated question. Citations stay as [Source N] either way.
 
-const buildContext = (chunks: Array<{ content: string; documentId: string; metadata: Record<string, unknown> }>, docMeta: Record<string, unknown>) =>
+The Context is in English because that is what the source documents are. You are answering a person who asked in ${language}. Use the Context as evidence; answer to them.`;
+
+/* `ScoredChunk` rather than an inline structural literal. The literal named only
+   three fields, which meant `parentContext` — read two lines below — was a type
+   error, and the fix had been a cast on the read. The shared type declares the
+   whole chunk, so adding a field the builder reads no longer requires editing
+   this signature. */
+const buildContext = (chunks: ScoredChunk[], docMeta: Record<string, DocMeta>) =>
   chunks
     .map((c, i) => {
-      const doc = (docMeta[c.documentId] as Record<string, unknown> | undefined) || {};
-      const src = (doc.title as string) || (doc.source_file as string) || c.documentId;
-      const dept = doc.department ? ` Dept:${doc.department}` : "";
-      const sec = (c.metadata as any)?.section_path?.length
-        ? ` > ${((c.metadata as any).section_path as string[]).join(" > ")}`
+      /* Absent metadata renders the raw document id rather than "undefined" in a
+         citation. Typed as `DocMeta`, so `title`/`source_file` are `string | null`
+         and the `||` chain handles all three cases without a cast. */
+      const doc = docMeta[c.documentId];
+      const src = doc?.title || doc?.source_file || c.documentId;
+      const dept = doc?.department ? ` Dept:${doc.department}` : "";
+      /* `section_path` is written by the chunker as a string array but lands in a
+         free-form JSON metadata column, so `unknown` is the honest type and the
+         `Array.isArray` guard is a real check, not a formality: a document that
+         put a string where the array belongs used to reach `.join()` and throw
+         mid-answer. `parentContext` is on `ScoredChunk` now that the shared type
+         declares it, so it needs no cast. */
+      const path = c.metadata?.section_path;
+      const sec = Array.isArray(path) && path.length
+        ? ` > ${path.map(String).join(" > ")}`
         : c.metadata?.heading
           ? ` > ${c.metadata.heading}`
           : "";
       const clause = c.metadata?.clause_id ? ` (Clause ${c.metadata.clause_id})` : "";
       const loc = c.metadata?.page ? `, Page ${c.metadata.page}` : "";
-      const parent = (c as any).parentContext ? `\n[Parent context]\n${(c as any).parentContext}` : "";
+      const parent = c.parentContext ? `\n[Parent context]\n${c.parentContext}` : "";
       return `[Source ${i + 1}: ${src}${dept}${sec}${clause}${loc}]\n${c.content}${parent}`;
     })
     .join("\n---\n");
 
-const planAttempts = ({ query, topK, alpha, filter, intent }: { query: string; topK: number; alpha: number | undefined; filter: Record<string, unknown>; intent: string }) => {
+const planAttempts = ({ query, topK, alpha, filter, intent }: { query: string; topK: number; alpha: number | undefined; filter: QueryFilter; intent: string }) => {
   const clause = (filter.clause as string) || extractClauseHint(query);
   let baseAlpha = alpha ?? Number(process.env.RAG_ALPHA || 0.5);
   if (alpha === undefined || alpha === null) {
@@ -102,7 +140,11 @@ const logQuery = async ({
   tenantId: string;
   userId: string;
   query: string;
-  filter: Record<string, unknown>;
+  /* `QueryFilter`, not `Record<string, unknown>`. The loose type is why the two
+     `logQuery` call sites below could not pass `scopedFilter` without a cast —
+     and a query log whose `filter` column is untyped is a log you cannot trust
+     when auditing which scope a given answer was produced under. */
+  filter: QueryFilter;
   result: Record<string, unknown>;
   latencyMs: number;
   providerUsed?: string;
@@ -153,11 +195,19 @@ export const answerQuery = async ({
   const scopedFilter = enforceScope(filter, role);
   const intent = routeIntent(query, context || "");
   const effectiveQuery = await rewriteQuery(query, context);
+  /* Read from `query`, before any rewrite. See `answerLanguage`. */
+  const language = answerLanguage(query);
 
   let enhancedQuery = effectiveQuery;
   let enhancedAlpha = alpha;
   try {
-    const enhancement = await QueryEnhancer.enhance(effectiveQuery, { tenantContext: context ?? undefined });
+    const enhancement = await QueryEnhancer.enhance(effectiveQuery, {
+      tenantContext: context ?? undefined,
+      /* By name, not tag — these prompts are read by a model, and "Gujarati"
+         is unambiguous where "gu" would need interpreting. This is the call site
+         that made the option real; it was previously declared and never passed. */
+      language: language.name,
+    });
     enhancedQuery = enhancement.queries[0];
     enhancedAlpha = enhancement.alpha;
     console.debug("[rag] Query enhanced", {
@@ -186,21 +236,52 @@ export const answerQuery = async ({
     console.debug("[rag] Query processor skipped", { error: (err as Error).message });
   }
 
+  /* `QueryFilter` from ./types declares `departments` and `clause` — both of which
+     were being cast because the local usage was checked against an inline
+     literal instead. This string is the cache scope, so a department or clause
+     filter that failed to reach it would serve one tenant's scoped results to
+     another; the casts were hiding exactly the fields that matter most here. */
   const scope = [
-    ...(scopedFilter.departments as string[] || []),
-    (scopedFilter as any).clause ? `clause ${(scopedFilter as any).clause}` : null,
+    ...(scopedFilter.departments ?? []),
+    scopedFilter.clause ? `clause ${scopedFilter.clause}` : null,
     `intent:${intent}`,
   ]
     .filter(Boolean)
     .join(", ");
-  const key = await cacheKey(tenantId, effectiveQuery, { topK, alpha, filter: scopedFilter, role });
+  /* The answer language is part of the key.
+
+     `effectiveQuery` is the English rewrite, so "રિફંડ પોલિસી કેટલા દિવસમાં?" and "What is
+     the refund window?" can reduce to the same string and would have shared one
+     cache entry. That was harmless while every answer was English; the moment
+     answers follow the question's language it becomes a wrong-language reply
+     served to the next person to ask — a Gujarati user handed an English answer
+     that looks like a fresh, correctly-cited response rather than a stale one.
+
+     Keying on the tag rather than the name keeps the key short; the name is
+     derived from it in one place. */
+  const key = await cacheKey(tenantId, effectiveQuery, {
+    topK,
+    alpha,
+    filter: scopedFilter,
+    role,
+    lang: language.tag,
+  });
   const cached = await getCached(key);
   if (cached) return { ...cached, cached: true, intent, scope };
 
   let semanticResult = null;
   if (semanticCache.enabled()) {
     try {
-      semanticResult = await semanticCache.get(tenantId, enhancedQuery, role);
+      /* The tag is passed as `variant` rather than being folded into the query
+         text: this cache matches on embedding similarity, so appending a
+         language marker to the string would put a non-linguistic token into the
+         vector and shift every score. See `makeCacheKey`. */
+      semanticResult = await semanticCache.get(
+        tenantId,
+        enhancedQuery,
+        role,
+        language.tag
+      );
     } catch (err) {
       console.debug("[rag] Semantic cache read failed", { error: (err as Error).message });
     }
@@ -211,8 +292,12 @@ export const answerQuery = async ({
   }
 
   const t0 = Date.now();
-  const allScored: Array<Record<string, unknown>> = [];
-  const allDocMeta: Record<string, unknown> = {};
+  const allScored: ScoredChunk[] = [];
+  /* `Record<string, DocMeta>`, not `Record<string, unknown>` — this is handed
+     straight to `scoreChunks`, which reads `created_at` and `authority` off each
+     entry. Typed as `unknown`, every one of those reads needed a cast and a
+     non-document value could have been passed in its place. */
+  const allDocMeta: Record<string, DocMeta> = {};
   let lastConf = { topConfidence: 0, threshold: 0.65, passed: false };
   let tRetrieve = 0;
   let totalAttempts = 0;
@@ -220,7 +305,7 @@ export const answerQuery = async ({
   for (const subQuery of subQueries) {
     const attempts = planAttempts({ query: subQuery, topK, alpha: enhancedAlpha, filter: scopedFilter, intent });
     totalAttempts += attempts.length;
-    let subScored: Array<Record<string, unknown>> = [];
+    let subScored: ScoredChunk[] = [];
 
     for (let a = 0; a < attempts.length; a++) {
       const plan = attempts[a];
@@ -230,7 +315,11 @@ export const answerQuery = async ({
         query: a === 0 ? subQuery : `${subQuery} ${plan.clause ? `section ${plan.clause}` : ""}`.trim(),
         topK: plan.topK,
         alpha: plan.alpha,
-        filter: { ...scopedFilter, clause: plan.clause ?? undefined } as any,
+        /* No cast — this object is a `QueryFilter`, which is what `retrieve` takes. The
+       `as any` here was hiding that `scopedFilter` was spread into an object that
+       could then carry fields `retrieve` did not declare, so a typo in a filter
+       key would have been silently forwarded into the SQL predicate builder. */
+        filter: { ...scopedFilter, clause: plan.clause ?? undefined },
         role,
       });
       tRetrieve += Date.now() - tR0;
@@ -249,7 +338,7 @@ export const answerQuery = async ({
         if (d.confidential && (!role || !allowed.includes(role))) return false;
         return true;
       });
-      const { scored, passed, topConfidence, threshold } = scoreChunks(scoped as any, docMeta as any);
+      const { scored, passed, topConfidence, threshold } = scoreChunks(scoped, docMeta);
       subScored = scored;
       lastConf = { topConfidence, threshold, passed };
       if (passed && scored.length) break;
@@ -257,20 +346,29 @@ export const answerQuery = async ({
     }
 
     allScored.push(...subScored);
-    Object.assign(allDocMeta, await loadDocumentTitles(tenantId, [...new Set(subScored.map((c) => c.documentId as string))]));
+    Object.assign(allDocMeta, await loadDocumentTitles(tenantId, [...new Set(subScored.map((c) => c.documentId))]));
   }
 
   const seen = new Set<string>();
-  const deduped: Array<Record<string, unknown>> = [];
+  /* `ScoredChunk[]`, not `Record<string, unknown>[]`. The looser type is what
+     `scoreChunks` had to be cast *away* from at the call below, because a
+     `Record` is not assignable to `ScoredChunk` — the cast was undoing this
+     declaration, not working around anything dynamic.
+
+     `chunk_index` is read through the index signature rather than assumed: it is
+     set by the chunker, so it is present on most rows and absent on any path
+     that synthesised a chunk, and `?? 0` keeps those deduping on document alone
+     instead of producing `undefined` in the key. */
+  const deduped: ScoredChunk[] = [];
   for (const c of allScored) {
-    const hash = `${c.documentId}:${c.chunk_index || 0}`;
+    const hash = `${c.documentId}:${c.chunk_index ?? 0}`;
     if (!seen.has(hash)) {
       seen.add(hash);
       deduped.push(c);
     }
   }
 
-  const { scored, passed, topConfidence, threshold } = scoreChunks(deduped as any, allDocMeta as any);
+  const { scored, passed, topConfidence, threshold } = scoreChunks(deduped, allDocMeta);
   lastConf = { topConfidence, threshold, passed };
 
   if (!lastConf.passed || !scored.length) {
@@ -295,8 +393,21 @@ export const answerQuery = async ({
   );
   const tGen0 = Date.now();
   const genResult = await generate({
-    system: systemFor(scope),
-    user: `Context:\n---\n${ctx}\n---\nQuestion: ${effectiveQuery}`,
+    system: systemFor(scope, language.name),
+    /* Both questions are given, and they are not the same string.
+
+       `effectiveQuery` is the resolved question — follow-up references ("what
+       about that one?") are expanded against the prior turn, which is why it
+       exists and why it stays the thing to answer. But it is an English rewrite,
+       so it is not the language the user spoke and it is not how they phrased
+       the question.
+
+       Handing the model the original alongside it is what lets it answer the
+       person rather than the paraphrase: register and terminology follow the
+       user's wording, and rule 7's language instruction has something real to
+       work from. `query` is included only when the rewrite actually changed it,
+       so the common case stays as compact as it was. */
+    user: `Context:\n---\n${ctx}\n---\nQuestion: ${effectiveQuery}${wasRewritten(query, effectiveQuery) ? `\n\nThe user's own words: "${query.trim()}"` : ""}`,
     maxTokens: 1024,
   });
   const tGen = Date.now() - tGen0;
@@ -304,14 +415,26 @@ export const answerQuery = async ({
   const providerUsed = genResult.providerUsed;
 
   const faith = checkFaithfulness(text, scored);
-  const citations = scored.map((c, i) => ({
-    source: i + 1,
-    documentId: c.documentId,
-    title: (allDocMeta[c.documentId as string] as Record<string, unknown>)?.title || (allDocMeta[c.documentId as string] as Record<string, unknown>)?.source_file,
-    department: (allDocMeta[c.documentId as string] as Record<string, unknown>)?.department,
-    metadata: c.metadata,
-    confidence: Number((c.confidence as number).toFixed(3)),
-  }));
+  /* No casts. `allDocMeta` is `Record<string, DocMeta>` and `c.documentId` is a
+     `string`, so every one of those five `as` casts was narrowing a value that
+     was already the right type — and `c.confidence as number` would have thrown
+     on `undefined` had a chunk ever reached this without being scored.
+
+     The `?? 0` on confidence is the real behaviour: an unscored chunk has no
+     confidence, and `Number(undefined.toFixed(3))` is a TypeError, so the old
+     cast was protecting a path that would have crashed rather than producing a
+     number. */
+  const citations = scored.map((c, i) => {
+    const doc = allDocMeta[c.documentId];
+    return {
+      source: i + 1,
+      documentId: c.documentId,
+      title: doc?.title || doc?.source_file,
+      department: doc?.department,
+      metadata: c.metadata,
+      confidence: Number((c.confidence ?? 0).toFixed(3)),
+    };
+  });
 
   const evals = {
     topConfidence: Number(lastConf.topConfidence.toFixed(3)),
@@ -342,7 +465,7 @@ export const answerQuery = async ({
     await trackCacheEntry(key, scored.map((c) => c.documentId as string));
     if (semanticCache.enabled()) {
       try {
-        await semanticCache.set(tenantId, enhancedQuery, result, {}, role);
+        await semanticCache.set(tenantId, enhancedQuery, result, {}, role, language.tag);
       } catch (err) {
         console.debug("[rag] Semantic cache write failed", { error: (err as Error).message });
       }

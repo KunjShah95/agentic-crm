@@ -37,7 +37,11 @@ interface OpenAiCompatible {
   choices?: Array<{ message?: { content?: string } }>;
 }
 
-interface GeminiResponse {
+/**
+ * Exported because `vision.ts` calls the same Gemini endpoint family and was
+ * independently reaching for `fetchJson<any>` to describe the identical envelope.
+ */
+export interface GeminiResponse {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
 }
 

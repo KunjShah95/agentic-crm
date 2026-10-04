@@ -13,7 +13,46 @@ import { enqueueIngest } from "./queue";
 import { invalidateDocuments } from "./cache";
 import { semanticCache } from "./semantic-cache";
 import { clearEmbeddingsFor, findChunksForReingest } from "./pgvector";
-import type { Prisma, RagModality } from "@/lib/generated/prisma/client";
+import type { Prisma, RagDocumentStatus, RagModality } from "@/lib/generated/prisma/client";
+import type { Modality } from "./types";
+/**
+ * What `reingestDocument` actually returns.
+ *
+ * Declared inline rather than reusing `IngestDocumentResult` because the two are
+ * genuinely different shapes: re-ingest reports `deduped` and the incremental
+ * counters, and takes `status` straight from the stored `RagDocumentStatus`
+ * (`PROCESSING` / `READY` / `ERROR`) rather than the lower-cased
+ * `DocumentStatus` the public ingest result uses. Forcing one type over the other
+ * would have meant a cast in each of the three return statements.
+ *
+ * Every arm of the union carries `status` and `version`. That is deliberate: this
+ * result is widened into `BulkIngestResult.ok[]`, where `status` is required, so
+ * an arm that omitted it produced an entry whose `status` was `undefined` at
+ * runtime while the declared type claimed otherwise.
+ */
+type ReingestDocumentResult =
+  | { id: string; status: RagDocumentStatus; deduped: true; version: number }
+  | {
+      id: string
+      status: RagDocumentStatus
+      version: number
+      modality: Modality
+      lang: string
+      chunks: number
+      reused: number
+      embedded: number
+      mode: string
+      cache: string
+    }
+  | {
+      id: string
+      status: RagDocumentStatus
+      version: number
+      modality: Modality
+      lang: string
+      chunks: number
+      mode: string
+    };
 
 /**
  * A JSON column is `Prisma.JsonValue`, which may hold a scalar or an array — so
@@ -271,7 +310,7 @@ export const reingestDocument = async ({
   confidential,
   allowedRoles,
   mode = "incremental",
-}: ReingestOptions) => {
+}: ReingestOptions): Promise<ReingestDocumentResult> => {
   if (!file?.buffer) throw new AppError("FILE_REQUIRED", "File required", 400);
   if (file.size > MAX_BYTES) throw new AppError("FILE_TOO_LARGE", `File too large (max ${MAX_BYTES} bytes)`, 400);
 
@@ -349,7 +388,7 @@ const incrementalReingest = async ({
   allowedRoles,
   content_hash,
   baseVersion,
-}: ReingestOptions & { content_hash: string; baseVersion: number }) => {
+}: ReingestOptions & { content_hash: string; baseVersion: number }): Promise<ReingestDocumentResult> => {
   const { parseFile: parse } = await import("./parsers/index");
   const { chunkText: chunk } = await import("./chunk");
   const parsed = await parse({ buffer: file.buffer, mime: file.mimetype, filename: file.originalname });
@@ -449,7 +488,9 @@ const incrementalReingest = async ({
     });
   }
 
-  const staleIds = oldChunks.map((o: any) => o.id).filter((id: string) => !keepIds.has(id));
+  /* No cast. `oldChunks` is `ReingestRow[]` from the pgvector accessor, so `id`
+     is already a `string` and the `filter` predicate did not need one. */
+  const staleIds = oldChunks.map((o) => o.id).filter((id) => !keepIds.has(id));
   for (let i = 0; i < staleIds.length; i += 100) {
     const batch = staleIds.slice(i, i + 100);
     if (!batch.length) continue;
@@ -777,7 +818,7 @@ export const syncDocumentsByExternalId = async ({
           allowedRoles: it.allowedRoles,
           mode: "incremental",
         });
-        if ((res as any).deduped) unchanged++;
+        if ("deduped" in res && res.deduped) unchanged++;
         else updated++;
       } else {
         res = await ingestDocument({

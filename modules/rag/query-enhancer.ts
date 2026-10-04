@@ -61,16 +61,38 @@ interface ClassifyResult {
 export class QueryEnhancer {
   static async enhance(
     query: string,
+    /* `language` is the answer language, not the retrieval language.
+
+       The three calls below produce *retrieval* queries, and the corpus is
+       English-language RERA and Gujarat regulation documents. So a Gujarati
+       question is deliberately translated into English sub-queries — that is what
+       makes them match the documents, and forcing them to stay in Gujarati would
+       find nothing.
+
+       What must not be lost is the user's language, because the rewritten query
+       is what reaches the answering model, and that model's instruction to
+       "answer in the same language as the question" was reading an English
+       string. `answer.ts` now states the language explicitly and passes the
+       original wording; `language` here exists so the enhancer is not the thing
+       that discards it, and is threaded into the prompts so they are told which
+       language the answer will be in and do not drift into rewriting the intent.
+
+       Deriving it from the query itself, rather than trusting the caller, is
+       deliberate — the only call site passes `tenantContext` alone, so an
+       option the caller must remember to set is an option nobody sets. */
     options: { tenantContext?: string; language?: string } = {}
   ): Promise<EnhanceResult> {
-    const { tenantContext = "", language = "en" } = options;
+    const { tenantContext = "", language = "" } = options;
+    const answerNote = language
+      ? `\nThe user asked in ${language}. Keep the meaning exactly; the answer will be written in ${language}, so do not add or drop any constraint.`
+      : "";
 
     const [intentResult, decomposed] = await Promise.all([
       this.classifyIntent(query, tenantContext),
-      this.decompose(query, tenantContext),
+      this.decompose(query, tenantContext, answerNote),
     ]);
 
-    const rewritten = await this.rewrite(decomposed[0], tenantContext);
+    const rewritten = await this.rewrite(decomposed[0], tenantContext, answerNote);
 
     return {
       queries: [rewritten, ...decomposed.slice(1)],
@@ -89,26 +111,37 @@ export class QueryEnhancer {
 
     try {
       const parsed = JSON.parse(result.text);
+      /* Bounded before it reaches `alpha`, which is used as a Prisma `topK`
+         -style weight and, further down, as the vector/keyword blend. A model
+         answering with `"alpha": 95` would otherwise silently dominate the hybrid
+         search. The clamp is on the parse, not at the point of use, so every
+         consumer gets the bounded value. */
+      const raw = typeof parsed.alpha === "number" ? parsed.alpha : 0.5;
       return {
-        intent: parsed.intent || "unknown",
-        alpha: parsed.alpha ?? 0.5,
+        intent: typeof parsed.intent === "string" ? parsed.intent : "unknown",
+        alpha: Math.max(0, Math.min(1, raw)),
       };
     } catch {
       return { intent: "unknown", alpha: 0.5 };
     }
   }
 
-  static async decompose(query: string, context = ""): Promise<string[]> {
+  static async decompose(query: string, context = "", note = ""): Promise<string[]> {
     const result = await generate({
       system: DECOMPOSE_SYSTEM,
-      user: context ? `${context}\n\nQuestion: ${query}` : `Question: ${query}`,
+      user: `${context ? `${context}\n\n` : ""}Question: ${query}${note}`,
       maxTokens: 200,
     });
 
     try {
       const parsed = JSON.parse(result.text);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
+        /* Only strings. The prompt asks for a JSON array of strings, and
+           `parsed.length` alone is satisfied by an array of objects or numbers —
+           which then became `query: [object Object]` in the retriever, silently
+           returning nothing rather than erroring. */
+        const strings = parsed.filter((q): q is string => typeof q === "string" && q.trim().length > 0);
+        if (strings.length) return strings;
       }
     } catch {
       // Not JSON, try to parse line by line
@@ -117,10 +150,10 @@ export class QueryEnhancer {
     return [query];
   }
 
-  static async rewrite(query: string, context = ""): Promise<string> {
+  static async rewrite(query: string, context = "", note = ""): Promise<string> {
     const result = await generate({
       system: REWRITE_SYSTEM,
-      user: context ? `${context}\n\nOriginal: ${query}` : `Original: ${query}`,
+      user: `${context ? `${context}\n\n` : ""}Original: ${query}${note}`,
       maxTokens: 100,
     });
 

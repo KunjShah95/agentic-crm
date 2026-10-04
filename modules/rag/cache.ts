@@ -15,32 +15,62 @@
 
 import crypto from "crypto";
 
-let redis: any = null;
+/**
+ * The slice of the `redis` client this module uses.
+ *
+ * Declared here rather than importing the driver's types because `redis` is
+ * loaded through a dynamic `import()` — it is optional, and a static import would
+ * make the whole cache module fail to load when the package is absent. The
+ * interface is the contract; the real client is structurally compatible with it.
+ *
+ * This was previously `let redis: any` with this very interface sitting
+ * *unused* directly below. The cast was what allowed the module to compile while
+ * the contract it was written against went unchecked — a typo like `client.ge`
+ * would have typechecked and failed at runtime, on the first cache read, in
+ * production.
+ */
+interface RedisClient {
+  get(key: string): Promise<string | null>;
+  set(key: string, value: string, options?: { EX?: number }): Promise<void>;
+  incr(key: string): Promise<number>;
+  /* `sAdd` / `sMembers`, not `sadd` / `smembers`. node-redis v4 renamed the set
+     commands to camelCase, so the lower-case names in the old interface did not
+     exist on the client — and because the variable holding the client was `any`,
+     the two call sites below that used the lower-case spelling compiled fine and
+     would have thrown `client.sadd is not a function` on the first document
+     cache invalidation. The names here match what the driver actually exposes. */
+  sAdd(key: string, member: string): Promise<number>;
+  sMembers(key: string): Promise<string[]>;
+  del(...keys: string[]): Promise<number>;
+  scanIterator(options: { MATCH: string; COUNT: number }): AsyncIterable<string>;
+  isOpen: boolean;
+  connect(): Promise<void>;
+  on?(event: string, handler: (err: Error) => void): unknown;
+}
 
-async function initRedis() {
+let redis: RedisClient | null = null;
+
+async function initRedis(): Promise<RedisClient | null> {
   if (redis) return redis;
   try {
     const { createClient } = await import("redis");
-    const client = createClient({ url: process.env.REDIS_URL });
-    client.on("error", (err: Error) => console.warn("Redis error:", err));
+    /* One documented cast, at the single point the driver's own type meets this
+       module's contract. `createClient` returns `RedisClientType<...modules...>`,
+       whose module map and generic parameters cannot be reconciled with a
+       structural interface — the driver type carries far more than this module
+       uses, and none of the extras are called here.
+
+       Every method this module actually invokes is declared on `RedisClient`
+       above, so the cast cannot hide a missing or misspelled command: that is
+       the property the untyped `let redis: any` did not have. */
+    const client = createClient({ url: process.env.REDIS_URL }) as unknown as RedisClient;
+    client.on?.("error", (err: Error) => console.warn("Redis error:", err));
     await client.connect();
     redis = client;
   } catch {
     redis = null;
   }
   return redis;
-}
-
-interface RedisClient {
-  get(key: string): Promise<string | null>;
-  set(key: string, value: string, options?: { EX?: number }): Promise<void>;
-  incr(key: string): Promise<number>;
-  smembers(key: string): Promise<string[]>;
-  sadd(key: string, member: string): Promise<number>;
-  del(...keys: string[]): Promise<number>;
-  scanIterator(options: { MATCH: string; COUNT: number }): AsyncIterable<string>;
-  isOpen: boolean;
-  connect(): Promise<void>;
 }
 
 const mem = new Map<string, { val: unknown; exp: number }>();
@@ -118,7 +148,7 @@ export const trackCacheEntry = async (entryKey: string, documentIds: string[] = 
     const client = await initRedis();
     if (client) {
       await client.set(docsKey(entryKey), JSON.stringify(ids), { EX: TTL_SEC });
-      for (const id of ids) await client.sadd(`rag:bydoc:${id}`, entryKey);
+      for (const id of ids) await client.sAdd(`rag:bydoc:${id}`, entryKey);
     } else {
       mem.set(docsKey(entryKey), { val: ids, exp: Date.now() + TTL_SEC * 1000 });
       for (const id of ids) {
@@ -133,14 +163,21 @@ export const trackCacheEntry = async (entryKey: string, documentIds: string[] = 
 };
 
 export const invalidateDocuments = async (tenantId: string, documentIds: string[] = []): Promise<{ invalidated: boolean; mode: string }> => {
-  const ids = [...new Set((documentIds || []).map(String))].filter(Boolean);
+  /* Trimmed before the blank check, not after.
+     `filter(Boolean)` alone drops `""` but keeps `"  "` — whitespace is truthy — so
+     a whitespace-only id passed the guard and went on to a reverse-index lookup
+     that can never match. Harmless in effect, but it means the `mode: "none"`
+     early return did not fire for input that was, in every practical sense,
+     empty: the caller asked to invalidate nothing and got `"warm"` — a claim
+     about cache state it had no way to interpret — instead. */
+  const ids = [...new Set((documentIds || []).map((id) => String(id).trim()))].filter(Boolean);
   if (!ids.length) return { invalidated: false, mode: "none" };
   try {
     let touched = false;
     const client = await initRedis();
     if (client) {
       for (const id of ids) {
-        const members = await client.smembers(`rag:bydoc:${id}`).catch(() => []);
+        const members = await client.sMembers(`rag:bydoc:${id}`).catch(() => []);
         if (members?.length) {
           touched = true;
           break;

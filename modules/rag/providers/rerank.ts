@@ -79,24 +79,55 @@ const mock = async ({ docs, topK }: RerankInput): Promise<RerankOrder> => ({
   order: docs.slice(0, topK).map((_, i) => ({ index: i, score: 1 - i / Math.max(docs.length, 1) })),
 });
 
-interface ChunkWithScore {
-  content: string;
-  fusedScore?: number;
-  rerankScore?: number;
-  score?: number;
-  documentId: string;
-  [key: string]: unknown;
-}
+/* The shared pipeline type. This file previously declared its own copy with a
+   different field list, which is why `rerank(...)` could not accept a chunk from
+   `scoreChunks` without an `as any` at the call site. */
+import type { ScoredChunk } from "../types";
 
 /**
  * rerank(query, chunks[], topK) -> reordered chunks with .rerankScore
  * Chunks keep their fusedScore; callers prefer rerankScore then fall back.
+ *
+ * Generic in the chunk type so the caller's own shape survives the round trip.
+ * Reranking is a pure reordering plus one added field — it does not transform a
+ * chunk — so declaring a fixed `ScoredChunk` return type discarded fields the
+ * caller legitimately has. `retrieve.ts` was losing `vecScore`, `kwScore`,
+ * `modality` and `lang` here and had to cast its way back to them.
  */
-export const rerank = async (query: string, chunks: ChunkWithScore[], topK: number): Promise<ChunkWithScore[]> => {
+export const rerank = async <T extends ScoredChunk>(
+  query: string,
+  chunks: T[],
+  topK: number
+): Promise<T[]> => {
   if (!chunks.length) return [];
   const docs = chunks.map((c) => String(c.content || ""));
   const { order } = await runPool("rerank", [jina, cohere], { query, docs, topK }, mock);
-  return order
-    .filter((o) => chunks[o.index])
+
+  /* Two guards on what the provider handed back, neither of which `top_n` in the
+     request body guarantees.
+
+     Dedupe by index: the order arrives in descending relevance, so the first
+     occurrence of an index is its best score and the later ones are noise. Without
+     this, a repeated index emits the same chunk twice — and downstream
+     `buildContext` numbers each input and `answer.ts` gives each its own citation,
+     so one document becomes two apparently independent sources quoting identical
+     text. That is precisely the corroboration a citation-backed system exists to
+     make impossible to fake.
+
+     Bound to `topK`: `topK` is the caller's budget for what reaches the generator.
+     Trusting the provider to honour `top_n` means a provider that returns more —
+     a different default, an API change, a miscounted response — silently widens
+     the context and the generation cost with it. Provider order is preserved
+     rather than re-sorted, so the truncation keeps the most relevant entries. */
+  const seen = new Set<number>();
+  const usable = order.filter((o) => {
+    if (!chunks[o.index]) return false; // out of range
+    if (seen.has(o.index)) return false; // repeated
+    seen.add(o.index);
+    return true;
+  });
+
+  return usable
+    .slice(0, Math.max(0, topK))
     .map((o) => ({ ...chunks[o.index], rerankScore: o.score }));
 };

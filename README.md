@@ -135,7 +135,7 @@ environment variables at module load:
 | Answer LLM | `RAG_LLM_POOL` (comma list of `groq,gemini,mistral,nvidia`), `GROQ_API_KEY`, `GEMINI_API_KEY` / `GEMINI_MODEL`, `MISTRAL_API_KEY`, `NVIDIA_API_KEY` | Extractive mock answer from top chunks |
 | Reranking | `JINA_API_KEY` (Jina reranker), `COHERE_API_KEY` (Cohere rerank) | Skipped; fused hybrid score used as-is |
 | Vision / STT | `GEMINI_API_KEY` | Image and audio parsers degrade gracefully |
-| Retrieval | `RAG_ALPHA` (hybrid weight), `RAG_POOL`, `RAG_HYDE`, `RAG_HIERARCHICAL`, `RAG_QUERY_EXPANSION`, `RAG_TEMPORAL_DECAY`, `RAG_AUTHORITY_WEIGHTING`, `RAG_MULTI_VECTOR` | Sensible defaults; advanced strategies opt-in |
+| Retrieval | `RAG_ALPHA` (hybrid weight), `RAG_POOL`, `RAG_HYDE`, `RAG_HIERARCHICAL`, `RAG_QUERY_EXPANSION`, `RAG_TEMPORAL_DECAY`, `RAG_AUTHORITY_WEIGHTING` | Sensible defaults; advanced strategies opt-in |
 | Chunking | `RAG_CHUNK_WORDS`, `RAG_CHUNK_OVERLAP` | ~380 words, 50 overlap |
 | Caching | `RAG_CACHE_TTL`, `RAG_CACHE_SIMILARITY` | Exact cache 1h; semantic cache 24h @ 0.85 similarity |
 | Limits | `RAG_MAX_FILE_BYTES`, `RAG_EMBED_CONCURRENCY`, `RAG_EMBED_BATCH` | 50 MB, 4 concurrent, batch 32 |

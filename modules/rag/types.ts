@@ -90,6 +90,23 @@ export interface ConfidenceResult {
   };
 }
 
+/**
+ * What `scoreChunks` actually returns.
+ *
+ * Distinct from `ConfidenceResult` because that one describes a *gate outcome*
+ * and is reused on `QueryResult`, where the per-chunk working is deliberately not
+ * carried out to the caller. The gate result always has the array; the query
+ * result may not. Declaring one type with an optional `scored` forced a null check
+ * at each of the eight places `answer.ts` uses it, which is a worse outcome than
+ * the cast it replaced — so the two shapes are named separately instead.
+ *
+ * This was missing from the declared shape entirely, which is why `answer.ts`
+ * destructured it untyped in the first place.
+ */
+export interface ScoredResult extends ConfidenceResult {
+  scored: ScoredChunk[];
+}
+
 export interface Citation {
   source: number;
   documentId: string;
@@ -207,4 +224,75 @@ export interface IngestDocumentResult {
   embedded?: number;
   mode?: "incremental" | "full";
   cache?: { invalidated: boolean; mode: string };
+  index: number;
+  externalId: string | null;
+}
+
+/**
+ * A retrieved chunk as it moves between the pipeline stages.
+ *
+ * This was declared twice — once in `confidence.ts` and once in
+ * `providers/rerank.ts` — with different field lists, and neither exported it.
+ * Because a `ScoredChunk` from `scoreChunks` was therefore not assignable to the
+ * `ChunkWithScore` that `rerank` accepted, every handoff in `answer.ts` and
+ * `retrieve.ts` needed `as any`. Those casts were papering over a duplicated
+ * type rather than over anything genuinely dynamic, so the type lives here once,
+ * next to `ChunkResult` (the public projection of the same object).
+ *
+ * The index signature is deliberate: a chunk carries its source document's
+ * metadata verbatim — `section_path`, `department`, `source_file`, and whatever
+ * else a given corpus puts there — so arbitrary keys are part of the contract.
+ * What is named is the part the pipeline itself reads.
+ */
+export interface ScoredChunk {
+  chunkId?: string;
+  content: string;
+  documentId: string;
+  /** Set by hybrid retrieval. */
+  fusedScore?: number;
+  /** Set by `rerank`. Callers prefer this and fall back to `fusedScore`. */
+  rerankScore?: number;
+  /** Legacy retrieval score. */
+  score?: number;
+  metadata?: Record<string, unknown>;
+  /** Set by `expandWithParent` when the parent section was also read. */
+  parentContext?: string;
+  /** Set by `scoreChunks`. */
+  confidence?: number;
+  components?: ScoreComponents;
+  [key: string]: unknown;
+}
+
+export interface ScoreComponents {
+  retrievalScore: number;
+  freshness: number;
+  authority: number;
+  agreement: number;
+}
+
+/**
+ * A document row as loaded by `loadDocumentTitles`.
+ *
+ * Every field is nullable because that is what the row actually contains — these
+ * come straight from Postgres, not from a validated input. This shape was
+ * previously declared twice: here with `authority?: number`, and in
+ * `retrieve.ts` with `authority: number | null` plus the fields only retrieval
+ * reads. The narrower copy is what made `applyAuthorityWeighting` need a cast at
+ * its single call site, and what forced `scoreChunks` to accept a different type
+ * than the metadata it was actually being handed.
+ *
+ * One declaration with the real nullability, so `doc.authority != null` narrows
+ * the way it reads and nothing has to bridge the two views.
+ */
+export interface DocMeta {
+  title: string | null;
+  source_file: string | null;
+  version: number;
+  department: string | null;
+  doc_type: string | null;
+  confidential: boolean;
+  allowed_roles: string[];
+  status: string | null;
+  created_at: Date | string | null;
+  authority: number | null;
 }

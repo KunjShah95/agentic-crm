@@ -13,6 +13,7 @@ import { embed } from "./providers/embeddings";
 import { rerank } from "./providers/rerank";
 import { extractClauseHint } from "./chunk";
 import { generate } from "./providers/llm";
+import type { DocMeta, ScoredChunk } from "./types";
 
 const DEFAULT_ALPHA = Number(process.env.RAG_ALPHA || 0.5);
 const POOL = Number(process.env.RAG_POOL || 30);
@@ -22,7 +23,14 @@ const HIERARCHICAL = process.env.RAG_HIERARCHICAL === "1";
 const HYDE_ENABLED = process.env.RAG_HYDE === "1";
 const TEMPORAL_DECAY_ENABLED = process.env.RAG_TEMPORAL_DECAY === "1";
 const AUTHORITY_WEIGHTING_ENABLED = process.env.RAG_AUTHORITY_WEIGHTING === "1";
-const MULTI_VECTOR_ENABLED = process.env.RAG_MULTI_VECTOR === "1";
+/* No `RAG_MULTI_VECTOR` flag. It was read here into a constant that nothing
+   referenced, and the corresponding `multiVector` field on `RetrieveFilter` was
+   likewise declared and never read or passed — multi-vector retrieval was
+   documented in the README as an available strategy but was not implemented at
+   any point. A flag that is accepted and silently ignored is worse than a
+   missing one: it reads as configuration, so an operator sets it, sees no change,
+   and concludes the strategy is subtly mis-tuned. Removed from the README along
+   with the dead code; re-add all three together when it is actually built. */
 
 const DEPT_ALPHA: Record<string, number> = { hr: 0.3, legal: 0.3, finance: 0.35, marketing: 0.65, engineering: 0.5, general: DEFAULT_ALPHA };
 const alphaFor = (explicit: number | undefined, departments?: string[]): number => {
@@ -70,33 +78,35 @@ function applyAuthorityWeighting(chunks: ChunkWithMetadata[], docMeta: Record<st
   });
 }
 
-interface ChunkWithMetadata {
+/**
+ * A chunk as it comes out of the SQL retrieval step, before scoring and
+ * reranking.
+ *
+ * Extends the shared `ScoredChunk` rather than restating it. This used to
+ * redeclare `chunkId`, `documentId`, `content`, `metadata`, `fusedScore`,
+ * `rerankScore`, `score` and `parentContext` — a fourth copy of the same fields,
+ * after `confidence.ts` and `providers/rerank.ts` had each declared their own.
+ * Because it was structurally identical but nominally separate, `rerank()` could
+ * not accept these chunks and the call below needed `as any` in both directions.
+ *
+ * The retrieval-specific fields stay here: `vecScore`/`kwScore` are the two halves
+ * of hybrid fusion and only exist between retrieval and the `fusedScore` that
+ * `alpha` produces, so nothing downstream of this file sees them.
+ */
+interface ChunkWithMetadata extends ScoredChunk {
+  /* Narrowed from the optional `chunkId` on `ScoredChunk`. At this stage in the
+     pipeline a chunk always has an id — it came from a database row — and the
+     dedupe loop immediately uses it as a `Set` key. Leaving it optional made
+     `seen.add(c.chunkId)` a type error, and the fix that got applied was to
+     loosen the Set rather than to assert what is actually true here. */
   chunkId: string;
-  documentId: string;
-  content: string;
-  metadata: Record<string, unknown>;
   modality: string;
   lang: string;
+  /** Cosine similarity against the query vector. */
   vecScore: number;
+  /** Full-text match score. */
   kwScore: number;
-  fusedScore: number;
   created_at?: string;
-  rerankScore?: number;
-  score?: number;
-  parentContext?: string;
-}
-
-interface DocMeta {
-  title: string | null;
-  source_file: string | null;
-  version: number;
-  department: string | null;
-  doc_type: string | null;
-  confidential: boolean;
-  allowed_roles: string[];
-  status: string | null;
-  created_at: Date | null;
-  authority: number | null;
 }
 
 interface RetrieveOptions {
@@ -120,7 +130,6 @@ interface RetrieveFilter {
   documentIds?: string[];
   clause?: string;
   hyde?: boolean;
-  multiVector?: boolean;
   temporalDecay?: boolean;
   authorityWeighting?: boolean;
   hierarchical?: boolean;
@@ -180,13 +189,27 @@ export const retrieve = async ({
   if (AUTHORITY_WEIGHTING_ENABLED || TEMPORAL_DECAY_ENABLED) {
     const docIds = [...new Set(deduped.map(c => c.documentId))];
     const docMeta = await loadDocumentTitles(tenantId, docIds);
-    ranked = applyAuthorityWeighting(deduped as any, docMeta as any);
+    ranked = applyAuthorityWeighting(deduped, docMeta);
   }
 
-  const reranked = await rerank(query, ranked as any, topK) as any;
-  const top = reranked.map((c: any) => ({ ...c, score: c.rerankScore ?? c.fusedScore }));
+  const reranked = await rerank(query, ranked, topK);
+  /* `rerankScore ?? fusedScore` — the documented fallback, and the `?? 0` is
+     real: both are optional on the shared chunk type, and a chunk with neither
+     would otherwise carry `score: undefined` into the caller, where it is
+     summed and sorted as though it were absent rather than as zero.
 
-  return expandWithParent({ tenantId, chunks: top }) as any;
+     The explicit annotation widens `ScoredChunk` (what `rerank` declares) back
+     to `ChunkWithMetadata`, which is what these values already are — rerank
+     preserves every field and adds `rerankScore`. Without the annotation the
+     spread silently widened the array to the base type and the retrieval-only
+     fields became unreachable for `expandWithParent` below. */
+  const top: ChunkWithMetadata[] = reranked.map((c) => ({
+    ...c,
+    chunkId: c.chunkId ?? "",
+    score: c.rerankScore ?? c.fusedScore ?? 0,
+  }));
+
+  return expandWithParent({ tenantId, chunks: top });
 };
 
 async function hybridSearch({
@@ -221,18 +244,52 @@ async function hybridSearch({
     )
   `;
 
-  return (result as unknown as Record<string, unknown>[]).map((r) => ({
-    chunkId: r.chunk_id as string,
-    documentId: r.document_id as string,
-    content: r.content as string,
-    metadata: r.metadata as Record<string, unknown>,
-    modality: r.modality as string,
-    lang: r.lang as string,
+  /**
+   * `$queryRaw` returns `unknown`, so this was cast straight to
+   * `Record<string, unknown>[]` and every field read back with an `as string`.
+   * The visible cost was `chunkId` typing as `string | undefined` — which made
+   * `seen.add(c.chunkId)` in the dedupe loop stop compiling, so the dedupe key
+   * had to be loosened to accept it. Declaring the row means the columns the SQL
+   * selects are named once and checked against the mapping.
+   *
+   * The similarity scores come back from Postgres as `real`, which the driver may
+   * hand over as a string, hence `number | string` on those two and the explicit
+   * `Number(...)` below. `metadata` is a JSON column and may legitimately be
+   * null, so it is narrowed rather than asserted.
+   */
+  return (result as RetrievalRow[]).map((r) => ({
+    chunkId: r.chunk_id,
+    documentId: r.document_id,
+    content: r.content,
+    metadata: asObject(r.metadata),
+    modality: r.modality,
+    lang: r.lang,
     vecScore: Number(r.vec_score),
     kwScore: Number(r.kw_score),
     fusedScore: Number(r.fused_score),
-    created_at: r.created_at as string,
+    created_at: r.created_at === null ? undefined : String(r.created_at),
   }));
+}
+
+/** A JSON column may hold a scalar or an array; callers here want a keyed bag. */
+function asObject(v: Prisma.JsonValue | null | undefined): Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v)
+    ? (v as Record<string, unknown>)
+    : {};
+}
+
+/** A row from the raw retrieval query — the columns selected above. */
+interface RetrievalRow {
+  chunk_id: string
+  document_id: string
+  content: string
+  metadata: Prisma.JsonValue | null
+  modality: string
+  lang: string
+  vec_score: number | string | null
+  kw_score: number | string | null
+  fused_score: number | string | null
+  created_at: Date | string | null
 }
 
 async function expandQuery(query: string): Promise<string[]> {

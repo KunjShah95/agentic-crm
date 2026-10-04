@@ -121,12 +121,35 @@ class SemanticCache {
    * roles cannot. There is deliberately no default that collapses privilege
    * levels onto one key: a caller has to name the role it already resolved.
    */
-  makeCacheKey(tenantId: string, scope: string, normalizedQuery: string): string {
+  /**
+   * @param variant  Discriminator for answers that share a query but differ in
+   *                 some other respect. Currently the answer language: the
+   *                 semantic key matches on query similarity, so the Gujarati and
+   *                 English phrasings of the same question share a scope and
+   *                 near-identical similarity scores — without this, whichever
+   *                 arrived first answered both, in its own language.
+   *
+   *                 A parameter rather than being folded into `normalizedQuery`
+   *                 because that string is what gets embedded; appending a
+   *                 language tag to it would put a non-linguistic token into the
+   *                 vector and shift every similarity score.
+   */
+  makeCacheKey(
+    tenantId: string,
+    scope: string,
+    normalizedQuery: string,
+    variant = ""
+  ): string {
     const queryHash = crypto.createHash("sha256").update(normalizedQuery).digest("hex").slice(0, 16);
-    return `rag:cache:${tenantId}:${scope}:${queryHash}`;
+    return `rag:cache:${tenantId}:${scope}:${variant ? `${variant}:` : ""}${queryHash}`;
   }
 
-  async get(tenantId: string, query: string, role?: string | string[] | null): Promise<unknown | null> {
+  async get(
+    tenantId: string,
+    query: string,
+    role?: string | string[] | null,
+    variant = ""
+  ): Promise<unknown | null> {
     if (!this.enabled) return null;
     await this.connect();
     if (!this.enabled) return null;
@@ -137,7 +160,7 @@ class SemanticCache {
     const scope = await this.getScopeHash(tenantId, role);
     if (!scope) return null;
 
-    const key = this.makeCacheKey(tenantId, scope, normalized);
+    const key = this.makeCacheKey(tenantId, scope, normalized, variant);
     const cached = await this.client!.get(key);
     if (!cached) return null;
 
@@ -152,7 +175,14 @@ class SemanticCache {
     return parsed;
   }
 
-  async set(tenantId: string, query: string, answer: unknown, metadata: Record<string, unknown> = {}, role?: string | string[] | null): Promise<void> {
+  async set(
+    tenantId: string,
+    query: string,
+    answer: unknown,
+    metadata: Record<string, unknown> = {},
+    role?: string | string[] | null,
+    variant = ""
+  ): Promise<void> {
     if (!this.enabled) return;
     await this.connect();
     if (!this.enabled) return;
@@ -163,7 +193,7 @@ class SemanticCache {
     const scope = await this.getScopeHash(tenantId, role);
     if (!scope) return;
 
-    const key = this.makeCacheKey(tenantId, scope, normalized);
+    const key = this.makeCacheKey(tenantId, scope, normalized, variant);
     const payload = {
       answer,
       metadata,
@@ -221,16 +251,27 @@ export const semanticCache = {
   /* `role` is threaded through on every read and write. This facade is what
      `answer.ts` actually imports, so a signature here that omits it would
      silently drop the role before it reached the key — exactly the cross-
-     privilege cache hit this was fixed to prevent. */
-  get: (tenantId: string, query: string, role?: string | string[] | null) =>
-    getSemanticCache().get(tenantId, query, role),
+     privilege cache hit this was fixed to prevent.
+
+     `variant` is threaded for the same reason and carries the answer language.
+     Both are positional-optional, which is why the comment exists: dropping
+     either from this facade would not fail to compile at the call sites, it
+     would fail to *discriminate* in the key, and the only symptom would be a
+     user in the wrong language with a confidently cited answer. */
+  get: (
+    tenantId: string,
+    query: string,
+    role?: string | string[] | null,
+    variant = ""
+  ) => getSemanticCache().get(tenantId, query, role, variant),
   set: (
     tenantId: string,
     query: string,
     answer: unknown,
     metadata: Record<string, unknown> = {},
     role?: string | string[] | null,
-  ) => getSemanticCache().set(tenantId, query, answer, metadata, role),
+    variant = ""
+  ) => getSemanticCache().set(tenantId, query, answer, metadata, role, variant),
   invalidateScope: (tenantId: string) => getSemanticCache().invalidateScope(tenantId),
   getStats: (tenantId: string) => getSemanticCache().getStats(tenantId),
   enabled: () => !!process.env.REDIS_URL

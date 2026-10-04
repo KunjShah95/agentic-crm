@@ -4,7 +4,6 @@
  */
 
 import { z } from "zod";
-import { Department, Role } from "./types";
 
 const DEPARTMENTS = [
   "general",
@@ -18,7 +17,24 @@ const DEPARTMENTS = [
 
 const ROLES = ["OWNER", "ADMIN", "MEMBER", "VIEWER"] as const;
 
-// Allow-listed mimes: text + office + image + audio + video
+/**
+ * Mime types the extractors can actually handle: text, office, image, audio, video.
+ *
+ * NOT enforced anywhere. `ingestSchema.mime` is a plain `z.string().max(150)`, so
+ * any caller-declared type is accepted. That is currently safe because
+ * `detectModality` in `parsers/index.ts` routes on the mime *prefix* and falls
+ * through to `buffer.toString("utf8")`, so a wrong type costs a garbled extraction
+ * rather than anything worse — but the cost lands in the corpus as unretrievable
+ * junk, which is not free.
+ *
+ * Left unenforced deliberately rather than wired in as a hard rejection: browsers
+ * and CLI clients legitimately send `application/octet-stream` for files whose
+ * real type was never determined, and rejecting those would break uploads that
+ * work today. The list is kept as documentation of what is supported, and the
+ * honest gate is `filename` extension, which `detectModality` also consults. Wire
+ * this in as a *warning* (or normalise octet-stream through the extension) before
+ * making it a rejection.
+ */
 export const ALLOWED_MIMES = [
   "text/plain",
   "text/markdown",
@@ -64,7 +80,19 @@ export const querySchema = z.object({
   topK: z.number().int().min(1).max(50).optional().default(8),
   alpha: z.number().min(0).max(1).optional(),
   departments: z.array(z.enum(DEPARTMENTS)).max(10).optional(),
-  documentIds: z.array(z.string().uuid().or(z.string().min(1))).max(20).optional(),
+  /* `z.string().min(1)`, which is what this was before it read
+     `uuid().or(min(1))`.
+
+     That union validated nothing: the second branch accepts every non-empty string,
+     including everything the first branch was there to exclude. It read as "a uuid,
+     or something else", which is the shape of a deliberate fallback — and a
+     deliberate fallback is exactly the thing a reader stops scrutinising. Ids in
+     this codebase are cuid, not uuid, so a uuid check would have been wrong anyway.
+
+     Not an injection risk: these reach `rag_hybrid_search` as a Prisma bind
+     parameter, not as interpolated SQL. A non-uuid id is a Postgres type error
+     (a 500), not a query the caller can reshape. */
+  documentIds: z.array(z.string().min(1)).max(20).optional(),
   clause: z.string().max(40).optional(),
   context: z.string().max(4000).optional(),
 });

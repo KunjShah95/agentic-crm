@@ -166,9 +166,35 @@ export const redactPII = (s = ""): string =>
  * Sentence-aware: never cut mid-sentence unless a single sentence exceeds the
  * window; markdown tables are kept as one atomic block (row splits kill recall).
  */
-const windowWords = (text: string, sectionMeta: Record<string, unknown> = {}, opts: Record<string, unknown> = {}): ChunkOutput[] => {
-  const wordsPer = Number(opts.wordsPerChunk || process.env.RAG_CHUNK_WORDS || WORDS_PER_CHUNK);
-  const overlap = Number(opts.overlapWords ?? process.env.RAG_CHUNK_OVERLAP ?? OVERLAP_WORDS);
+/**
+ * Read a positive integer override, falling back to the default.
+ *
+ * `Number(...)` alone is not enough. Every comparison below is against `wordsPer`,
+ * and every one of them is false when it is `NaN` — so a malformed value does not
+ * produce a wrong chunk size, it produces no chunks at all: the sentence loop's
+ * `w > wordsPer` and `bufLen + w > wordsPer` are both false, every sentence falls
+ * into the buffer, and `pushWindow` then computes `step = Math.max(1, NaN - NaN)`
+ * and breaks on the empty first slice.
+ *
+ * The document is then ingested with no chunks at all. That is the worst possible
+ * outcome for this module and it is completely silent — no error, no log, and a
+ * document that simply never matches any query. Reachable from a bad
+ * `RAG_CHUNK_WORDS` in the environment or a bad `opts` value at a call site.
+ */
+const positiveInt = (value: unknown, fallback: number): number => {
+  const n = Number(value);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
+};
+
+const windowWords = (text: string, sectionMeta: SectionMeta = {}, opts: Record<string, unknown> = {}): ChunkOutput[] => {
+  const wordsPer = positiveInt(opts.wordsPerChunk ?? process.env.RAG_CHUNK_WORDS, WORDS_PER_CHUNK);
+  const overlap = Math.min(
+    positiveInt(opts.overlapWords ?? process.env.RAG_CHUNK_OVERLAP, OVERLAP_WORDS),
+    /* Overlap must be smaller than the window, or `step` clamps to 1 and every
+       chunk re-emits the entire document from offset 0. Capping here rather than
+       trusting the caller, because this is reachable from an env var. */
+    Math.max(1, wordsPer - 1)
+  );
   const redacted = opts.redact === false ? String(text || "") : redactPII(String(text || ""));
   // Keep tables atomic: split out table blocks, window prose normally.
   const blocks = redacted.split(/((?:^\|.*\|\s*\n?)+)/m).filter((b) => b && b.trim());
@@ -217,14 +243,31 @@ const windowWords = (text: string, sectionMeta: Record<string, unknown> = {}, op
   return chunks;
 };
 
-const makeChunk = (content: string, idx: number, sectionMeta: Record<string, unknown>, charOffset: number): ChunkOutput => ({
+/**
+ * The per-section provenance the chunker copies into chunk metadata.
+ *
+ * `null` rather than `undefined` for the optional members because that is what
+ * the section parser produces — `parseSections` builds `Section` with
+ * `heading: null, clauseId: null` for a section with neither. Declaring
+ * `undefined` here meant the call site could not pass its own values without a
+ * cast, which is how `section_path` ended up read through `as any`.
+ */
+interface SectionMeta {
+  /** Ancestor heading path, outermost first. */
+  section_path?: string[] | null
+  heading?: string | null
+  clause_id?: string | number | null
+  [key: string]: unknown
+}
+
+const makeChunk = (content: string, idx: number, sectionMeta: SectionMeta, charOffset: number): ChunkOutput => ({
   content,
   chunk_index: idx,
   chunk_hash: hashChunk(content),
   lang: detectLang(content),
   metadata: {
     char_offset: charOffset,
-    ...((sectionMeta as any).section_path?.length ? { section_path: (sectionMeta as any).section_path } : {}),
+    ...(sectionMeta.section_path?.length ? { section_path: sectionMeta.section_path } : {}),
     ...(sectionMeta.heading ? { heading: sectionMeta.heading } : {}),
     ...(sectionMeta.clause_id ? { clause_id: sectionMeta.clause_id } : {}),
   },

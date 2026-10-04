@@ -4,6 +4,7 @@
  */
 
 import { fetchJson, runPool } from "./http";
+import type { GeminiResponse } from "./llm";
 
 interface VisionInput {
   imageBase64: string;
@@ -37,7 +38,7 @@ const geminiVision = {
   isEnabled: () => !!process.env.GEMINI_API_KEY,
   call: async ({ imageBase64, mime }: VisionInput): Promise<VisionResponse> => {
     const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const json = await fetchJson<any>(
+    const json = await fetchJson<GeminiResponse>(
       `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         body: {
@@ -54,6 +55,11 @@ const geminiVision = {
         },
       }
     );
+    /* `GeminiResponse` is the same shape `llm.ts` declares for its text
+       generation — Gemini wraps a completion in `candidates[].content.parts[]`
+       whichever endpoint you call. Reusing it here means a Gemini envelope
+       change is fixed in one place rather than in two files that had each
+       reached for `fetchJson<any>` because neither had named the shape. */
     return { text: json.candidates?.[0]?.content?.parts?.[0]?.text || "", providerUsed: "gemini" };
   },
 };
