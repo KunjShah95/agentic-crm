@@ -58,9 +58,25 @@ export async function decomposeQuery(query: string, intent: string): Promise<str
     });
 
     const subQuestions = JSON.parse(result.text);
-    return Array.isArray(subQuestions)
-      ? subQuestions.filter((q) => q && typeof q === "string" && q.length > 10)
-      : [query];
+    if (Array.isArray(subQuestions)) {
+      /* Fragments — too short to be a question, or not a string at all — are
+         dropped, but an empty result after that filter has to fall back to the
+         original query.
+
+         It did not, and the consequence was a total retrieval failure rather than a
+         degraded one: `answer.ts` assigns `subQueries` from here and loops over it
+         to retrieve, so an empty array means zero retrievals, which means
+         `scoreChunks([])` returns `passed: false`, which means the pipeline
+         refuses to answer. A model returning `["ok", "no"]` — plausible when
+         max_tokens truncates a JSON array mid-write — turned a comparative question
+         into silence. The `Array.isArray` guard below has always fallen back; this
+         path had to as well. */
+      const usable = subQuestions.filter(
+        (q) => q && typeof q === "string" && q.length > 10
+      );
+      return usable.length ? usable : [query];
+    }
+    return [query];
   } catch {
     return [query];
   }

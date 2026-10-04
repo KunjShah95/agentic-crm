@@ -31,6 +31,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ten
       return NextResponse.json({ error: parsed.error.issues[0].message }, { status: 400 });
     }
 
+    /* `createdBy` is the literal "api-user" for every request.
+
+       A workspace API key authenticates a *tenant*, not a person — `verifyApiKey`
+       resolves to a workspace id and there is no per-principal identity on the
+       credential — so there is no better value available here without changing the
+       key model. Recorded rather than silently left, because it has a consequence
+       worth knowing: `submitFeedback` also ingests any `correction` as a new
+       document, and that document's author is this same string. So for corrections
+       arriving through the API there is no record anywhere of which integration, or
+       which person behind it, wrote a document that the corpus now treats as
+       max-authority and cites to the whole workspace.
+
+       Not fabricated into a plausible-looking id. An honest placeholder that is
+       greppable beats a plausible value that reads as a real account. */
     const data = await submitFeedback({
       tenantId: auth.workspaceId,
       userId: "api-user",
