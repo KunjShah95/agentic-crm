@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
+import { auth } from "@/lib/auth"
+import { resolveViewerScope } from "@/lib/permissions"
 import { listTemplates, listGeneratedDocuments } from "@/modules/documents/queries"
 import { GeneratedDocList } from "@/components/documents/doc-list"
 import { Badge } from "@/components/ui/badge"
@@ -13,7 +15,14 @@ export default async function DocumentsPage({ params }: { params: Promise<{ work
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
 
-  const [templates, docs] = await Promise.all([listTemplates(ws.id), listGeneratedDocuments(ws.id)])
+  const session = await auth()
+  const scope = session?.user?.id ? await resolveViewerScope(ws.id, session.user.id) : null
+  if (!scope) notFound()
+
+  const [templates, docs] = await Promise.all([
+    listTemplates(ws.id),
+    listGeneratedDocuments(scope),
+  ])
 
   return (
     <div className="space-y-6">

@@ -1,5 +1,10 @@
 import { db } from "@/lib/db"
 import { isOpenKind, isWonKind } from "@/lib/pipeline-stages"
+import {
+  brokerContactScope,
+  brokerScopeFilter,
+  type ViewerScope,
+} from "@/lib/permissions"
 
 /**
  * Dashboard aggregates.
@@ -126,9 +131,9 @@ export function reportingCurrency(deals: { currency: string; value: number | nul
   )[0][0]
 }
 
-async function getTopDeals(workspaceId: string) {
+async function getTopDeals(scope: ViewerScope) {
   return db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     orderBy: [{ value: "desc" }, { updatedAt: "desc" }],
     take: 6,
     select: {
@@ -145,9 +150,19 @@ async function getTopDeals(workspaceId: string) {
   })
 }
 
-async function getRecentActivity(workspaceId: string) {
+async function getRecentActivity(scope: ViewerScope) {
   return db.activity.findMany({
-    where: { workspaceId },
+    where: {
+      workspaceId: scope.workspaceId,
+      // Activity rows are not broker-scoped directly, but a row that belongs to
+      // another broker's deal carries that deal's title in `body`. Scoping
+      // through the deal relation keeps the dashboard timeline from becoming a
+      // second way to read a competitor's book. Rows with no deal are workspace
+      // chatter and stay visible.
+      ...(scope.role === "BROKER"
+        ? { OR: [{ dealId: null }, { deal: { brokerId: scope.brokerId ?? "__no_broker__" } }] }
+        : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 7,
     select: { id: true, type: true, body: true, createdAt: true },
@@ -169,13 +184,21 @@ async function getRecentProjects(workspaceId: string) {
   })
 }
 
-export async function getDashboardData(workspaceId: string): Promise<DashboardData> {
+export async function getDashboardData(scope: ViewerScope): Promise<DashboardData> {
   const now = new Date()
+  const { workspaceId } = scope
+  // Every deal- or contact-derived number below is a rollup over rows, so a
+  // missing predicate here does not look wrong on screen — the dashboard simply
+  // shows a broker the whole tenant's figures, which reads as a legitimate
+  // total. Scoping is applied once here and spread into each deal/contact query
+  // rather than per-call, so a new aggregate added later inherits it.
+  const dealScope = brokerScopeFilter(scope.role, scope.brokerId)
+  const contactScope = brokerContactScope(scope.role, scope.brokerId)
 
   const [contacts, deals, projects, siteVisits, tasks, stages, allDeals, leadGroups, topDeals, recentActivity, recentProjects, units] =
     await Promise.all([
-      db.contact.count({ where: { workspaceId } }),
-      db.deal.count({ where: { workspaceId } }),
+      db.contact.count({ where: { workspaceId, ...contactScope } }),
+      db.deal.count({ where: { workspaceId, ...dealScope } }),
       db.project.count({ where: { workspaceId } }),
       db.siteVisit.count({ where: { workspaceId } }),
       // Open tasks are `Activity` rows of type TASK with no completion stamp —
@@ -196,7 +219,7 @@ export async function getDashboardData(workspaceId: string): Promise<DashboardDa
       // one donut, so the rollup happens in memory from a deliberately narrow
       // select.
       db.deal.findMany({
-        where: { workspaceId },
+        where: { workspaceId, ...dealScope },
         select: {
           stageId: true,
           value: true,
@@ -209,11 +232,11 @@ export async function getDashboardData(workspaceId: string): Promise<DashboardDa
       }),
       db.contact.groupBy({
         by: ["leadSource"],
-        where: { workspaceId, leadSource: { not: null } },
+        where: { workspaceId, leadSource: { not: null }, ...contactScope },
         _count: { _all: true },
       }),
-      getTopDeals(workspaceId),
-      getRecentActivity(workspaceId),
+      getTopDeals(scope),
+      getRecentActivity(scope),
       getRecentProjects(workspaceId),
       // A real count across every project. Summing `_count.units` over
       // `recentProjects` instead — which is `take: 4` — silently undercounts

@@ -12,6 +12,7 @@ import {
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { resolveViewerScope } from "@/lib/permissions"
 import { fullName, formatMoney } from "@/lib/format"
 import {
   getLinkableContacts,
@@ -51,22 +52,14 @@ export default async function OrganizationDetailPage({
   const workspace = await db.workspace.findUnique({ where: { slug } })
   if (!workspace) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: workspace.id,
-            userId: session.user.id,
-          },
-        },
-      })
-    : null
-  if (!membership) notFound()
+  const scope =
+    session?.user?.id ? await resolveViewerScope(workspace.id, session.user.id) : null
+  if (!scope) notFound()
 
-  const org = await getOrganizationDetail(workspace.id, id)
+  const org = await getOrganizationDetail(scope, id)
   if (!org) notFound()
 
-  const linkable = await getLinkableContacts(workspace.id, org.domain)
+  const linkable = await getLinkableContacts(scope, org.domain)
   const totalDealValue = org.deals.reduce((sum, d) => sum + (d.value ?? 0), 0)
 
   return (
@@ -121,7 +114,7 @@ export default async function OrganizationDetailPage({
             size: org.size,
             website: org.website,
           }}
-          role={membership.role}
+          role={scope.role}
         />
       </div>
 

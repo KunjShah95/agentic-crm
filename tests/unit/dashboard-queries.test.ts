@@ -31,6 +31,20 @@ vi.mock("@/lib/db", () => ({ db }))
 
 import { getDashboardData, reportingCurrency } from "@/modules/dashboard/queries"
 import type { StageKind } from "@/lib/pipeline-stages"
+import type { Role } from "@/lib/generated/prisma/client"
+import type { ViewerScope } from "@/lib/permissions"
+
+/**
+ * Viewer scope for the rollup assertions below.
+ *
+ * These cases are about currency and window arithmetic, not visibility, so they
+ * all pass an OWNER scope — which resolves to no broker predicate and therefore
+ * preserves the previous "whole workspace" behaviour. The broker-scoping
+ * assertions further down use `scope("BROKER", ...)` explicitly.
+ */
+function scope(role: Role = "OWNER", brokerId: string | null = null): ViewerScope {
+  return { workspaceId: "w1", role, brokerId }
+}
 
 const STAGES = [
   { id: "st-proposal", name: "Proposal", kind: "OPEN" as StageKind, order: 0 },
@@ -121,7 +135,7 @@ describe("getDashboardData currency scoping", () => {
       { stageId: "st-negotiation", value: 500_000, probability: 40, updatedAt: daysAgo(3), currency: "CAD", stage: { name: "Negotiation", kind: "OPEN" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(data.currency).toBe("INR")
     // 25M + 25M. Adding the CAD 500k would be a fabricated rupee total.
@@ -139,7 +153,7 @@ describe("getDashboardData currency scoping", () => {
       { stageId: "st-negotiation", value: 563_578, probability: 34, updatedAt: daysAgo(2), currency: "CAD", stage: { name: "Negotiation", kind: "OPEN" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(data.currency).toBe("CAD")
     expect(data.openPipeline).toBe(563_578)
@@ -152,7 +166,7 @@ describe("getDashboardData currency scoping", () => {
       { stageId: "st-won", value: 700_000, probability: 100, updatedAt: daysAgo(5), currency: "CAD", stage: { name: "Won", kind: "WON" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(data.counts.wonDeals).toBe(2)
     const bucket = data.wonByMonth.find((m) => m.count > 0)
@@ -165,7 +179,7 @@ describe("getDashboardData window scope", () => {
   it("counts units across every project, not the four most recent", async () => {
     seed([], 68)
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(db.unit.count).toHaveBeenCalledWith({ where: { workspaceId: "w1" } })
     expect(data.counts.units).toBe(68)
@@ -177,7 +191,7 @@ describe("getDashboardData window scope", () => {
       { stageId: "st-won", value: 99_000_000, probability: 100, updatedAt: daysAgo(200), currency: "INR", stage: { name: "Won", kind: "WON" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     // All-time won still counts both...
     expect(data.counts.wonDeals).toBe(2)
@@ -213,7 +227,7 @@ describe("getDashboardData won-at bucketing", () => {
       },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     const plotted = data.wonByMonth.filter((m) => m.value > 0)
     expect(plotted).toHaveLength(1)
@@ -228,7 +242,7 @@ describe("getDashboardData won-at bucketing", () => {
       { stageId: "st-won", value: 20_000_000, probability: 100, updatedAt: daysAgo(1), wonAt: daysAgo(80), currency: "INR", stage: { name: "Won", kind: "WON" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     const plotted = data.wonByMonth.filter((m) => m.value > 0)
     expect(plotted).toHaveLength(2)
@@ -242,7 +256,7 @@ describe("getDashboardData won-at bucketing", () => {
       { stageId: "st-won", value: 10_000_000, probability: 100, updatedAt: daysAgo(15), wonAt: null, currency: "INR", stage: { name: "Won", kind: "WON" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(data.wonByMonth.reduce((s, m) => s + m.value, 0)).toBe(10_000_000)
   })
@@ -252,7 +266,7 @@ describe("getDashboardData won-at bucketing", () => {
       { stageId: "st-won", value: 99_000_000, probability: 100, updatedAt: daysAgo(2), wonAt: daysAgo(400), currency: "INR", stage: { name: "Won", kind: "WON" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     // Counted all-time, plotted nowhere — which is the honest split for a win
     // that predates the window.
@@ -266,7 +280,7 @@ describe("getDashboardData won-at bucketing", () => {
       { stageId: "st-neg", value: 40_000_000, probability: 70, updatedAt: daysAgo(2), wonAt: daysAgo(10), currency: "INR", stage: { name: "Negotiation", kind: "OPEN" } },
     ])
 
-    const data = await getDashboardData("w1")
+    const data = await getDashboardData(scope())
 
     expect(data.counts.wonDeals).toBe(0)
     expect(data.wonByMonth.reduce((s, m) => s + m.value, 0)).toBe(0)

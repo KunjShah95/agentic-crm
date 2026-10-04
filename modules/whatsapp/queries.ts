@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { CHANNEL, REPLY_WINDOW_MS } from "@/modules/social/ingest"
+import { brokerContactScope, type ViewerScope } from "@/lib/permissions"
 
 /**
  * Inbox data layer.
@@ -9,6 +10,12 @@ import { CHANNEL, REPLY_WINDOW_MS } from "@/modules/social/ingest"
  * `Activity.channel` string. That is deliberate (it keeps calls, notes, leads and
  * WhatsApp on one timeline) but it means every query here must stay scoped to
  * `workspaceId` or it leaks across tenants.
+ *
+ * Every read additionally takes a `ViewerScope` so a BROKER sees only their own
+ * conversations. The inbox is the most sensitive reader in the app: a row here
+ * carries message bodies, phone numbers and `optedOut` — the last being a DPDP
+ * consent signal, not merely business data. An unscoped inbox is not a noisy
+ * list, it is a directory of every customer conversation in the tenant.
  */
 
 /**
@@ -43,10 +50,14 @@ export type InboxContact = {
  * Contacts that have any comms activity, newest first, with a one-line preview.
  * Used by the inbox left rail.
  */
-export async function listInboxContacts(workspaceId: string, limit = 100): Promise<InboxContact[]> {
+export async function listInboxContacts(
+  scope: ViewerScope,
+  limit = 100,
+): Promise<InboxContact[]> {
   const contacts = await db.contact.findMany({
     where: {
-      workspaceId,
+      workspaceId: scope.workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
       activities: { some: { channel: { in: [...INBOX_CHANNELS] } } },
     },
     orderBy: { updatedAt: "desc" },
@@ -63,7 +74,7 @@ export async function listInboxContacts(workspaceId: string, limit = 100): Promi
   })
 
   const previews = await latestActivityPreviews(
-    workspaceId,
+    scope.workspaceId,
     contacts.map((c) => c.id),
   )
 
@@ -116,12 +127,16 @@ async function latestActivityPreviews(
 
 /** Contacts with activity in one channel — the inbox filter tabs. */
 export async function listInboxContactsByChannel(
-  workspaceId: string,
+  scope: ViewerScope,
   channel: string,
   limit = 100,
 ): Promise<InboxContact[]> {
   const contacts = await db.contact.findMany({
-    where: { workspaceId, activities: { some: { channel } } },
+    where: {
+      workspaceId: scope.workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
+      activities: { some: { channel } },
+    },
     orderBy: { updatedAt: "desc" },
     take: limit,
     select: {
@@ -136,7 +151,7 @@ export async function listInboxContactsByChannel(
   })
 
   const previews = await latestActivityPreviews(
-    workspaceId,
+    scope.workspaceId,
     contacts.map((c) => c.id),
   )
 
@@ -150,9 +165,23 @@ export async function listInboxContactsByChannel(
  * Full merged timeline for one contact across every channel, oldest first
  * (chat order). Always filtered by workspaceId — this is a tenant boundary.
  */
-export async function getContactTimeline(workspaceId: string, contactId: string) {
+export async function getContactTimeline(scope: ViewerScope, contactId: string) {
+  // The contact lookup is scoped even though the timeline query filters by
+  // contactId directly: without it, `/inbox/<contactId>` would render another
+  // broker's conversation for any id in the tenant. Message bodies are the most
+  // sensitive rows in the product.
+  const visible = await db.contact.findFirst({
+    where: {
+      id: contactId,
+      workspaceId: scope.workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
+    },
+    select: { id: true },
+  })
+  if (!visible) return []
+
   return db.activity.findMany({
-    where: { workspaceId, contactId },
+    where: { workspaceId: scope.workspaceId, contactId },
     orderBy: { createdAt: "asc" },
     select: {
       id: true,
@@ -202,21 +231,30 @@ export function toTimelineItems(
  * Everything the composer needs to know before it lets an agent type.
  * Computed server-side so the client never guesses at policy.
  */
-export async function getReplyContext(params: {
-  workspaceId: string
-  contactId: string
-}) {
-  const { workspaceId, contactId } = params
-  const [contact, lastInbound, connection] = await Promise.all([
-    db.contact.findFirst({
-      where: { id: contactId, workspaceId },
-      select: { phone: true, optedOut: true },
-    }),
-    db.activity.findFirst({
-      where: { workspaceId, contactId, channel: CHANNEL, direction: "IN" },
-      orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
-    }),
+export async function getReplyContext(scope: ViewerScope, contactId: string) {
+  const { workspaceId } = scope
+
+  // Contact first, sequentially: the reply-window lookup must not run for a
+  // contact the caller cannot see, or `lastInboundAt` discloses that *some*
+  // conversation exists on a foreign id. These two cannot be concurrent because
+  // the second is conditional on the first.
+  const contact = await db.contact.findFirst({
+    where: {
+      id: contactId,
+      workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
+    },
+    select: { phone: true, optedOut: true },
+  })
+
+  const [lastInbound, connection] = await Promise.all([
+    contact
+      ? db.activity.findFirst({
+          where: { workspaceId, contactId, channel: CHANNEL, direction: "IN" },
+          orderBy: { createdAt: "desc" },
+          select: { createdAt: true },
+        })
+      : Promise.resolve(null),
     db.socialConnection.findFirst({
       where: { workspaceId, provider: "whatsapp", status: "active" },
       select: { id: true, displayName: true, externalAccountId: true },

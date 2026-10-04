@@ -5,6 +5,11 @@
  */
 
 import { db } from "@/lib/db"
+import {
+  brokerContactScope,
+  brokerScopeFilter,
+  type ViewerScope,
+} from "@/lib/permissions"
 
 export type AskResult = {
   answer: string
@@ -17,11 +22,19 @@ const reContacts = /\b(contacts?|leads?)\b/i
 const reOverdue = /\boverdue\b/i
 const reFunnel = /\bfunnel\b/i
 
-export async function askPipeline(workspaceId: string, q: string): Promise<AskResult> {
+export async function askPipeline(scope: ViewerScope, q: string): Promise<AskResult> {
   const lower = q.toLowerCase()
+  const { workspaceId } = scope
+  // `/ask` is a natural-language front door onto the same rows the tables read,
+  // so it inherits the same broker scoping. An unscoped answer here is worse
+  // than an unscoped table: the question is phrased in the user's own words,
+  // so they have no reason to suspect the row counts are the whole tenant's
+  // rather than their book's.
+  const dealScope = brokerScopeFilter(scope.role, scope.brokerId)
+  const contactScope = brokerContactScope(scope.role, scope.brokerId)
 
   if (reFunnel.test(q)) {
-    const deals = await db.deal.findMany({ where: { workspaceId }, select: { bookingStage: true } })
+    const deals = await db.deal.findMany({ where: { workspaceId, ...dealScope }, select: { bookingStage: true } })
     const counts: Record<string, number> = {}
     for (const d of deals) counts[d.bookingStage ?? "INQUIRY"] = (counts[d.bookingStage ?? "INQUIRY"] ?? 0) + 1
     return { answer: `Funnel has ${deals.length} deals.`, rows: Object.entries(counts).map(([stage, count]) => ({ stage, count })) }
@@ -29,7 +42,9 @@ export async function askPipeline(workspaceId: string, q: string): Promise<AskRe
 
   if (reOverdue.test(q)) {
     const payments = await db.payment.findMany({
-      where: { workspaceId, status: { in: ["OVERDUE", "DUE"] } },
+      // Payments are reached through their deal, so the broker predicate belongs
+      // on the relation — `Payment` has no brokerId of its own.
+      where: { workspaceId, deal: { workspaceId, ...dealScope }, status: { in: ["OVERDUE", "DUE"] } },
       select: { amount: true, dueDate: true, status: true, dealId: true },
       take: 20,
     })
@@ -40,7 +55,7 @@ export async function askPipeline(workspaceId: string, q: string): Promise<AskRe
   if (reDeals.test(q) && !reContacts.test(q)) {
     const take = 10
     const deals = await db.deal.findMany({
-      where: { workspaceId, ...(lower.includes("closing") ? { bookingStage: "CLOSING" as never } : {}) },
+      where: { workspaceId, ...dealScope, ...(lower.includes("closing") ? { bookingStage: "CLOSING" as never } : {}) },
       take,
       orderBy: { updatedAt: "desc" },
       select: { id: true, title: true, bookingStage: true, value: true },
@@ -50,7 +65,7 @@ export async function askPipeline(workspaceId: string, q: string): Promise<AskRe
 
   if (reContacts.test(q)) {
     const contacts = await db.contact.findMany({
-      where: { workspaceId },
+      where: { workspaceId, ...contactScope },
       take: 10,
       orderBy: { updatedAt: "desc" },
       select: { id: true, firstName: true, lastName: true, leadSource: true, leadScore: true },

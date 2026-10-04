@@ -1,12 +1,18 @@
 # Open security findings — tenant isolation review
 
 Status as of commit `6f3e1d6`. These were found in the same review that produced
-the fixes in that commit; they are **not yet fixed**. Each is verified (not
-inferred) — the review read enough surrounding context to rule out an outer
-guard before reporting.
+the fixes in that commit. Ordered by severity. Each entry names the file and the
+specific claim, so it can be re-verified or fixed without redoing the review.
 
-Ordered by severity. Each entry names the file and the specific claim, so it can
-be re-verified or fixed without redoing the review.
+**Update — broker scoping (MEDIUM-HIGH) is now fixed, and the surface has been
+fully triaged.** The seven unwrapped read paths listed below were closed: every
+tenant read now takes a `ViewerScope` (`lib/permissions.ts`) instead of a bare
+`workspaceId`, so the unscoped signature is unrepresentable. A second pass then
+read and closed the 20 read paths that had been recorded as unreviewed, and a
+third found that **outbound WhatsApp send was unscoped** even though every inbox
+read was correct. See "Broker scoping — closed" at the foot of this file.
+
+The remaining entries below are still open.
 
 ---
 
@@ -41,6 +47,9 @@ not persist is a README claiming a backstop that is not deployed.
 ---
 
 ## MEDIUM-HIGH — `brokerScopeFilter` is applied to 3 of ~10 read paths
+
+**CLOSED.** Retained as the origin of the current design; see "Broker scoping —
+closed" below.
 
 `lib/permissions.ts:73` documents BROKER-role users as seeing only their
 allocated inventory and deals. Applied in `modules/brokers/queries.ts`,
@@ -103,6 +112,43 @@ Note the sibling guards already exist elsewhere — `createActivityAction`
 (`lib/actions/activities.ts:30`) and `linkContactToOrgAction`
 (`lib/actions/organizations.ts:126`) validate both foreign keys. This is a gap
 in the deals/contacts paths, not a policy decision.
+
+---
+
+## MEDIUM — Outbound WhatsApp was not broker-scoped
+
+**CLOSED.** Found and fixed while restoring the parked WhatsApp integration.
+
+`sendWhatsAppMessage` (`modules/whatsapp/actions.ts`) verified workspace
+membership and then passed the caller-supplied `contactId` straight to
+`sendOutboundWhatsAppMessage`, which looks the contact up as
+`{ id: contactId, workspaceId }`. Every inbox *read* was broker-scoped, so this
+was easy to miss: the reads were correct and the write path was not.
+
+**Why it matters more than a read leak.** A Next.js server action is a public
+HTTP endpoint on the app — it does not require the UI that scopes it. So a BROKER
+could invoke the action directly with any `contactId` in the tenant and:
+
+1. send an **outbound** WhatsApp message, from the company's own business number,
+   to a real customer's phone, with no UI and no human confirmation;
+2. do so in a way that cannot be undone — reading another broker's rows leaves a
+   log, the message is delivered;
+3. put the tenant's Meta account at risk, which `production-readiness.md` already
+   records as a WhatsApp-policy ban risk on *that customer's* account.
+
+The action now resolves the caller's `ViewerScope` and looks the contact up
+through `brokerContactScope` before calling the outbox. The refusal is reported as
+`CONTACT_NOT_FOUND`, not a permission error, because a distinct "forbidden" code
+would confirm the contact exists and turn the action into an oracle for
+enumerating another broker's book.
+
+Locked down by `tests/unit/whatsapp-outbound-scope.test.ts` (8 tests), which
+asserts on the *refusal* — the guarantee is that the action never reaches the
+outbox for a contact the caller cannot see.
+
+Note the pre-existing controls in this path that were already sound and are left
+alone: `optedOut`, missing phone, and the 24-hour reply window are all enforced
+in `modules/comms/outbox.ts`, not just in the composer UI.
 
 ---
 
@@ -197,3 +243,141 @@ Recorded so these are not re-audited:
   and compared in constant time; OAuth state is HMAC-signed with a single-use
   nonce. No guessable or enumerable token. (The fixed `createBuyerAccess` bug
   was the *absence of an auth check*, not token strength.)
+
+---
+
+## Broker scoping — closed
+
+The MEDIUM-HIGH finding above is fixed. Recorded here because the shape of the
+fix matters more than the seven call sites.
+
+### What changed
+
+The seven read paths took `workspaceId: string`, and `brokerScopeFilter` needs a
+role to do anything. With no role in scope the filter had nothing to act on, so
+each query was workspace-wide *by construction* — not by oversight in the body,
+which is why it survived review seven times.
+
+So the signature changed instead of the body:
+
+- `ViewerScope` (`lib/permissions.ts`) carries `workspaceId` **and** `role`
+  **and** `brokerId`. Every tenant read path now takes it, so the unscoped
+  signature can no longer be written. The compiler found all 19 call sites.
+- `resolveViewerScope(workspaceId, userId)` resolves role and broker id in one
+  place and returns `null` for a non-member, so pages keep their `notFound()`
+  behaviour without repeating the membership lookup inline.
+- `brokerContactScope` was added for `Contact`, which has **no `brokerId`
+  column**. `brokerScopeFilter` returns `{ brokerId }` and cannot be spread into
+  a `ContactWhereInput`; contacts reach a broker through
+  `deals: { some: { brokerId } }`.
+
+Fail-closed throughout: a `BROKER` with no linked `Broker` row gets
+`__no_broker__`, matching nothing.
+
+Also closed while in these paths:
+
+- `exportContactsCsvAction` raised `pageSize` to 1000, so it was the widest leak
+  in the app — a BROKER's "Export CSV" returned every contact in the tenant
+  regardless of what the table above it showed.
+- `app/(app)/[workspace]/ai/page.tsx` had no membership `notFound()` gate, unlike
+  every other page in the app, and its two forecast queries were unscoped.
+- `getDealDetail` carries the broker predicate **in the lookup**, so a foreign
+  deal reads as not-found and cannot be probed for existence.
+- `getContactDetail` scopes the nested `deals` relation as well as the parent
+  row; scoping only the parent would still expose every deal on a shared contact.
+
+### What is now enforced
+
+Two suites, deliberately separate:
+
+| Suite | Asserts |
+| --- | --- |
+| `tests/unit/broker-scope-registry.test.ts` | Every tenant read path in `modules/**/queries.ts` has a recorded broker-visibility decision, and entries claiming `"scoped"` really call a filter helper. |
+| `tests/unit/broker-scope-reads.test.ts` | The predicate that reaches Prisma carries the broker id, and is absent for every other role. |
+
+`tests/unit/search-queries.test.ts` covers the raw-SQL case separately: the
+broker predicate there is hand-written SQL, and a structural check cannot see it
+because it is interpolated as a `Prisma.sql` fragment rather than appearing in
+the template's static chunks. A test that joined only those chunks would call a
+scoped query unscoped.
+
+The registry also carries a **`unreviewed`** state and a baseline count, so the
+surface nobody has looked at yet is printed on every run instead of being
+silently absent. It ratchets: the count may fall, never rise. Run
+`npx vitest run tests/unit/broker-scope-registry.test.ts` to see the outstanding
+list.
+
+**The baseline is now 0 — all 43 tenant read paths are classified.** Each is
+either `scoped` (with the predicate asserted behaviourally) or `workspace-wide`
+with a stated reason, and the suite fails if a `workspace-wide` entry has an
+empty reason or if a new read path appears unregistered.
+
+### Second pass — the remaining surface
+
+The 20 paths that were still `unreviewed` have now been read and closed. Eight
+were live leaks:
+
+| Read path | What it disclosed |
+| --- | --- |
+| `search::searchWorkspace` | The ⌘K palette returned every contact (with email) and deal in the tenant. Widest surface in the product, reachable from any page. |
+| `whatsapp::listInboxContacts` / `…ByChannel` | Every conversation in the tenant, with phone numbers **and the `optedOut` DPDP consent flag**. |
+| `whatsapp::getContactTimeline` | Full message bodies for any contact id in the tenant. |
+| `whatsapp::getReplyContext` | Phone, opt-out state, and the 24h reply-window clock. |
+| `organizations::getOrganizationDetail` | Every contact and deal on any organization the broker looked up. |
+| `reports::getPipelineByStage` / `getDealsByOwner` / `getWinRateByDealType` | Tenant-wide pipeline value, per-owner totals, and a win rate whose denominator was the whole tenant. |
+| `siteVisits::listSiteVisits` | Lead name and phone, free-text notes, outcome, and the GPS fix of every visit. |
+
+Two defects beyond simple missing scoping:
+
+- **`reports::getSourceROI` had a query with no `workspaceId` at all** —
+  `db.contact.findMany({ where: { id: { in: contactIds } } })`. The ids come
+  from a workspace-scoped deal set, so it was safe *by derivation*, but a foreign
+  `contactId` is accepted on deal create and update (the MEDIUM finding below),
+  and one such deal would have disclosed another tenant's contact `leadSource`.
+  Derivation is not a boundary; the predicate is now explicit.
+- **`reports::getReportsSnapshot` forwarded `role`/`brokerId` to five of its
+  eight sub-queries** and passed the workspace id alone to the other three. All
+  eight now receive the same `ViewerScope`.
+
+Seven are workspace-wide by design, with the reason recorded: the four
+`association::` queries (a pooled lead is *supposed* to be visible across the
+association — that is the NAAR network feature, and the workspace boundary is
+enforced upstream by `getAssociationForWorkspace`), `organizations::
+listOrganizations` and `documents::listTemplates` (shared master data),
+`reports::getInventoryHealth` (`Unit` has no `brokerId`, so filtering would
+silently redefine the metric), and `reports::getTeamVsTarget`'s member directory
+(a broker must see the team to hand a lead to — only the booking counts filter).
+
+Three pages were also missing the `notFound()` membership gate that every other
+page has (`site-visits`, `documents`, `organizations/[id]`), and four inline
+`db.contact.findMany` contact-picker queries in pages were unscoped.
+
+### Still open
+
+1. **NEW — `documents::listGeneratedDocuments` cannot be scoped without a
+   migration.** `renderedHtml` is a full deal document (buyer, unit, payment
+   figures) and should be broker-scoped, but `GeneratedDocument.dealId` is a
+   bare column with **no `@relation` to `Deal`** (`Deal` has no back-relation
+   either), so there is nothing to filter through in the Prisma layer. Two ways
+   to close it:
+   - add `deal Deal? @relation(fields: [dealId], references: [id])` to
+     `GeneratedDocument` plus the matching list on `Deal`, then filter the
+     relation exactly as `siteVisits::listSiteVisits` does. Smallest diff.
+   - denormalise `brokerId` onto `GeneratedDocument` at generation time. Faster
+     to filter, but must be kept in sync when a deal changes broker.
+
+   Recorded in the registry as `workspace-wide` with this reason so the gap is
+   visible rather than assumed safe.
+
+2. **Contact visibility for a BROKER.** `brokerContactScope` currently means "a
+   contact attached to one of my deals". A freshly imported or reassigned lead —
+   not yet on a deal — is therefore invisible on `/contacts`, and the same rule
+   now applies to the inbox and to outbound send. If brokers are meant to work a
+   raw lead list, the intended rule is probably "contacts they own"
+   (`Contact.ownerId`), which needs the caller's userId threaded alongside the
+   role. Both are defensible; this is a product call. Worth deciding before the
+   broker role is used in anger, because the rule now gates sending as well as
+   reading.
+
+The HIGH finding above (no RLS backstop) is untouched by this work and remains
+the larger risk.

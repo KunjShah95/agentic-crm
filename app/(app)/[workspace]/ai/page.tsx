@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
+import { brokerScopeFilter, resolveViewerScope } from "@/lib/permissions"
 import { getReportsSnapshot } from "@/modules/reports/queries"
 import { revenueForecast, collectionForecast } from "@/modules/ai/forecast"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -23,18 +24,30 @@ export default async function AIPage({
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
   const session = await auth()
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({ where: { workspaceId_userId: { workspaceId: ws.id, userId: session.user.id } } })
-    : null
+  // Every other page in this app gates on membership with notFound(). This one
+  // did not, so a non-member who guessed a valid workspace slug rendered the
+  // Intelligence page and the workspace-wide forecast below it. The broker
+  // scope doubles as the membership proof.
+  const scope =
+    session?.user?.id ? await resolveViewerScope(ws.id, session.user.id) : null
+  if (!scope) notFound()
 
-  // forecast data
-  const deals = await db.deal.findMany({ where: { workspaceId: ws.id }, select: { bookingStage: true, value: true } })
-  const payments = await db.payment.findMany({ where: { workspaceId: ws.id }, select: { status: true, amount: true, dueDate: true } })
+  // forecast data — scoped, because these two queries are the numbers the page
+  // headlines. An unscoped read here does not look like a bug: a broker seeing
+  // the whole tenant's revenue is indistinguishable from a big month.
+  const dealScope = brokerScopeFilter(scope.role, scope.brokerId)
+  const [deals, payments] = await Promise.all([
+    db.deal.findMany({ where: { workspaceId: ws.id, ...dealScope }, select: { bookingStage: true, value: true } }),
+    db.payment.findMany({
+      where: { workspaceId: ws.id, deal: { workspaceId: ws.id, ...dealScope } },
+      select: { status: true, amount: true, dueDate: true },
+    }),
+  ])
   const rev = revenueForecast(deals)
   const coll = collectionForecast(payments)
-  const snapshot = await getReportsSnapshot(ws.id, { role: (membership?.role as never) ?? undefined })
+  const snapshot = await getReportsSnapshot(scope, { projectId: undefined })
 
-  const askResult = q ? await askPipeline(ws.id, q) : null
+  const askResult = q ? await askPipeline(scope, q) : null
 
   return (
     <div className="flex flex-col gap-6">

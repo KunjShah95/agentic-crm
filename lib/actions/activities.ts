@@ -8,8 +8,16 @@ import { requireWorkspaceMember } from "@/lib/permissions"
 import { activitySchema, completeTaskSchema } from "@/lib/validators"
 import type { ActivityType } from "@/lib/generated/prisma/client"
 
-const ACTIVITY_SOURCES = ["manual", "social", "agent"] as const
-export type ActivitySource = (typeof ACTIVITY_SOURCES)[number]
+/**
+ * Where an activity originated.
+ *
+ * A plain union: the array this replaced was only ever read through
+ * `typeof ACTIVITY_SOURCES[number]`, so it existed at runtime purely to source a
+ * type. `system` is included because `activitySource` in the activity timeline
+ * resolves a channel to it, and every write path in this module stamps
+ * `source` from the caller rather than validating against this type.
+ */
+export type ActivitySource = "manual" | "social" | "agent" | "system"
 
 export async function createActivityAction(
   workspaceId: string,

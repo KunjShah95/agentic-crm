@@ -11,6 +11,7 @@ import {
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { brokerContactScope, resolveViewerScope } from "@/lib/permissions"
 import { formatDate, formatMoney } from "@/lib/format"
 import { getDealDetail } from "@/modules/deals/queries"
 import { listWorkspaceMembers } from "@/modules/contacts/queries"
@@ -42,25 +43,17 @@ export default async function DealDetailPage({
   const workspace = await db.workspace.findUnique({ where: { slug } })
   if (!workspace) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: workspace.id,
-            userId: session.user.id,
-          },
-        },
-      })
-    : null
-  if (!membership) notFound()
+  const scope =
+    session?.user?.id ? await resolveViewerScope(workspace.id, session.user.id) : null
+  if (!scope) notFound()
 
-  const deal = await getDealDetail(workspace.id, id)
+  const deal = await getDealDetail(scope, id)
   if (!deal) notFound()
 
   const [members, contacts, orgs, stages] = await Promise.all([
     listWorkspaceMembers(workspace.id),
     db.contact.findMany({
-      where: { workspaceId: workspace.id },
+      where: { workspaceId: workspace.id, ...brokerContactScope(scope.role, scope.brokerId) },
       orderBy: { firstName: "asc" },
       select: { id: true, firstName: true, lastName: true },
     }),

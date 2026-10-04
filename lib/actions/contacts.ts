@@ -11,10 +11,11 @@ import {
   contactSchema,
 } from "@/lib/validators"
 import { listContacts, type ContactFilters } from "@/modules/contacts/queries"
+import { resolveBrokerId } from "@/modules/brokers/queries"
 import { requireQuota } from "@/modules/billing/quota"
 import { headers } from "next/headers"
 import { sendEmail } from "@/modules/email/adapter"
-import { checkContactFormRateLimit, getClientIp, RateLimitedError } from "@/modules/web-contact/rate-limit"
+import { checkContactFormRateLimit, getClientIp } from "@/modules/web-contact/rate-limit"
 import { SITE } from "@/components/landing/site-config"
 
 function clean(input: Record<string, unknown>) {
@@ -285,9 +286,15 @@ export async function exportContactsCsvAction(
   return handleAction(async () => {
     const session = await auth()
     if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
-    await requireWorkspaceMember(workspaceId, session.user.id)
+    const membership = await requireWorkspaceMember(workspaceId, session.user.id)
 
-    const { items } = await listContacts(workspaceId, {
+    // The export was the widest broker leak in the app: pageSize is raised to
+    // 1000 here, so a BROKER hitting "Export CSV" got every contact in the
+    // tenant as a spreadsheet, regardless of what the table above it showed.
+    const brokerId =
+      membership.role === "BROKER" ? await resolveBrokerId(workspaceId, session.user.id) : null
+
+    const { items } = await listContacts({ workspaceId, role: membership.role, brokerId }, {
       ...filters,
       pageSize: 1000,
       page: 1,

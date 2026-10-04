@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { resolveViewerScope } from "@/lib/permissions"
 import { listContacts, type ContactFilters } from "@/modules/contacts/queries"
 import { ContactsTable } from "@/components/contacts/contacts-table"
 import { PageHeader } from "@/components/shell/page-header"
@@ -25,17 +26,9 @@ export default async function ContactsPage({
   const workspace = await db.workspace.findUnique({ where: { slug } })
   if (!workspace) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: workspace.id,
-            userId: session.user.id,
-          },
-        },
-      })
-    : null
-  if (!membership) notFound()
+  const scope =
+    session?.user?.id ? await resolveViewerScope(workspace.id, session.user.id) : null
+  if (!scope) notFound()
 
   const str = (v: string | string[] | undefined) =>
     typeof v === "string" ? v : undefined
@@ -50,7 +43,7 @@ export default async function ContactsPage({
   }
 
   const [data, tags, orgs, members] = await Promise.all([
-    listContacts(workspace.id, filters),
+    listContacts(scope, filters),
     db.tag.findMany({
       where: { workspaceId: workspace.id },
       orderBy: { name: "asc" },
@@ -83,7 +76,7 @@ export default async function ContactsPage({
       <ContactsTable
         workspaceSlug={slug}
         workspaceId={workspace.id}
-        role={membership.role}
+        role={scope.role}
         data={data}
         filters={filters}
         tags={tags}

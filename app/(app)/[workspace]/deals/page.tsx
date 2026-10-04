@@ -6,6 +6,7 @@ import { KanbanSquare, Table as TableIcon } from "lucide-react"
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { brokerContactScope, resolveViewerScope } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 import {
   getPipeline,
@@ -37,27 +38,22 @@ export default async function DealsPage({
   const workspace = await db.workspace.findUnique({ where: { slug } })
   if (!workspace) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: workspace.id,
-            userId: session.user.id,
-          },
-        },
-      })
-    : null
-  if (!membership) notFound()
+  const scope =
+    session?.user?.id ? await resolveViewerScope(workspace.id, session.user.id) : null
+  if (!scope) notFound()
 
   const view = sp.view === "table" ? "table" : "kanban"
 
   const [pipeline, tableDeals, members, contacts, orgs, stats, tags] =
     await Promise.all([
-      getPipeline(workspace.id),
-      view === "table" ? listDealsForTable(workspace.id) : null,
+      getPipeline(scope),
+      view === "table" ? listDealsForTable(scope) : null,
       listWorkspaceMembers(workspace.id),
+      // Scoped for the same reason the tables are: this feeds the deal form's
+      // contact picker, and an unscoped list lets a broker pick any contact in
+      // the tenant and attach one of their deals to it.
       db.contact.findMany({
-        where: { workspaceId: workspace.id },
+        where: { workspaceId: workspace.id, ...brokerContactScope(scope.role, scope.brokerId) },
         orderBy: { firstName: "asc" },
         select: { id: true, firstName: true, lastName: true },
       }),
@@ -66,7 +62,7 @@ export default async function DealsPage({
         orderBy: { name: "asc" },
         select: { id: true, name: true },
       }),
-      pipelineStats(workspace.id),
+      pipelineStats(scope),
       db.tag.findMany({
         where: { workspaceId: workspace.id },
         orderBy: { name: "asc" },

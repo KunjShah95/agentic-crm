@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { isOpenKind, isWonKind } from "@/lib/pipeline-stages"
+import { brokerScopeFilter, type ViewerScope } from "@/lib/permissions"
 import {
   effectiveCommissionPct,
   expectedCommission,
@@ -7,15 +8,16 @@ import {
   normalizeUrgency,
 } from "./commission"
 
-export async function getPipeline(workspaceId: string) {
+export async function getPipeline(scope: ViewerScope) {
+  const brokerScope = brokerScopeFilter(scope.role, scope.brokerId)
   const [stages, deals] = await Promise.all([
     db.pipelineStage.findMany({
-      where: { workspaceId },
+      where: { workspaceId: scope.workspaceId },
       orderBy: { order: "asc" },
       include: { _count: { select: { deals: true } } },
     }),
     db.deal.findMany({
-      where: { workspaceId },
+      where: { workspaceId: scope.workspaceId, ...brokerScope },
       include: {
         contact: { select: { id: true, firstName: true, lastName: true, email: true } },
         organization: { select: { id: true, name: true } },
@@ -28,9 +30,9 @@ export async function getPipeline(workspaceId: string) {
   return { stages, deals }
 }
 
-export async function listDealsForTable(workspaceId: string) {
+export async function listDealsForTable(scope: ViewerScope) {
   return db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     include: {
       stage: { select: { id: true, name: true, color: true } },
       contact: { select: { id: true, firstName: true, lastName: true } },
@@ -42,9 +44,13 @@ export async function listDealsForTable(workspaceId: string) {
   })
 }
 
-export async function getDealDetail(workspaceId: string, dealId: string) {
+export async function getDealDetail(scope: ViewerScope, dealId: string) {
   const deal = await db.deal.findFirst({
-    where: { id: dealId, workspaceId },
+    // The broker predicate is part of the lookup, not a post-filter. A BROKER
+    // asking for a deal outside their book gets `null` — indistinguishable from
+    // a wrong id, so this cannot be used to probe for the existence of another
+    // broker's deals.
+    where: { id: dealId, workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     include: {
       stage: { select: { id: true, name: true, color: true, order: true } },
       contact: {
@@ -65,9 +71,9 @@ export async function getDealDetail(workspaceId: string, dealId: string) {
   return deal
 }
 
-export async function pipelineStats(workspaceId: string) {
+export async function pipelineStats(scope: ViewerScope) {
   const deals = await db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     select: {
       title: true,
       value: true,

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
+import { resolveViewerScope } from "@/lib/permissions"
 import { getReportsSnapshot } from "@/modules/reports/queries"
 import {
   REPORT_IDS,
@@ -39,15 +40,10 @@ export async function GET(
   }
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) return NextResponse.json({ error: "Workspace not found" }, { status: 404 })
-  const membership = await db.workspaceMember.findUnique({
-    where: { workspaceId_userId: { workspaceId: ws.id, userId: session.user.id } },
-  })
-  if (!membership) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+  const scope = await resolveViewerScope(ws.id, session.user.id)
+  if (!scope) return NextResponse.json({ error: "Forbidden" }, { status: 403 })
 
-  const snapshot = await getReportsSnapshot(ws.id, {
-    projectId,
-    role: membership.role as never,
-  })
+  const snapshot = await getReportsSnapshot(scope, { projectId })
 
   if (format === "pdf") {
     const html = buildReportsHtml({

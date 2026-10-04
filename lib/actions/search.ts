@@ -2,6 +2,7 @@
 
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { resolveViewerScope } from "@/lib/permissions"
 import { searchWorkspace, type SearchHit } from "@/modules/search/queries"
 import { AppError } from "@/lib/errors"
 
@@ -35,13 +36,14 @@ export async function globalSearchAction(
     })
     if (!workspace) throw new AppError("NOT_FOUND", "Workspace not found.", 404)
 
-    const membership = await db.workspaceMember.findUnique({
-      where: { workspaceId_userId: { workspaceId: workspace.id, userId: session.user.id } },
-      select: { userId: true },
-    })
-    if (!membership) throw new AppError("FORBIDDEN", "Not a member of this workspace.", 403)
+    // Membership *and* visibility in one lookup. This action only selected
+    // `userId` before, so the palette had no role to scope with and returned
+    // every contact and deal in the tenant to a BROKER — the widest read
+    // surface in the product, reachable from any page in three keystrokes.
+    const scope = await resolveViewerScope(workspace.id, session.user.id)
+    if (!scope) throw new AppError("FORBIDDEN", "Not a member of this workspace.", 403)
 
-    const hits: SearchHit[] = await searchWorkspace(workspace.id, q)
+    const hits: SearchHit[] = await searchWorkspace(scope, q)
 
     const contacts: GlobalSearchResult["contacts"] = []
     const organizations: GlobalSearchResult["organizations"] = []

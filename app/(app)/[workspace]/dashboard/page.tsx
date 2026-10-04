@@ -4,6 +4,8 @@ import { Plus, ArrowUpRight } from "lucide-react"
 
 import { db } from "@/lib/db"
 import { formatMoneyShort } from "@/lib/format"
+import { resolveViewerScope } from "@/lib/permissions"
+import { auth } from "@/lib/auth"
 import { getDashboardData } from "@/modules/dashboard/queries"
 import { ButtonLink } from "@/components/ds/button"
 import { Masthead, type MastheadFigure } from "@/components/ds/masthead"
@@ -24,7 +26,11 @@ export default async function DashboardPage({ params }: { params: Promise<{ work
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
 
-  const data = await getDashboardData(ws.id)
+  const session = await auth()
+  const scope = session?.user?.id ? await resolveViewerScope(ws.id, session.user.id) : null
+  if (!scope) notFound()
+
+  const data = await getDashboardData(scope)
   const { counts } = data
   const money = (value: number | null | undefined) => formatMoneyShort(value, data.currency)
 

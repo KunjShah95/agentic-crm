@@ -1,7 +1,12 @@
 "use server"
 
 import { auth } from "@/lib/auth"
-import { requireWorkspaceMember } from "@/lib/permissions"
+import { db } from "@/lib/db"
+import {
+  brokerContactScope,
+  requireWorkspaceMember,
+  resolveViewerScope,
+} from "@/lib/permissions"
 import { sendOutboundWhatsAppMessage, type OutboundResult } from "@/modules/comms/outbox"
 
 /**
@@ -26,6 +31,35 @@ export async function sendWhatsAppMessage(input: {
   const membership = await requireWorkspaceMember(input.workspaceId, session.user.id).catch(() => null)
   if (!membership) {
     return { ok: false, code: "PROVIDER_ERROR", message: "You don't have access to this workspace." }
+  }
+
+  // Outbound broker scoping.
+  //
+  // Every *read* of the inbox is broker-scoped, but this action was not, and it
+  // does not need the UI to be reachable: a server action is a public endpoint on
+  // the app. Passing any `contactId` in the tenant let a BROKER send a WhatsApp
+  // message to another broker's client — from the company's own business number,
+  // to a real customer's phone, with no UI involved. `production-readiness.md`
+  // already flags unsolicited outbound as a WhatsApp-policy ban risk on the
+  // customer's account, which makes this more than a data leak.
+  //
+  // The failure is reported as CONTACT_NOT_FOUND rather than a permission error
+  // on purpose: a distinct "forbidden" code would confirm the contact exists and
+  // turn the action into an oracle for enumerating another broker's book.
+  const scope = await resolveViewerScope(input.workspaceId, session.user.id)
+  if (!scope) {
+    return { ok: false, code: "PROVIDER_ERROR", message: "You don't have access to this workspace." }
+  }
+  const visible = await db.contact.findFirst({
+    where: {
+      id: input.contactId,
+      workspaceId: input.workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
+    },
+    select: { id: true },
+  })
+  if (!visible) {
+    return { ok: false, code: "CONTACT_NOT_FOUND", message: "Contact not found." }
   }
 
   return sendOutboundWhatsAppMessage({

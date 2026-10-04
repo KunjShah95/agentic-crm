@@ -11,6 +11,7 @@ import {
 } from "lucide-react"
 
 import { auth } from "@/lib/auth"
+import { resolveViewerScope } from "@/lib/permissions"
 import { db } from "@/lib/db"
 import { formatDate, fullName } from "@/lib/format"
 import { getContactDetail, listWorkspaceMembers } from "@/modules/contacts/queries"
@@ -54,19 +55,11 @@ export default async function ContactDetailPage({
   const workspace = await db.workspace.findUnique({ where: { slug } })
   if (!workspace) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: {
-          workspaceId_userId: {
-            workspaceId: workspace.id,
-            userId: session.user.id,
-          },
-        },
-      })
-    : null
-  if (!membership) notFound()
+  const scope =
+    session?.user?.id ? await resolveViewerScope(workspace.id, session.user.id) : null
+  if (!scope) notFound()
 
-  const contact = await getContactDetail(workspace.id, id)
+  const contact = await getContactDetail(scope, id)
   if (!contact) notFound()
 
   const [members, tags, orgs, whatsAppConnection] = await Promise.all([
@@ -141,7 +134,7 @@ export default async function ContactDetailPage({
           tags={tags}
           currentOwnerId={contact.ownerId}
           currentTagIds={contact.tags.map((t) => t.tag.id)}
-          role={membership.role}
+          role={scope.role}
           organizations={orgs}
           contact={{
             id: contact.id,

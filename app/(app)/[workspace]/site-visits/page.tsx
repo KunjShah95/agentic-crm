@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
+import { auth } from "@/lib/auth"
+import { brokerContactScope, resolveViewerScope } from "@/lib/permissions"
 import { listSiteVisits } from "@/modules/siteVisits/queries"
 import { ScheduleVisitDialog, CheckInButton } from "@/components/site-visits/site-visit-panel"
 import {
@@ -21,9 +23,21 @@ export default async function SiteVisitsPage({ params }: { params: Promise<{ wor
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
 
+  const session = await auth()
+  const scope = session?.user?.id ? await resolveViewerScope(ws.id, session.user.id) : null
+  if (!scope) notFound()
+
   const [visits, contacts] = await Promise.all([
-    listSiteVisits(ws.id),
-    db.contact.findMany({ where: { workspaceId: ws.id }, orderBy: { firstName: "asc" }, select: { id: true, firstName: true, lastName: true }, take: 500 }),
+    listSiteVisits(scope),
+    // Scoped for the same reason the visit list is: this feeds the
+    // schedule-a-visit contact picker, and unscoped it offers every contact in
+    // the tenant.
+    db.contact.findMany({
+      where: { workspaceId: ws.id, ...brokerContactScope(scope.role, scope.brokerId) },
+      orderBy: { firstName: "asc" },
+      select: { id: true, firstName: true, lastName: true },
+      take: 500,
+    }),
   ])
 
   return (

@@ -1,30 +1,28 @@
 import { db } from "@/lib/db"
-import { brokerScopeFilter } from "@/lib/permissions"
+import { brokerContactScope, brokerScopeFilter, type ViewerScope } from "@/lib/permissions"
 import { isWonKind } from "@/lib/pipeline-stages"
-import type { Role } from "@/lib/generated/prisma/client"
 import { collections, funnel, inventoryHealth, sourceROI, teamVsTarget } from "./aggregate"
 
 const BOOKING_STAGES = new Set(["BOOKING", "REGISTRATION", "POSSESSION", "CLOSED"])
 
-export async function getFunnel(workspaceId: string, role?: Role, brokerId?: string | null) {
-  const brokerFilter = role ? brokerScopeFilter(role, brokerId) : {}
+export async function getFunnel(scope: ViewerScope) {
   const deals = await db.deal.findMany({
-    where: { workspaceId, ...brokerFilter },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     select: { bookingStage: true },
   })
   return funnel(deals.map((d) => ({ bookingStage: d.bookingStage ?? null })))
 }
 
-export async function getInventoryHealth(
-  workspaceId: string,
-  opts: { projectId?: string; role?: Role; brokerId?: string | null } = {},
-) {
-  const brokerFilter = opts.role ? brokerScopeFilter(opts.role, opts.brokerId) : {}
-  // brokers see no inventory unless allocated — for reports we simply apply same filter to deals; units are not broker-scoped in M3, so return full
-  void brokerFilter
+export async function getInventoryHealth(scope: ViewerScope, opts: { projectId?: string } = {}) {
+  // Deliberately NOT broker-scoped. `Unit` has no brokerId column — allocation is
+  // expressed through `Deal.brokerId` — so there is no predicate to add here
+  // without changing what "inventory health" means (it would become "units on my
+  // deals", a different metric). The filter is applied to the deal-derived
+  // reports instead. Recorded in the broker-visibility registry as
+  // workspace-wide with this reason, rather than left as a silent `void`.
   const units = await db.unit.findMany({
     where: {
-      workspaceId,
+      workspaceId: scope.workspaceId,
       ...(opts.projectId ? { projectId: opts.projectId } : {}),
     },
     select: { status: true },
@@ -32,32 +30,48 @@ export async function getInventoryHealth(
   return inventoryHealth(units)
 }
 
-export async function getCollections(workspaceId: string, role?: Role, brokerId?: string | null) {
-  const brokerFilter = role ? brokerScopeFilter(role, brokerId) : {}
+export async function getCollections(scope: ViewerScope) {
   const payments = await db.payment.findMany({
     where: {
-      workspaceId,
-      deal: { workspaceId, ...brokerFilter },
+      workspaceId: scope.workspaceId,
+      // Payment has no brokerId of its own; the predicate belongs on the relation.
+      deal: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     },
     select: { status: true, amount: true, dueDate: true },
   })
   return collections(payments.map((p) => ({ status: p.status, amount: p.amount, dueDate: p.dueDate })))
 }
 
-export async function getSourceROI(workspaceId: string, role?: Role, brokerId?: string | null) {
-  const brokerFilter = role ? brokerScopeFilter(role, brokerId) : {}
+export async function getSourceROI(scope: ViewerScope) {
+  const brokerFilter = brokerScopeFilter(scope.role, scope.brokerId)
   const deals = await db.deal.findMany({
-    where: { workspaceId, ...brokerFilter },
+    where: { workspaceId: scope.workspaceId, ...brokerFilter },
     select: { bookingStage: true, value: true, contactId: true },
   })
   const contactIds = deals.map((d) => d.contactId).filter(Boolean) as string[]
   const contacts = contactIds.length
-    ? await db.contact.findMany({ where: { id: { in: contactIds } }, select: { id: true, leadSource: true } })
+    ? await db.contact.findMany({
+        // The workspace predicate is load-bearing here, not decorative. These
+        // ids come from `deals`, which is workspace-scoped, so the list is
+        // currently safe by derivation — but `open-findings.md` records that a
+        // foreign `contactId` is accepted on deal create/update and then read
+        // back. With no predicate here, one such deal is enough to disclose
+        // another tenant's contact leadSource. Derivation is not a boundary.
+        where: {
+          workspaceId: scope.workspaceId,
+          id: { in: contactIds },
+          ...brokerContactScope(scope.role, scope.brokerId),
+        },
+        select: { id: true, leadSource: true },
+      })
     : []
   const byContact = new Map(contacts.map((c) => [c.id, c.leadSource ?? "UNKNOWN"]))
 
   // also include contacts without deals as leads
-  const allContacts = await db.contact.findMany({ where: { workspaceId }, select: { id: true, leadSource: true } })
+  const allContacts = await db.contact.findMany({
+    where: { workspaceId: scope.workspaceId, ...brokerContactScope(scope.role, scope.brokerId) },
+    select: { id: true, leadSource: true },
+  })
   const dealContactSet = new Set(deals.map((d) => d.contactId).filter(Boolean))
   const leadOnly = allContacts.filter((c) => !dealContactSet.has(c.id))
 
@@ -75,19 +89,26 @@ export async function getSourceROI(workspaceId: string, role?: Role, brokerId?: 
   return sourceROI(rows)
 }
 
-export async function getTeamVsTarget(workspaceId: string, role?: Role, brokerId?: string | null) {
-  const brokerFilter = role ? brokerScopeFilter(role, brokerId) : {}
-  const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { settingsJson: true } })
+export async function getTeamVsTarget(scope: ViewerScope) {
+  const brokerFilter = brokerScopeFilter(scope.role, scope.brokerId)
+  const ws = await db.workspace.findUnique({
+    where: { id: scope.workspaceId },
+    select: { settingsJson: true },
+  })
   const settings = (ws?.settingsJson as Record<string, unknown> | null) ?? null
   const targets = (settings?.targets as Record<string, number> | undefined) ?? {}
 
+  // The member directory is workspace-wide on purpose — a broker still needs to
+  // see the team to know who to hand a lead to. Only the booking counts are
+  // broker-scoped, so this shows "the rest of the team booked N" rather than
+  // "the rest of the team's books", which is the intended comparison.
   const members = await db.workspaceMember.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId },
     include: { user: { select: { id: true, name: true } } },
   })
 
   const deals = await db.deal.findMany({
-    where: { workspaceId, ...brokerFilter, bookingStage: { in: Array.from(BOOKING_STAGES) } },
+    where: { workspaceId: scope.workspaceId, ...brokerFilter, bookingStage: { in: Array.from(BOOKING_STAGES) } },
     select: { ownerId: true },
   })
   const counts = new Map<string, number>()
@@ -103,32 +124,33 @@ export async function getTeamVsTarget(workspaceId: string, role?: Role, brokerId
   return teamVsTarget(rows)
 }
 
-export async function getReportsSnapshot(
-  workspaceId: string,
-  opts: { projectId?: string; role?: Role; brokerId?: string | null } = {},
-) {
+export async function getReportsSnapshot(scope: ViewerScope, opts: { projectId?: string } = {}) {
+  // Every sub-report receives the same scope. This used to forward
+  // `role`/`brokerId` to five of eight calls and pass the workspace id alone to
+  // the other three, which is how a broker ended up with a scoped funnel beside
+  // an unscoped pipeline-by-stage on one screen.
   const [funnelRows, inv, coll, roi, team, pipelineByStage, dealsByOwner, winRateByType] = await Promise.all([
-    getFunnel(workspaceId, opts.role, opts.brokerId),
-    getInventoryHealth(workspaceId, { projectId: opts.projectId, role: opts.role, brokerId: opts.brokerId }),
-    getCollections(workspaceId, opts.role, opts.brokerId),
-    getSourceROI(workspaceId, opts.role, opts.brokerId),
-    getTeamVsTarget(workspaceId, opts.role, opts.brokerId),
-    getPipelineByStage(workspaceId),
-    getDealsByOwner(workspaceId),
-    getWinRateByDealType(workspaceId),
+    getFunnel(scope),
+    getInventoryHealth(scope, { projectId: opts.projectId }),
+    getCollections(scope),
+    getSourceROI(scope),
+    getTeamVsTarget(scope),
+    getPipelineByStage(scope),
+    getDealsByOwner(scope),
+    getWinRateByDealType(scope),
   ])
   return { funnel: funnelRows, inventory: inv, collections: coll, sourceROI: roi, teamVsTarget: team, pipelineByStage, dealsByOwner, winRateByType }
 }
 
-export async function getPipelineByStage(workspaceId: string) {
+export async function getPipelineByStage(scope: ViewerScope) {
   const stages = await db.pipelineStage.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId },
     orderBy: { order: "asc" },
     select: { id: true, name: true, color: true },
   })
 
   const deals = await db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     select: { stageId: true, value: true },
   })
 
@@ -153,14 +175,14 @@ export async function getPipelineByStage(workspaceId: string) {
   }))
 }
 
-export async function getDealsByOwner(workspaceId: string) {
+export async function getDealsByOwner(scope: ViewerScope) {
   const members = await db.workspaceMember.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId },
     include: { user: { select: { id: true, name: true } } },
   })
 
   const deals = await db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     select: { ownerId: true, value: true },
   })
 
@@ -187,9 +209,9 @@ export async function getDealsByOwner(workspaceId: string) {
   }))
 }
 
-export async function getWinRateByDealType(workspaceId: string) {
+export async function getWinRateByDealType(scope: ViewerScope) {
   const deals = await db.deal.findMany({
-    where: { workspaceId },
+    where: { workspaceId: scope.workspaceId, ...brokerScopeFilter(scope.role, scope.brokerId) },
     // `kind`, not `name` — a win rate that reads 0% because someone renamed the
     // Won stage is a chart nobody can debug.
     select: { dealType: true, stage: { select: { kind: true } } },

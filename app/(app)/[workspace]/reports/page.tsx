@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import Link from "next/link"
 import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
+import { resolveViewerScope } from "@/lib/permissions"
 import { getReportsSnapshot } from "@/modules/reports/queries"
 import { ExportButtons } from "@/components/reports/export-buttons"
 import { PageHeader } from "@/components/shell/page-header"
@@ -27,15 +28,14 @@ export default async function ReportsPage({
   const ws = await db.workspace.findUnique({ where: { slug } })
   if (!ws) notFound()
 
-  const membership = session?.user?.id
-    ? await db.workspaceMember.findUnique({
-        where: { workspaceId_userId: { workspaceId: ws.id, userId: session.user.id } },
-      })
-    : null
+  const scope = session?.user?.id ? await resolveViewerScope(ws.id, session.user.id) : null
+  // Reports aggregate the whole book. A non-member reaching this page read
+  // tenant-wide funnel, collections and ROI figures, so the gate is not
+  // cosmetic here.
+  if (!scope) notFound()
 
-  const snapshot = await getReportsSnapshot(ws.id, {
+  const snapshot = await getReportsSnapshot(scope, {
     projectId: projectId ?? undefined,
-    role: (membership?.role as never) ?? undefined,
   })
 
   const projects = await db.project.findMany({ where: { workspaceId: ws.id }, select: { id: true, name: true } })

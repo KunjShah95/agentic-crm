@@ -1,4 +1,5 @@
 import { db } from "@/lib/db"
+import { brokerContactScope, brokerScopeFilter, type ViewerScope } from "@/lib/permissions"
 import { Prisma } from "@/lib/generated/prisma/client"
 
 export type ContactFilters = {
@@ -19,11 +20,14 @@ const SORTS = {
   updated: { updatedAt: "desc" as const },
 }
 
-export async function listContacts(workspaceId: string, filters: ContactFilters = {}) {
+export async function listContacts(scope: ViewerScope, filters: ContactFilters = {}) {
   const page = Math.max(1, filters.page ?? 1)
   const pageSize = Math.min(100, Math.max(1, filters.pageSize ?? 25))
 
-  const where: Prisma.ContactWhereInput = { workspaceId }
+  const where: Prisma.ContactWhereInput = {
+    workspaceId: scope.workspaceId,
+    ...brokerContactScope(scope.role, scope.brokerId),
+  }
 
   if (filters.q) {
     const q = filters.q.trim()
@@ -59,14 +63,24 @@ export async function listContacts(workspaceId: string, filters: ContactFilters 
   return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) }
 }
 
-export async function getContactDetail(workspaceId: string, contactId: string) {
+export async function getContactDetail(scope: ViewerScope, contactId: string) {
   const contact = await db.contact.findFirst({
-    where: { id: contactId, workspaceId },
+    where: {
+      id: contactId,
+      workspaceId: scope.workspaceId,
+      ...brokerContactScope(scope.role, scope.brokerId),
+    },
     include: {
       organization: { select: { id: true, name: true, domain: true, industry: true } },
       owner: { select: { id: true, name: true } },
       tags: { include: { tag: { select: { id: true, name: true, color: true } } } },
       deals: {
+        // A contact a broker can legitimately open may still carry deals
+        // belonging to other brokers. Scoping the *relation* as well as the
+        // parent row matters: without this, `/contacts/<id>` becomes a way to
+        // read the title, stage and value of every deal on a shared contact,
+        // which is the leak the parent-row filter was added to close.
+        where: { ...brokerScopeFilter(scope.role, scope.brokerId) },
         include: { stage: { select: { id: true, name: true, color: true } } },
         orderBy: { updatedAt: "desc" },
       },
