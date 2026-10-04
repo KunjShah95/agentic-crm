@@ -13,7 +13,7 @@ import { enqueueIngest } from "./queue";
 import { invalidateDocuments } from "./cache";
 import { semanticCache } from "./semantic-cache";
 import { clearEmbeddingsFor, findChunksForReingest } from "./pgvector";
-import type { Prisma } from "@/lib/generated/prisma/client";
+import type { Prisma, RagModality } from "@/lib/generated/prisma/client";
 
 /**
  * A JSON column is `Prisma.JsonValue`, which may hold a scalar or an array — so
@@ -23,6 +23,70 @@ import type { Prisma } from "@/lib/generated/prisma/client";
  */
 const asObject = (v: Prisma.JsonValue | null | undefined): Record<string, unknown> =>
   v !== null && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : {};
+
+/**
+ * The write-side counterpart to `asObject`.
+ *
+ * Going into a `Json` column, the value has to be an `InputJsonValue`, which
+ * Prisma types as "anything JSON except `undefined`". Chunk metadata is built
+ * from parsed source and routinely carries `undefined` values for optional
+ * fields, so those are dropped here rather than sent and rejected by the driver.
+ *
+ * Only the values JSON cannot represent are removed. An object containing a
+ * function is impossible from the parser, but `null` is common and is preserved
+ * — dropping `null` would silently erase a real "there is no department" from a
+ * document that genuinely has none.
+ */
+const asJson = (v: unknown): Prisma.InputJsonValue => {
+  if (typeof v === "number" || typeof v === "string" || typeof v === "boolean") {
+    return v;
+  }
+  if (Array.isArray(v)) {
+    /* A null *element* is allowed — `InputJsonArray` is
+       `ReadonlyArray<InputJsonValue | null>` and JSON has a first-class null. Only
+       a top-level null is unrepresentable, because Prisma reserves that position
+       for "set the column to SQL NULL" via `Prisma.DbNull` / `Prisma.JsonNull`.
+
+       The explicit `InputJsonArray` annotation is load-bearing: without it the
+       map infers `(InputJsonValue | null)[]`, whose *element* type is not the
+       declared parameter and the branch fails to typecheck against the union. */
+    const arr: Prisma.InputJsonArray = v.map((x) =>
+      x === undefined || x === null ? null : asJson(x),
+    );
+    return arr;
+  }
+  if (typeof v === "object" && v !== null) {
+    /* The element type carries the `| null`, not `InputJsonObject`. Two
+       constraints meet here and neither alone is enough:
+         - `Prisma.InputJsonObject` allows a null value but is declared
+           `readonly` (`{ readonly [key: string]: InputJsonValue | null }`), so it
+           cannot be the accumulator of a loop that assigns by key.
+         - `Record<string, InputJsonValue>` is writable but its value type
+           excludes `null` — and preserving an explicit null is the whole point
+           of the branch below.
+       So the accumulator is typed to what it actually holds and is widened once,
+       at the return, to the type the column is declared with. Naming it here
+       keeps the "null survives" decision from quietly becoming "null is
+       dropped" the next time someone reaches for the Record form. */
+    const out: Record<string, Prisma.InputJsonValue | null> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      /* Drop `undefined`: Prisma rejects it as an input value, and JSON has no
+         way to express "key present but undefined". Dropping the key entirely is
+         what `JSON.stringify` does too, so the round-trip is faithful. */
+      if (val === undefined) continue;
+      /* Preserve an explicit null inside the object. Dropping it would erase the
+         difference between "absent" and "known to be empty", which for chunk
+         metadata — an optional section_path, a null source_file — is exactly the
+         distinction the column exists to keep. */
+      out[k] = val === null ? null : asJson(val);
+    }
+    return out;
+  }
+  /* Top-level null, `undefined`, a function, a symbol or a bigint. Not a value
+     JSON can hold at the root of a column, so it becomes an empty object rather
+     than a lie about what was stored. */
+  return {};
+};
 
 const MAX_BYTES = Number(process.env.RAG_MAX_FILE_BYTES || 50 * 1024 * 1024);
 
@@ -55,11 +119,17 @@ const buildChunks = async ({
     chunkIndex: c.chunk_index,
     chunkHash: c.chunk_hash || null,
     content: c.content,
-    modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO",
+    modality: parsed.modality.toUpperCase() as RagModality,
     lang: c.lang,
-    metadata: c.metadata,
+    /* `asJson` rather than a cast. The chunker builds `metadata` as a
+       `Record<string, unknown>`, but a Prisma `Json` column is typed
+       `InputJsonValue`, which excludes `undefined` and functions — so the two
+       are genuinely not the same type and the compiler is right to refuse. The
+       conversion is where that difference is resolved, once, with the values
+       that cannot survive the round-trip dropped rather than sent as-is. */
+    metadata: asJson(c.metadata),
   }));
-  await (db as any).ragChunk.createMany({ data: rows });
+  await db.ragChunk.createMany({ data: rows });
   return { parsed, chunks, lang };
 };
 
@@ -109,14 +179,14 @@ export const ingestDocument = async ({
   await assertQuota({ tenantId, event: "RAG_DOCS" });
 
   const content_hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
-  const existing = await (db as any).ragDocument.findFirst({
+  const existing = await db.ragDocument.findFirst({
     where: { tenantId, contentHash: content_hash },
     select: { id: true, status: true },
   });
   if (existing) return { ...existing, deduped: true };
 
   if (externalId) {
-    const byKey = await (db as any).ragDocument.findFirst({
+    const byKey = await db.ragDocument.findFirst({
       where: { tenantId, externalId },
       select: { id: true },
     });
@@ -139,7 +209,7 @@ export const ingestDocument = async ({
   }
 
   const source_file = `${tenantId}/rag/${Date.now()}-${file.originalname || "upload"}`;
-  const doc = await (db as any).ragDocument.create({
+  const doc = await db.ragDocument.create({
     data: {
       tenantId,
       sourceFile: source_file,
@@ -166,7 +236,7 @@ export const ingestDocument = async ({
       mimetype: file.mimetype,
       originalname: file.originalname,
     });
-    await (db as any).ragDocument.update({
+    await db.ragDocument.update({
       where: { id: doc.id },
       data: { modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO", lang, chunkCount: chunks.length, department, docType: docType || null, tags: tags || [], authority: authority ?? 1.0 },
     });
@@ -176,7 +246,7 @@ export const ingestDocument = async ({
     return { id: doc.id, status: "PROCESSING" as const, modality: parsed.modality, lang, chunks: chunks.length };
   } catch (e) {
     const msg = (e as Error).message || "ingest failed";
-    await (db as any).ragDocument.update({ where: { id: doc.id }, data: { status: "ERROR", error: msg } });
+    await db.ragDocument.update({ where: { id: doc.id }, data: { status: "ERROR", error: msg } });
     if (e instanceof AppError) throw e;
     throw new AppError("INGEST_FAILED", `Ingest failed: ${msg}`, 422);
   }
@@ -205,14 +275,22 @@ export const reingestDocument = async ({
   if (!file?.buffer) throw new AppError("FILE_REQUIRED", "File required", 400);
   if (file.size > MAX_BYTES) throw new AppError("FILE_TOO_LARGE", `File too large (max ${MAX_BYTES} bytes)`, 400);
 
-  const doc = await (db as any).ragDocument.findFirst({
+  const doc = await db.ragDocument.findFirst({
     where: { tenantId, id: documentId },
-    select: { id: true, version: true, contentHash: true },
+    select: { id: true, version: true, contentHash: true, status: true },
   });
   if (!doc) throw new AppError("NOT_FOUND", "Document not found", 404);
 
   const content_hash = crypto.createHash("sha256").update(file.buffer).digest("hex");
-  if (doc.contentHash === content_hash) return { id: doc.id, deduped: true, version: doc.version ?? 1 };
+  /* `status` is carried through, not omitted. This early return is reachable
+     from `ingestDocument` (same `externalId`, identical bytes), so its shape is
+     one arm of the union that `bulkIngestDocuments` widens into its `ok[]`
+     array — where `status` is a required field. Returning it here as absent
+     produced an entry whose `status` was `undefined` at runtime while the
+     declared `BulkIngestResult` said otherwise: a contract the compiler could
+     not see and no test covered. Re-ingesting unchanged bytes leaves the
+     document exactly as it was, so its current status is the truthful answer. */
+  if (doc.contentHash === content_hash) return { id: doc.id, status: doc.status, deduped: true, version: doc.version ?? 1 };
 
   await assertQuota({ tenantId, event: "RAG_DOCS" });
 
@@ -279,14 +357,14 @@ const incrementalReingest = async ({
   if (!next.length) throw new AppError("NO_TEXT", "No extractable text in file", 422);
 
   /* The old chunks, read through the pgvector accessor rather than
-     `(db as any).ragChunk`: the `embedding` column is `Unsupported(...)` in the
+     `db.ragChunk`: the `embedding` column is `Unsupported(...)` in the
      Prisma schema, so it cannot be selected through the typed client. See
      modules/rag/pgvector.ts for why that gap is real and why it is contained
      there instead of being cast away at 27 call sites. */
   const oldChunks = await findChunksForReingest(tenantId, documentId);
 
   const nextVersion = baseVersion + 1;
-  await (db as any).ragDocument.update({
+  await db.ragDocument.update({
     where: { id: documentId, tenantId },
     data: {
       status: "PROCESSING",
@@ -321,16 +399,23 @@ const incrementalReingest = async ({
   }
 
   const keepIds = new Set<string>();
-  const reuseUpdates: Array<{ id: string; chunkIndex: number; metadata: Record<string, unknown> }> = [];
+  const reuseUpdates: Array<{ id: string; chunkIndex: number; metadata: Prisma.InputJsonValue }> = [];
+  /* `metadata` is typed as the Prisma *input* JSON type, not
+     `Record<string, unknown>`, because these rows go straight into
+     `createMany` / `update`. Declaring them as a plain object bag here is what
+     forced the `as any` on the write in the first place: the array was typed as
+     something the client then refused. `modality` is the enum rather than
+     `string` for the same reason — it is compared against `RagModality` by the
+     generated input type, not by a loose string. */
   const toInsert: Array<{
     tenantId: string;
     documentId: string;
     chunkIndex: number;
     chunkHash: string | null;
     content: string;
-    modality: string;
+    modality: RagModality;
     lang: string;
-    metadata: Record<string, unknown>;
+    metadata: Prisma.InputJsonValue;
   }> = [];
   let reused = 0;
   let needsEmbed = false;
@@ -341,7 +426,7 @@ const incrementalReingest = async ({
     if (oc) {
       reused++;
       keepIds.add(oc.id);
-      reuseUpdates.push({ id: oc.id, chunkIndex: i, metadata: c.metadata });
+      reuseUpdates.push({ id: oc.id, chunkIndex: i, metadata: asJson(c.metadata) });
       if (!oc.embedding) needsEmbed = true;
     } else {
       toInsert.push({
@@ -350,17 +435,17 @@ const incrementalReingest = async ({
         chunkIndex: i,
         chunkHash: c.chunk_hash || null,
         content: c.content,
-        modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO",
+        modality: parsed.modality.toUpperCase() as RagModality,
         lang: c.lang,
-        metadata: c.metadata,
+        metadata: asJson(c.metadata),
       });
     }
   });
 
   for (const u of reuseUpdates) {
-    await (db as any).ragChunk.update({
+    await db.ragChunk.update({
       where: { id: u.id, tenantId },
-      data: { chunkIndex: u.chunkIndex, metadata: u.metadata },
+      data: { chunkIndex: u.chunkIndex, metadata: asJson(u.metadata) },
     });
   }
 
@@ -368,16 +453,16 @@ const incrementalReingest = async ({
   for (let i = 0; i < staleIds.length; i += 100) {
     const batch = staleIds.slice(i, i + 100);
     if (!batch.length) continue;
-    await (db as any).ragChunk.deleteMany({
+    await db.ragChunk.deleteMany({
       where: { tenantId, documentId, id: { in: batch } },
     });
   }
 
   if (toInsert.length) {
-    await (db as any).ragChunk.createMany({ data: toInsert });
+    await db.ragChunk.createMany({ data: toInsert });
   }
 
-  await (db as any).ragDocument.update({
+  await db.ragDocument.update({
     where: { id: documentId },
     data: { modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO", lang, chunkCount: next.length },
   });
@@ -387,7 +472,7 @@ const incrementalReingest = async ({
   const requeue = toInsert.length > 0 || needsEmbed;
   if (requeue) enqueueIngest({ tenantId, documentId });
   else {
-    await (db as any).ragDocument.update({
+    await db.ragDocument.update({
       where: { id: documentId, tenantId },
       data: { status: "READY", updatedAt: new Date() },
     });
@@ -423,7 +508,7 @@ const fullReingest = async ({
   baseVersion,
 }: ReingestOptions & { content_hash: string; baseVersion: number }) => {
   const nextVersion = (baseVersion ?? 1) + 1;
-  await (db as any).ragChunk.deleteMany({ where: { tenantId, documentId } });
+  await db.ragChunk.deleteMany({ where: { tenantId, documentId } });
 
   const nsPatch = {
     status: "PROCESSING" as const,
@@ -440,7 +525,7 @@ const fullReingest = async ({
     ...(confidential !== undefined ? { confidential: !!confidential } : {}),
     ...(allowedRoles ? { allowedRoles } : {}),
   };
-  await (db as any).ragDocument.update({ where: { id: documentId, tenantId }, data: nsPatch });
+  await db.ragDocument.update({ where: { id: documentId, tenantId }, data: nsPatch });
 
   try {
     const { parsed, chunks, lang } = await buildChunks({
@@ -450,7 +535,7 @@ const fullReingest = async ({
       mimetype: file.mimetype,
       originalname: file.originalname,
     });
-    await (db as any).ragDocument.update({
+    await db.ragDocument.update({
       where: { id: documentId },
       data: { modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO", lang, chunkCount: chunks.length },
     });
@@ -461,14 +546,14 @@ const fullReingest = async ({
     return { id: documentId, status: "PROCESSING" as const, version: nextVersion, modality: parsed.modality, lang, chunks: chunks.length, mode: "full" };
   } catch (e) {
     const msg = (e as Error).message || "re-ingest failed";
-    await (db as any).ragDocument.update({ where: { id: documentId }, data: { status: "ERROR", error: msg } });
+    await db.ragDocument.update({ where: { id: documentId }, data: { status: "ERROR", error: msg } });
     if (e instanceof AppError) throw e;
     throw new AppError("REINGEST_FAILED", `Re-ingest failed: ${msg}`, 422);
   }
 };
 
 export const reindexTenant = async ({ tenantId }: { tenantId: string }) => {
-  const docs = await (db as any).ragDocument.findMany({
+  const docs = await db.ragDocument.findMany({
     where: { tenantId },
     select: { id: true, status: true },
   });
@@ -476,13 +561,13 @@ export const reindexTenant = async ({ tenantId }: { tenantId: string }) => {
   for (const d of docs) {
     if (d.status === "PROCESSING") continue;
     /* Re-dirty the vectors so the queue re-embeds them. Through the pgvector
-       accessor rather than `(db as any).ragChunk.updateMany`, because `embedding`
+       accessor rather than `db.ragChunk.updateMany`, because `embedding`
        is an `Unsupported` column — and because clearing a vector is not a generic
        "update many", it is a specific operation with a name that says what it
        does and clears `model` and `dim` alongside it. Leaving `model` set while
        the vector is null is what made the provenance column lie. */
     await clearEmbeddingsFor(tenantId, d.id);
-    await (db as any).ragDocument.update({
+    await db.ragDocument.update({
       where: { id: d.id, tenantId },
       data: { status: "PROCESSING", updatedAt: new Date() },
     });
@@ -495,7 +580,7 @@ export const reindexTenant = async ({ tenantId }: { tenantId: string }) => {
 };
 
 export const listDocuments = async ({ tenantId }: { tenantId: string }) => {
-  const docs = await (db as any).ragDocument.findMany({
+  const docs = await db.ragDocument.findMany({
     where: { tenantId },
     select: {
       id: true,
@@ -524,7 +609,7 @@ export const listDocuments = async ({ tenantId }: { tenantId: string }) => {
 };
 
 export const getDocument = async ({ tenantId, documentId }: { tenantId: string; documentId: string }) => {
-  const doc = await (db as any).ragDocument.findFirst({
+  const doc = await db.ragDocument.findFirst({
     where: { tenantId, id: documentId },
     select: {
       id: true,
@@ -553,9 +638,9 @@ export const getDocument = async ({ tenantId, documentId }: { tenantId: string; 
 };
 
 export const deleteDocument = async ({ tenantId, documentId }: { tenantId: string; documentId: string }) => {
-  const doc = await (db as any).ragDocument.findFirst({ where: { tenantId, id: documentId }, select: { id: true } });
+  const doc = await db.ragDocument.findFirst({ where: { tenantId, id: documentId }, select: { id: true } });
   if (!doc) throw new AppError("NOT_FOUND", "Document not found", 404);
-  await (db as any).ragDocument.delete({ where: { id: documentId, tenantId } });
+  await db.ragDocument.delete({ where: { id: documentId, tenantId } });
   await invalidateDocuments(tenantId, [documentId]);
   await semanticCache.invalidateScope(tenantId);
   return { deleted: documentId };
@@ -671,7 +756,7 @@ export const syncDocumentsByExternalId = async ({
         mimetype: it.mime || "text/plain",
         size: buffer.length,
       };
-      const existing = await (db as any).ragDocument.findFirst({
+      const existing = await db.ragDocument.findFirst({
         where: { tenantId, externalId: it.externalId },
         select: { id: true },
       });
@@ -711,7 +796,7 @@ export const syncDocumentsByExternalId = async ({
         created++;
       }
       if (source || cursor) {
-        await (db as any).ragDocument.update({
+        await db.ragDocument.update({
           where: { id: res.id || existing?.id, tenantId },
           data: {
             ...(source ? { syncSource: source } : {}),

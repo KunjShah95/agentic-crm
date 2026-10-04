@@ -88,7 +88,7 @@ export class QueryEnhancer {
     });
 
     try {
-      const parsed = JSON.parse((result as any).text);
+      const parsed = JSON.parse(result.text);
       return {
         intent: parsed.intent || "unknown",
         alpha: parsed.alpha ?? 0.5,
@@ -106,7 +106,7 @@ export class QueryEnhancer {
     });
 
     try {
-      const parsed = JSON.parse((result as any).text);
+      const parsed = JSON.parse(result.text);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed;
       }
@@ -124,7 +124,7 @@ export class QueryEnhancer {
       maxTokens: 100,
     });
 
-    return (result as any).text.trim() || query;
+    return result.text.trim() || query;
   }
 
   static mergeResults(

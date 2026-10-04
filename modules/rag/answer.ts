@@ -39,7 +39,7 @@ const rewriteQuery = async (query: string, context: string | null): Promise<stri
       user: `Context: ${context.slice(0, 1000)}\nFollow-up: ${base}`,
       maxTokens: 200,
     });
-    const text = (result as any).text;
+    const text = result.text;
     const t = String(text || "").trim().split("\n")[0];
     return t && t.length > 3 && t.length < 1000 ? t : `${base} (${context.slice(0, 200)})`;
   } catch {
@@ -293,8 +293,8 @@ export const answerQuery = async ({
     maxTokens: 1024,
   });
   const tGen = Date.now() - tGen0;
-  const text = (genResult as any).text;
-  const providerUsed = (genResult as any).providerUsed;
+  const text = genResult.text;
+  const providerUsed = genResult.providerUsed;
 
   const faith = checkFaithfulness(text, scored);
   const citations = scored.map((c, i) => ({

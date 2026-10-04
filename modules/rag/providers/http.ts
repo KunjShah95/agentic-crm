@@ -9,7 +9,10 @@ const cooldowns = new Map<string, number>();
 const COOLDOWN_MS = 30_000;
 
 export const onRateLimit = (name: string) => cooldowns.set(name, Date.now() + COOLDOWN_MS);
-const isCoolingDown = (name: string) => (cooldowns.get(name) || 0) > Date.now();
+/* Exported because the streaming path in `llm.ts` picks its own provider instead
+   of going through `runPool` (spreading a generator does not make it iterable),
+   and it still has to honour a rate-limit cooldown. */
+export const isCoolingDown = (name: string) => (cooldowns.get(name) || 0) > Date.now();
 
 interface Provider<TIn, TOut> {
   name: string;

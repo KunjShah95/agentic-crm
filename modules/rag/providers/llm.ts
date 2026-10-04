@@ -3,7 +3,7 @@
  * Stateless, so rotating across providers is safe (unlike embeddings).
  */
 
-import { fetchJson, runPool } from "./http";
+import { fetchJson, runPool, isCoolingDown, onRateLimit } from "./http";
 
 interface LLMPayload {
   system: string;
@@ -16,6 +16,29 @@ interface LLMPayload {
 interface LLMResponse {
   text: string;
   providerUsed: string;
+}
+
+/**
+ * Response shapes for the four hosted providers.
+ *
+ * `fetchJson` is already generic in its return type, so the `as any` on every
+ * call below was throwing that away — these are declarations, not assertions.
+ * They earn their keep in two ways: a provider that renames a field becomes a
+ * compile error here instead of a runtime `undefined` silently becoming an empty
+ * completion, and the optional-chaining chain that guards a genuinely-absent
+ * `choices[0]` stays honest about the fact that it may be missing.
+ *
+ * Only the fields actually read are declared. Writing out the full upstream
+ * schema would be a liability: these four APIs are versioned independently of
+ * this file, and a hand-maintained copy of all of one provider's response would
+ * drift into a second thing to keep up to date.
+ */
+interface OpenAiCompatible {
+  choices?: Array<{ message?: { content?: string } }>;
+}
+
+interface GeminiResponse {
+  candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
 }
 
 type StreamGenerator = AsyncGenerator<{ text: string }>;
@@ -39,7 +62,7 @@ ALL.groq = {
   name: "groq",
   isEnabled: () => !!process.env.GROQ_API_KEY,
   call: async ({ system, user, maxTokens }): Promise<LLMResponse> => {
-    const json = await fetchJson("https://api.groq.com/openai/v1/chat/completions", {
+    const json = await fetchJson<OpenAiCompatible>("https://api.groq.com/openai/v1/chat/completions", {
       headers: { authorization: `Bearer ${process.env.GROQ_API_KEY}` },
       body: {
         model: process.env.GROQ_MODEL || "llama-3.3-70b-versatile",
@@ -51,7 +74,7 @@ ALL.groq = {
         ],
       },
     });
-    return { text: (json as any).choices?.[0]?.message?.content || "", providerUsed: "groq" };
+    return { text: json.choices?.[0]?.message?.content || "", providerUsed: "groq" };
   },
   stream: async function* ({ system, user, maxTokens }) {
     const fetch = (await import("node-fetch")).default;
@@ -117,7 +140,7 @@ ALL.mistral = {
   name: "mistral",
   isEnabled: () => !!process.env.MISTRAL_API_KEY,
   call: async ({ system, user, maxTokens }): Promise<LLMResponse> => {
-    const json = await fetchJson("https://api.mistral.ai/v1/chat/completions", {
+    const json = await fetchJson<OpenAiCompatible>("https://api.mistral.ai/v1/chat/completions", {
       headers: { authorization: `Bearer ${process.env.MISTRAL_API_KEY}` },
       body: {
         model: process.env.MISTRAL_MODEL || "mistral-small-latest",
@@ -129,7 +152,7 @@ ALL.mistral = {
         ],
       },
     });
-    return { text: (json as any).choices?.[0]?.message?.content || "", providerUsed: "mistral" };
+    return { text: json.choices?.[0]?.message?.content || "", providerUsed: "mistral" };
   },
 };
 
@@ -139,8 +162,7 @@ ALL.gemini = {
   isEnabled: () => !!process.env.GEMINI_API_KEY,
   call: async ({ system, user, maxTokens }): Promise<LLMResponse> => {
     const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
-    const json = await fetchJson(
-      `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
+    const json = await fetchJson<GeminiResponse>(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         body: {
           systemInstruction: { parts: [{ text: system }] },
@@ -149,7 +171,7 @@ ALL.gemini = {
         },
       }
     );
-    return { text: (json as any).candidates?.[0]?.content?.parts?.[0]?.text || "", providerUsed: "gemini" };
+    return { text: json.candidates?.[0]?.content?.parts?.[0]?.text || "", providerUsed: "gemini" };
   },
 };
 
@@ -158,7 +180,7 @@ ALL.nvidia = {
   name: "nvidia",
   isEnabled: () => !!process.env.NVIDIA_API_KEY,
   call: async ({ system, user, maxTokens }): Promise<LLMResponse> => {
-    const json = await fetchJson("https://integrate.api.nvidia.com/v1/chat/completions", {
+    const json = await fetchJson<OpenAiCompatible>("https://integrate.api.nvidia.com/v1/chat/completions", {
       headers: { authorization: `Bearer ${process.env.NVIDIA_API_KEY}` },
       body: {
         model: process.env.NVIDIA_MODEL || "meta/llama-3.1-70b-instruct",
@@ -170,7 +192,7 @@ ALL.nvidia = {
         ],
       },
     });
-    return { text: (json as any).choices?.[0]?.message?.content || "", providerUsed: "nvidia" };
+    return { text: json.choices?.[0]?.message?.content || "", providerUsed: "nvidia" };
   },
 };
 
@@ -183,24 +205,65 @@ const mock = async ({ user }: LLMPayload): Promise<LLMResponse> => {
 };
 
 /**
- * generate({system, user, maxTokens, stream}) -> { text, providerUsed } | AsyncIterable<{ text }>
+ * Overloads rather than a union return type.
+ *
+ * `Promise<LLMResponse | StreamGenerator>` forced every one of the fifteen-odd
+ * call sites to cast before reading `.text`, because a union forces a narrowing
+ * check even when the caller passed `stream: false` — or did not pass `stream`
+ * at all, which is the overwhelmingly common case. That is what the scattered
+ * `(result as any).text` in `answer.ts`, `retrieve.ts`, `query-processor.ts` and
+ * `query-enhancer.ts` were: not a missing type, a union that had to be
+ * circumvented at every single use.
+ *
+ * With overloads keyed on the `stream` literal, `await generate({...})` infers
+ * `LLMResponse` on its own and those casts are simply gone. A caller that passes
+ * `stream: true` gets `StreamGenerator` and cannot accidentally read `.text` off
+ * it.
  */
-export const generate = async (payload: LLMPayload): Promise<LLMResponse | StreamGenerator> => {
+export function generate(payload: LLMPayload & { stream?: false }): Promise<LLMResponse>;
+export function generate(payload: LLMPayload & { stream: true }): Promise<StreamGenerator>;
+export async function generate(payload: LLMPayload): Promise<LLMResponse | StreamGenerator> {
   const { stream = false } = payload;
 
   if (stream) {
-    return runPool("llm", poolOrder.map((n) => ALL[n]), payload, async function* () {
-      const mockResult = await mock(payload);
-      const text = mockResult.text;
+    /* Deliberately not `runPool`.
+       `runPool` picks a provider by awaiting each one and falling through on a
+       throw, then returns `{ ...out, providerUsed }`. Neither half works for a
+       generator: the spread of an async generator object produces a plain object
+       that is not iterable, and awaiting the generator function does not consume
+       it. The old `runPool(... async function* () {...} as any) as any` compiled
+       only because both ends were cast away — the streaming path returned an
+       object that could not be `for await`-ed.
+
+       Falling back on a synchronous throw from the provider's `stream()` call is
+       the honest version: by the time it yields, the response has already
+       started and there is nothing to fall back to. */
+    for (const name of poolOrder) {
+      const p = ALL[name];
+      if (!p?.isEnabled() || isCoolingDown(name) || !p.stream) continue;
+      try {
+        return await p.stream(payload);
+      } catch (e) {
+        const status = (e as Error & { status?: number }).status;
+        if (status === 429) onRateLimit(name);
+        console.warn(`rag/llm: stream provider ${name} failed (${status || "err"})`, {
+          err: (e as Error).message,
+        });
+      }
+    }
+    /* Mock stream: chunk the extractive fallback so a streaming caller gets
+       incremental output even with no provider available. */
+    const { text } = await mock(payload);
+    return (async function* () {
       const chunkSize = 20;
       for (let i = 0; i < text.length; i += chunkSize) {
         yield { text: text.slice(i, i + chunkSize) };
       }
-    } as any) as any;
+    })();
   }
 
   return runPool("llm", poolOrder.map((n) => ALL[n]), payload, mock);
-};
+}
 
 export { ALL as providers };
 export type { LLMResponse, StreamGenerator };

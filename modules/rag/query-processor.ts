@@ -36,7 +36,7 @@ export async function classifyIntent(query: string): Promise<string> {
       temperature: 0,
     });
 
-    const intent = (result as any).text.trim().toLowerCase();
+    const intent = result.text.trim().toLowerCase();
     const validIntents = ["factual", "procedural", "comparative", "creative", "ambiguous"];
     return validIntents.includes(intent) ? intent : "factual";
   } catch {
@@ -57,7 +57,7 @@ export async function decomposeQuery(query: string, intent: string): Promise<str
       temperature: 0.3,
     });
 
-    const subQuestions = JSON.parse((result as any).text);
+    const subQuestions = JSON.parse(result.text);
     return Array.isArray(subQuestions)
       ? subQuestions.filter((q) => q && typeof q === "string" && q.length > 10)
       : [query];
@@ -75,7 +75,7 @@ export async function expandQuery(query: string): Promise<string[]> {
       temperature: 0.5,
     });
 
-    const expansions = JSON.parse((result as any).text);
+    const expansions = JSON.parse(result.text);
     return Array.isArray(expansions) ? expansions.filter((e) => e && typeof e === "string") : [];
   } catch {
     return [];
