@@ -1,0 +1,66 @@
+# Database-dependent checks.
+#
+# Split out from `ci.yml` because these need a reachable Postgres and
+# credentials, which means they cannot run on an untrusted fork PR. Running
+# them on `master` only is deliberate: the schema/migration/live-database
+# disagreement they detect is a *deployment* fault, not a code fault, and it
+# cannot be evaluated until there is a database to compare against.
+#
+# The failure this exists to catch is silent until it is catastrophic:
+#
+#   Unknown field `wonAt` for select statement on model `Deal`
+#
+# A field is added to `prisma/schema.prisma` and used in a query; `tsc` passes
+# (the generated client is a dependency, not an input) and the app 500s on every
+# page render behind the dev overlay. See
+# `docs/architecture/production-readiness.md` for the full post-mortem.
+#
+# `DATABASE_URL` must be a **direct** (non-pooled) connection. The script
+# queries `information_schema` and `_prisma_migrations`; over a transaction-mode
+# pooler those reads are fine, but the pgbouncer-compatible URL is not always
+# resolvable for catalog reads depending on the provider.
+
+name: DB checks
+
+on:
+  push:
+    branches: [master, main]
+  schedule:
+    # Sunday 06:00 UTC. Catches drift introduced out-of-band — a migration
+    # applied by hand, a table altered in the Supabase dashboard — which never
+    # touches the repository and so never triggers a push.
+    - cron: "0 6 * * 0"
+  workflow_dispatch:
+
+concurrency:
+  group: db-checks-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  verify-schema-sync:
+    name: schema / migrations / live database agree
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify schema, migrations and live database agree
+        # Read-only: it inspects `information_schema.columns` and
+        # `_prisma_migrations` and reports. It applies nothing and deletes
+        # nothing — a sync check that mutated the database would be a worse
+        # problem than the one it reports.
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: npm run db:verify-sync

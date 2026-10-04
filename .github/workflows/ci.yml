@@ -1,0 +1,74 @@
+# Continuous integration for Estate360.
+#
+# Scope: the three gates that need no secrets and no running database.
+# `vitest.config.ts` injects its own dummy DATABASE_URL, so the whole unit +
+# integration suite runs against a live-less environment and every one of these
+# jobs is safe to run on an untrusted fork PR.
+#
+# Database-dependent checks (schema/migration/live drift, pilot ingress
+# verification) live in `db-checks.yml` because they need credentials and a
+# reachable database.
+#
+# Before adding a job here, read `docs/security/open-findings.md`. If the job can
+# only fail on something a human must judge, it belongs in a script under
+# `scripts/` that exits non-zero, not in a workflow that prints and passes.
+
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+# A new push to the same branch supersedes the previous run. Without this, a
+# five-job matrix on a busy branch queues up dozens of stale runs that report
+# against commits nobody cares about any more.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: typecheck, lint, test
+    runs-on: ubuntu-latest
+    # The suite is deliberately serial (see vitest.config.ts: maxWorkers 2,
+    # fileParallelism false) because worker count is bounded by memory, not CPU.
+    # On a 2-core runner that is ~4-6 minutes of wall clock, not the ~3.5
+    # minutes measured on a 24-core dev box. The ceiling is set well above both
+    # so a slow runner produces a slow pass rather than a red X that teaches
+    # everyone to ignore this workflow.
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          # Next 16 and Prisma 7 both require Node 20.9+; 22 is the active LTS.
+          node-version: 22
+          cache: npm
+
+      # `npm ci` runs `postinstall` → `prisma generate`, so the Prisma client is
+      # built before anything imports it. This is the guard that makes
+      # "Unknown field `wonAt` for select statement on model `Deal`" impossible
+      # here (see docs/architecture/production-readiness.md) — tsc alone cannot
+      # catch it, because the generated client is a dependency, not an input.
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        # Warnings do not fail the build. There are 53 open warnings and they
+        # are not regressions; blocking on them would mean this job is red for
+        # weeks and gets ignored, which is worse than a visible warning count.
+        # Tighten to `--max-warnings 0` once the count reaches zero.
+        run: npx eslint . --max-warnings 999999
+
+      - name: Unit and integration tests
+        run: npm test

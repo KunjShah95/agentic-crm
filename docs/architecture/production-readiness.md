@@ -160,7 +160,7 @@ contact scored 85 and a routed deal.
 ## Verified this pass
 
 - `npx tsc --noEmit` — clean.
-- `npx vitest run` — 305 passed, 2 skipped, 0 failing.
+- `npx vitest run` — 576 passed, 2 skipped, 0 failing.
 - Two previously-failing suites (`billing`, `contact-quota`) were not logic
   failures: both timed out at vitest's 5s default while importing the Prisma
   client and server-action graph. `testTimeout` is now 30s, which also cut the
@@ -170,3 +170,36 @@ contact scored 85 and a routed deal.
 - `tests/unit/lead-ingress.test.ts` (ingress auth) and
   `tests/integration/lead-ingest.test.ts` (auto-ack gating in both directions)
   are new and pin the controls above.
+
+## Continuous integration
+
+Two workflows, split by what they need:
+
+| Workflow | Runs | Needs |
+| --- | --- | --- |
+| `.github/workflows/ci.yml` | Every push and PR | Nothing. `vitest.config.ts` injects its own dummy `DATABASE_URL`, so the whole unit + integration suite runs without a database and is safe on an untrusted fork. |
+| `.github/workflows/db-checks.yml` | Push to `master`, weekly cron, manual | `DATABASE_URL`. Runs `npm run db:verify-sync`, which compares `schema.prisma`, the applied migrations and the live database. |
+
+Lint runs non-blocking in CI (`--max-warnings 999999`). The open warnings are a
+known, counted backlog; blocking on them would mean a permanently red build that
+everyone learns to ignore. Tighten to `--max-warnings 0` once it reaches zero.
+
+Neither workflow runs the Playwright e2e suite: it needs a seeded database and a
+running server, which is a deployment concern rather than a PR gate. Run
+`npm run test:e2e` locally before a release.
+
+### Tenant-visibility gates
+
+Two suites keep broker scoping from regressing, and they are deliberately
+separate:
+
+- `tests/unit/broker-scope-registry.test.ts` — every tenant read path in
+  `modules/**/queries.ts` has a recorded broker-visibility decision. A new query
+  function fails until someone decides whether a broker may see its rows. All 43
+  are currently classified; entries marked `workspace-wide` must state why.
+- `tests/unit/broker-scope-reads.test.ts` — the predicate that reaches Prisma
+  carries the broker id and is absent for every other role. A structural check
+  cannot do this: a filter call whose result is discarded looks identical to one
+  that is applied.
+
+Add to both when a new module gets a `queries.ts`.
