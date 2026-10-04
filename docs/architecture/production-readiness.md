@@ -160,7 +160,7 @@ contact scored 85 and a routed deal.
 ## Verified this pass
 
 - `npx tsc --noEmit` — clean.
-- `npx vitest run` — 576 passed, 2 skipped, 0 failing.
+- `npx vitest run` — 624 passed, 2 skipped, 0 failing.
 - Two previously-failing suites (`billing`, `contact-quota`) were not logic
   failures: both timed out at vitest's 5s default while importing the Prisma
   client and server-action graph. `testTimeout` is now 30s, which also cut the
@@ -180,9 +180,12 @@ Two workflows, split by what they need:
 | `.github/workflows/ci.yml` | Every push and PR | Nothing. `vitest.config.ts` injects its own dummy `DATABASE_URL`, so the whole unit + integration suite runs without a database and is safe on an untrusted fork. |
 | `.github/workflows/db-checks.yml` | Push to `master`, weekly cron, manual | `DATABASE_URL`. Runs `npm run db:verify-sync`, which compares `schema.prisma`, the applied migrations and the live database. |
 
-Lint runs non-blocking in CI (`--max-warnings 999999`). The open warnings are a
-known, counted backlog; blocking on them would mean a permanently red build that
-everyone learns to ignore. Tighten to `--max-warnings 0` once it reaches zero.
+Lint runs blocking at `--max-warnings 0`. It was non-blocking while a counted
+backlog of warnings was open, on the reasoning that a permanently red job gets
+ignored — which is the right call and the wrong long-term home. The count reached
+zero when the unused-binding cleanup landed, so the escape hatch is removed
+rather than kept as a habit: a new warning now fails on the commit that caused it,
+which is the only point at which anyone knows which change it was.
 
 Neither workflow runs the Playwright e2e suite: it needs a seeded database and a
 running server, which is a deployment concern rather than a PR gate. Run

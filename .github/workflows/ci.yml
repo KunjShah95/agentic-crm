@@ -64,11 +64,14 @@ jobs:
         run: npm run typecheck
 
       - name: Lint
-        # Warnings do not fail the build. There are 53 open warnings and they
-        # are not regressions; blocking on them would mean this job is red for
-        # weeks and gets ignored, which is worse than a visible warning count.
-        # Tighten to `--max-warnings 0` once the count reaches zero.
-        run: npx eslint . --max-warnings 999999
+        # Blocking at zero. This was originally `--max-warnings 999999` with a
+        # comment explaining that 53 warnings were a known, counted backlog and
+        # that a permanently red job gets ignored — which is the right call and
+        # the wrong threshold. The count is now 0, so the escape hatch is
+        # removed rather than left as a habit: the next warning fails the build
+        # on the commit that introduced it, which is the only point at which
+        # anyone knows which change caused it.
+        run: npx eslint . --max-warnings 0
 
       - name: Unit and integration tests
         run: npm test
