@@ -18,9 +18,14 @@ The remaining entries below are still open.
 
 ## HIGH — The third isolation layer does not exist
 
-`README.md` and `docs/architecture/system-design.md` describe a three-layer
-model: app gate → query scoping → **Postgres RLS backstop**. The first two are
-real. The third is not.
+**PARTIALLY ADDRESSED.** The false claim is now corrected in `README.md` and
+`docs/architecture/system-design.md`, and the remaining single layer is enforced
+by a test gate rather than by reviewer vigilance. The underlying gap — no
+database-side backstop — is unchanged and still needs a migration.
+
+The documentation previously described a three-layer model: app gate → query
+scoping → **Postgres RLS backstop**. The first two are real. The third is not.
+Both documents now state one layer and say why.
 
 - `prisma/migrations/20260913000001_enable_rag_rls/migration.sql` enables RLS on
   exactly four tables: `RagDocument`, `RagChunk`, `RagFeedback`, `RagQueryLog`.
@@ -35,14 +40,32 @@ real. The third is not.
 - `.env.example:19` documents `DATABASE_URL` as the Supabase `postgres` role,
   which carries `BYPASSRLS`, so RLS is skipped regardless of policy.
 
-**Impact:** effective isolation is one layer, not three. A single forgotten
-`workspaceId` on a CRM table is an immediate, unrecoverable cross-tenant
-read/write. This is precisely the class of bug the other fixes in `6f3e1d6`
-close at the application layer — which is now the *only* layer.
+**Impact:** effective isolation is one layer. A single forgotten `workspaceId`
+on a CRM table is an immediate, unrecoverable cross-tenant read/write. This is
+precisely the class of bug the other fixes in `6f3e1d6` close at the application
+layer — which is now the *only* layer.
 
-**To decide:** either enable RLS with policies for the CRM tables and have the
-app set the tenant GUC per request, or correct the documentation. What should
-not persist is a README claiming a backstop that is not deployed.
+**What has been done about it, short of the migration:**
+
+- `README.md` and `docs/architecture/system-design.md` (§3.2) no longer claim a
+  three-layer model. The README gained a **Tenant isolation** section stating
+  plainly that there is one layer, why RLS does not engage (no `set_config`
+  anywhere; `postgres` role carries `BYPASSRLS`), and what deploying it would
+  actually require.
+- `tests/unit/tenant-scope-guard.test.ts` scans every `db.<tenantModel>.*` call
+  site in `app/`, `lib/` and `modules/` and fails if the `workspaceId` predicate
+  is absent. Three sites are exempted with checkable reasons (Stripe webhook
+  derivation, and two shared `where` objects). The test asserts its own scan
+  covers >150 call sites and >20 tenant models, so it cannot pass by matching
+  nothing — the failure mode that makes a scanner like this worthless.
+
+This converts "we remembered to scope it" into a build failure. It does **not**
+add a second layer: a bug in the *scanner* (a call shape it does not recognise)
+would still pass. That residual risk is exactly what RLS would close.
+
+**To decide:** either deploy RLS, or accept one enforced layer and stop
+describing the system as defence-in-depth. What should not persist is a README
+claiming a backstop that is not deployed — that part is now fixed.
 
 ---
 

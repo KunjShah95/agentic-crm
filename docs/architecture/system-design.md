@@ -125,11 +125,54 @@ Supabase provides the **database, storage, and Postgres primitives** in one mana
 |---|---|---|
 | **Managed Postgres, standard wire protocol** | Real Postgres — Prisma connects via `@prisma/adapter-pg` with a plain connection string. Zero lock-in; the same code runs on Neon or self-hosted Postgres by swapping `DATABASE_URL`. | **PlanetScale (MySQL)** drops foreign keys and lacks Postgres features the schema relies on. **Firebase/Firestore** is a document store — no relational joins, no SQL, poor fit for a normalized CRM with deep relations (deal → unit → cost sheet → payment plan). |
 | **Vector search in the same DB** | `pgvector` extension + HNSW indexing live inside the primary Postgres, so semantic features need no separate vector store. | A dedicated vector DB (Pinecone/Weaviate) adds a second system to operate, sync, and pay for. |
-| **Row-Level Security backstop** | Native Postgres RLS gives a defense-in-depth tenant guard beneath the app-layer `workspaceId` filter. | App-only isolation has no database-side safety net. |
+| **Row-Level Security (available, not deployed)** | Native Postgres RLS *can* give a defense-in-depth tenant guard beneath the app-layer `workspaceId` filter. **Estate360 does not use it** — see §3.2. | App-only isolation has no database-side safety net. This is a known gap, not a property of the platform. |
 | **Connection pooling at scale** | Built-in Supavisor/PgBouncer pooler — essential for serverless/Fluid Compute where connections churn. | Raw Postgres exhausts connections under serverless fan-out. |
 | **Storage + SQL from one vendor** | Object storage (documents, generated PDFs, media) with the same auth model and dashboard. | Stitching S3 + a separate DB host means two IAM models and two bills. |
 
 **Neon** is the closest peer and remains a drop-in fallback (README notes both) — Supabase is preferred because it bundles Storage, `pgvector`, RLS, and the pooler in one console, reducing operational surface for a small team.
+
+### 3.2 Row-Level Security — what is actually deployed
+
+**Effective tenant isolation is one layer, not three.** The diagram in §4 previously showed three; only the first two exist.
+
+| Layer | Status |
+|---|---|
+| App gate — `requireWorkspaceMember` | Deployed. Every server action and route calls it. |
+| Query scoping — `workspaceId` in the Prisma `where` | Deployed, and mechanically enforced. `tests/unit/tenant-scope-guard.test.ts` fails if a query against a tenant-owned model omits the predicate. |
+| Postgres RLS | **Not deployed for any CRM table.** |
+
+Concretely:
+
+- Migration `20260913000001_enable_rag_rls` enables RLS on exactly four tables
+  (`RagDocument`, `RagChunk`, `RagFeedback`, `RagQueryLog`). No CRM table —
+  `Contact`, `Deal`, `Unit`, `Activity`, `Payment`, `Broker`, `WebhookEvent`,
+  `SocialEvent` and the rest — has RLS or any policy.
+- Even those four policies would not engage. They resolve the tenant from
+  `auth.jwt()` or an `app.current_tenant_id` GUC, and nothing in the TypeScript
+  ever sets one: `lib/db.ts` builds a single long-lived `PrismaClient` with no
+  per-request `set_config`, and there are no `set_config` callers in the repo.
+- `.env.example` documents `DATABASE_URL` as the Supabase `postgres` role,
+  which carries `BYPASSRLS`, so RLS would be skipped regardless of policy.
+
+**Consequence.** A single forgotten `workspaceId` on a CRM table is an immediate,
+unrecoverable cross-tenant read or write. The `where` clause is the *only*
+boundary. This is why the query-scoping guard above is a hard test gate rather
+than a review convention, and why `brokerScopeFilter` is now encoded in the
+`ViewerScope` type — an unscoped signature cannot be written by accident.
+
+**To close it**, two things are needed together, and the second is the one that
+is easy to miss:
+
+1. `ALTER TABLE … ENABLE ROW LEVEL SECURITY` plus a policy per tenant-owned
+   table, keyed on the current tenant.
+2. A database role **without** `BYPASSRLS` for the application to connect as,
+   and per-request `set_config('app.current_tenant_id', …)` on a transaction —
+   which means the query path has to stop sharing one long-lived client, or the
+   GUC leaks across requests on a pooled connection.
+
+Doing (1) alone is worse than doing nothing: it would silently return zero rows
+for every query while appearing to work. Tracked as the HIGH finding in
+`docs/security/open-findings.md`.
 
 ### 3.2 Why NextAuth (not Supabase Auth) for authentication
 
@@ -156,13 +199,14 @@ graph LR
   end
   A4 --> C["WHERE workspaceId = … (Prisma)"]
   B2 --> C
-  C --> D["RLS backstop (Postgres)"]
   A4 -. non-member .-> E["403 PermissionError"]
 ```
 
 1. **App gate** — `requireWorkspaceMember(workspaceId, userId, minRole?)` runs before any data access; throws `PermissionError` → 403 on non-membership or insufficient role.
-2. **Query scoping** — every Prisma `where` carries `workspaceId`.
-3. **RLS backstop** — Postgres row-level security keyed off the tenant id resolved from the JWT/GUC.
+2. **Query scoping** — every Prisma `where` carries `workspaceId`. This is the
+   only isolation layer that is actually deployed; there is no database-side
+   backstop (see §3.2). It is enforced mechanically by
+   `tests/unit/tenant-scope-guard.test.ts`, not by convention.
 
 **Roles & capabilities** (`lib/permissions.ts`):
 

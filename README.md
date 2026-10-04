@@ -18,8 +18,9 @@ Full architecture, diagrams, and data model:
 
 - **Auth & multi-tenancy** — email/password (optional Google), workspace
   auto-created on signup, invite links with roles (Owner / Admin / Member /
-  Broker); every query filtered by `workspaceId` with a three-layer isolation
-  model (app gate → query scoping → Postgres RLS backstop).
+  Broker); every query filtered by `workspaceId`, which is the *only* deployed
+  isolation layer and is enforced by a test gate, not by convention — see
+  [Tenant isolation](#tenant-isolation).
 - **CRM core** — contacts, organizations (with email-domain auto-link), deals on
   a drag-and-drop kanban (stage changes auto-logged), unified activity timeline,
   tags, and workspace-scoped full-text search.
@@ -64,9 +65,11 @@ backed by the same Postgres. Rationale:
   Row-Level Security, and a serverless-friendly connection pooler come from one
   vendor and one dashboard — fewer moving parts for a small team than stitching
   a DB host + S3 + a pooler.
-- **RLS as a safety net.** Postgres RLS backs the app-layer `workspaceId` filter,
-  giving defense-in-depth tenant isolation the application can't accidentally
-  bypass. The RAG tables are covered by their own RLS migration.
+- **RLS is available but not deployed.** Postgres RLS *could* back the app-layer
+  `workspaceId` filter. Estate360 does not use it for any CRM table — and could
+  not, because `DATABASE_URL` connects as a role carrying `BYPASSRLS`. See
+  [Tenant isolation](#tenant-isolation) before relying on any "defense in depth"
+  claim.
 - **Auth stays in our tables.** NextAuth keeps identity, membership, and role
   (`WorkspaceMember`) as first-class relational rows the CRM already joins
   against, avoiding a sync loop with an external auth directory.
@@ -121,6 +124,46 @@ npm install
    ```
 
 Log in with the seed account created by `npm run setup` (see `prisma/seed.ts`).
+
+## Tenant isolation
+
+**There is one isolation layer, not three: the Prisma `where` clause.** An
+earlier version of this README described a three-layer model (app gate → query
+scoping → Postgres RLS backstop). The first two are real; the third is not
+deployed, and this section exists so the difference is not rediscovered.
+
+| Layer | Status |
+| --- | --- |
+| App gate — `requireWorkspaceMember` | Deployed on every server action and route. |
+| Query scoping — `workspaceId` in the `where` | Deployed, and **mechanically enforced** by `tests/unit/tenant-scope-guard.test.ts`, which scans every `db.<tenantModel>.*` call site in `app/`, `lib/` and `modules/`. |
+| Postgres RLS | **Not deployed for any CRM table.** |
+
+Why the third does not count, in detail:
+
+- `prisma/migrations/20260913000001_enable_rag_rls` enables RLS on exactly four
+  tables — `RagDocument`, `RagChunk`, `RagFeedback`, `RagQueryLog`. No CRM table
+  has RLS or any policy.
+- Even those four policies would not engage. They read the tenant from
+  `auth.jwt()` or an `app.current_tenant_id` GUC, and nothing sets one:
+  `lib/db.ts` builds a single long-lived `PrismaClient` with no per-request
+  `set_config`, and there are no `set_config` callers in the codebase.
+- `.env.example` documents `DATABASE_URL` as the Supabase `postgres` role, which
+  carries `BYPASSRLS`, so RLS is skipped whether or not a policy exists.
+
+**So a forgotten `workspaceId` is an immediate, unrecoverable cross-tenant read
+or write.** That is why scoping is enforced by tests rather than left to review:
+
+| Test | Enforces |
+| --- | --- |
+| `tests/unit/tenant-scope-guard.test.ts` | Every query against a tenant-owned model carries a `workspaceId` predicate. Exceptions must be registered with a checkable reason. |
+| `tests/unit/broker-scope-registry.test.ts` | Every tenant read path has a recorded broker-visibility decision. |
+| `tests/unit/broker-scope-reads.test.ts` | The broker predicate actually reaches Prisma, and is absent for other roles. |
+
+To actually deploy RLS takes two changes, not one: policies per table **and** a
+non-`BYPASSRLS` application role with a per-request `set_config` on a
+transaction. Doing the first alone is worse than doing nothing — it returns
+zero rows for every query while appearing to work. Tracked as the HIGH finding in
+[`docs/security/open-findings.md`](docs/security/open-findings.md).
 
 ## RAG configuration
 
