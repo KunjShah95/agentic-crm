@@ -280,6 +280,11 @@ export const ingestDocument = async ({
       data: { modality: parsed.modality.toUpperCase() as "TEXT" | "IMAGE" | "AUDIO" | "VIDEO", lang, chunkCount: chunks.length, department, docType: docType || null, tags: tags || [], authority: authority ?? 1.0 },
     });
     await recordUsage({ tenantId, userId, event: "RAG_DOCS" });
+    /* Clears the exact-answer cache. The *semantic* cache is deliberately not
+       touched here: at this point the document has chunks but no embeddings, so it
+       is not yet retrievable and there is nothing for an answer to be stale
+       against. It is invalidated in `queue.ts` at the moment the vectors land,
+       which is the first instant it matters — see `invalidateRetrievalCaches`. */
     await invalidateDocuments(tenantId, [doc.id]);
     enqueueIngest({ tenantId, documentId: doc.id });
     return { id: doc.id, status: "PROCESSING" as const, modality: parsed.modality, lang, chunks: chunks.length };

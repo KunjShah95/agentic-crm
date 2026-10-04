@@ -7,6 +7,7 @@
 import { db } from "@/lib/db";
 import { embed, embeddingModel } from "./providers/embeddings";
 import { findChunksNeedingEmbedding, setEmbedding } from "./pgvector";
+import { invalidateRetrievalCaches } from "./cache";
 import { logger } from "@/lib/logger";
 
 interface QueueItem {
@@ -94,6 +95,11 @@ async function processItem(item: QueueItem) {
         where: { id: documentId, tenantId },
         data: { status: "READY", updatedAt: new Date() },
       });
+      /* Both caches, at the point the document becomes searchable.
+         See the full invalidation below — same reasoning, and the `!chunks.length`
+         branch is not a special case: a document with no pending vectors may still
+         have had its content replaced by a re-ingest. */
+      await invalidateRetrievalCaches(tenantId);
       logger.info("rag/embed: no chunks to embed, marked ready", { tenantId, documentId });
       return;
     }
@@ -113,6 +119,21 @@ async function processItem(item: QueueItem) {
       where: { id: documentId, tenantId },
       data: { status: "READY", updatedAt: new Date() },
     });
+    /* This is the moment the new content becomes retrievable, and it is the only
+       place that matters. Invalidation used to happen earlier, in `ingestDocument`,
+       which cleared the exact-answer cache while the document still had no
+       embeddings — so the flush bought nothing, and a re-asked question in similar
+       wording was served from the *semantic* cache, which nothing invalidated at
+       all. The result: a freshly ingested compliance document could be ignored for
+       the full 24h semantic TTL, with a confident, fully-cited answer drawn from
+       before it existed.
+
+       `invalidateRetrievalCaches` covers both caches: `invalidateTenant` bumps the
+       version embedded in every `rag:ans:` key, and `invalidateScope` clears the
+       `rag:cache:` keys outright. Both are cheap, and neither is safe to skip on
+       the grounds that this runs in a background worker — that is exactly the
+       context in which the omission went unnoticed. */
+    await invalidateRetrievalCaches(tenantId);
     logger.info("rag/embed complete", { tenantId, documentId, chunks: chunks.length });
   } catch (e) {
     const err = e as Error;

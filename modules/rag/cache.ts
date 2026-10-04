@@ -139,6 +139,33 @@ export const invalidateTenant = async (tenantId: string): Promise<void> => {
   }
 };
 
+/**
+ * Drop every cached answer for a tenant, in both caches.
+ *
+ * There are two independent caches and they are invalidated by different
+ * mechanisms, which is why clearing one is routinely mistaken for clearing both:
+ *
+ *   - `rag:ans:` keys, invalidated by bumping the per-tenant version that is part
+ *     of every key. Old entries are not deleted, they become unreachable.
+ *   - `rag:cache:` semantic keys, which have no version component and are
+ *     invalidated only by `semanticCache.invalidateScope`, which scans and deletes.
+ *
+ * A mutation that touches the corpus and calls only one of them leaves the other
+ * serving pre-mutation answers. The semantic cache is the worse of the two, because
+ * it matches on query *similarity* rather than equality: a re-asked question in
+ * slightly different wording finds the old entry even though the exact key would
+ * have missed.
+ *
+ * Defined here rather than at each call site so the two stay in step. `queue.ts`
+ * needs it at the moment embeddings land — which is when content becomes
+ * retrievable, and the only point at which invalidation has anything to protect.
+ */
+export async function invalidateRetrievalCaches(tenantId: string): Promise<void> {
+  await invalidateTenant(tenantId);
+  const { semanticCache } = await import("./semantic-cache");
+  await semanticCache.invalidateScope(tenantId);
+}
+
 const docsKey = (cacheEntryKey: string) => `rag:docs:${cacheEntryKey}`;
 
 export const trackCacheEntry = async (entryKey: string, documentIds: string[] = []): Promise<void> => {

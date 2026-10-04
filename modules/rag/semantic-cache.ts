@@ -1,7 +1,12 @@
 /**
  * Semantic Cache — Redis-based, Scope-Aware Cross-Instance Cache
- * Uses document versions to auto-invalidate when KB changes.
+ *
  * Normalizes queries for semantic similarity matching.
+ *
+ * Does NOT auto-invalidate when the corpus changes. Nothing here observes
+ * `RagDocument`, so a mutation on its own leaves this cache warm — see
+ * `computeScopeHash` for why the scope token cannot do that job, and
+ * `invalidateRetrievalCaches` in ./cache for the call every mutation path owes.
  */
 
 import { createClient, RedisClientType } from "redis";
@@ -60,7 +65,58 @@ class SemanticCache {
     }
   }
 
-  // Scope = hash of all document IDs + versions for this tenant
+  /**
+   * The document-set fingerprint for a tenant.
+   *
+   * NOT a fingerprint of the documents. It hashes `tenantId` with the current
+   * timestamp, so it is stable only for as long as the memoised value in Redis
+   * survives — it does not change when a document is added, edited or deleted.
+   *
+   * The module docstring above, and the comment this one replaced — which described
+   * this function as hashing every document id and version for the tenant — both
+   * claimed that a corpus change moves this value.
+   *
+   * Both were describing the intended implementation, not the code, and that gap is
+   * dangerous rather than merely untidy: a maintainer who reads either one concludes
+   * invalidation is automatic and reasonably omits the explicit
+   * `invalidateScope` call — which is the only thing actually keeping the cache
+   * correct. That is precisely how the embedding queue ended up leaving the
+   * semantic cache warm for its full 24h TTL after every ingest.
+   *
+   * The explicit `invalidateScope` on every mutation path is the real mechanism.
+   * Deriving this from `RagDocument.version` would be the genuine fix and is worth
+   * doing; until then, treat it as an opaque per-TTL token and do not rely on it to
+   * detect change.
+   */
+  async computeScopeHash(tenantId: string): Promise<string> {
+    /* Random, not `Date.now()`.
+       Two scopes computed in the same millisecond were byte-identical, because the
+       only varying input was the clock. That is the one property this value
+       actually needs: it must differ between generations, since it is what makes
+       pre-invalidation keys unreachable. A timestamp cannot guarantee that, and
+       `invalidateScope` immediately followed by a read lands in exactly that
+       window. It does not leak today — the invalidation deletes the entries
+       themselves, not just the scope key — but a scope that can collide is a scope
+       carrying no information, which is the whole reason it was worth replacing.
+
+       Still not a document fingerprint. See the note above. */
+    return crypto
+      .createHash("sha256")
+      .update(`${tenantId}:${crypto.randomBytes(16).toString("hex")}`)
+      .digest("hex")
+      .slice(0, 16);
+  }
+
+  /**
+   * The scope used in cache keys: the document-set token, plus a role tag when the
+   * caller named one.
+   *
+   * `role === undefined` — not `null` — returns the bare document token. The
+   * distinction is deliberate: `null` means "the roleless API caller", which is its
+   * own distinct privilege level and gets its own tag, so it cannot read an entry
+   * written for a named role. `undefined` means the caller declined to say, which
+   * is a different thing and must not be conflated with either.
+   */
   async getScopeHash(tenantId: string, role?: string | string[] | null): Promise<string | null> {
     if (!this.enabled) return null;
     await this.connect();
@@ -79,13 +135,6 @@ class SemanticCache {
     }
     if (role === undefined) return scope;
     return `${scope}:${roleTag(role)}`;
-  }
-
-  async computeScopeHash(tenantId: string): Promise<string> {
-    // We'll use a simple approach - in production, this would query the database
-    // For now, we use a timestamp-based approach that gets invalidated
-    const timestamp = Date.now().toString();
-    return crypto.createHash("sha256").update(`${tenantId}:${timestamp}`).digest("hex").slice(0, 16);
   }
 
   normalizeQuery(query: string): string {
@@ -164,15 +213,32 @@ class SemanticCache {
     const cached = await this.client!.get(key);
     if (!cached) return null;
 
-    const parsed = JSON.parse(cached);
-    // Verify scope still valid (documents haven't changed)
+    const parsed = JSON.parse(cached) as { answer: unknown; scope: string };
+    /* Verify scope still valid (documents haven't changed) */
     const currentScope = await this.getScopeHash(tenantId, role);
     if (currentScope !== scope) {
       await this.client!.del(key);
       return null;
     }
 
-    return parsed;
+    /* Return the stored *value*, not the envelope.
+       The payload exists on disk to carry `scope` alongside the answer so this
+       staleness check has something to compare — but `get` returned the whole
+       envelope, and the sole caller spreads the result as though it were the
+       answer itself:
+
+           return { ...semanticResult, cached: true, ... }
+
+       So a semantic cache hit produced `{ answer: { answer: "...", citations: [...] },
+       metadata, cachedAt, scope, cached }` where the caller expects
+       `{ answer: "...", citations: [...] }` — `answer` nested one level too deep,
+       and the citations, faithfulness score and confidence all missing from where
+       the type says they are. It read as a working cache hit: right shape at the
+       top level, correct `cached: true`, and a broken answer underneath.
+
+       The exact-answer cache in `cache.ts` stores and returns its value bare, so
+       this now matches it: `set`'s `answer` argument is what `get` yields. */
+    return parsed.answer;
   }
 
   async set(
