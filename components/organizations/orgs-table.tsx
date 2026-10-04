@@ -36,7 +36,6 @@ import {
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table"
 import { Metric, TableTotalsBar } from "@/components/ui/table-metrics"

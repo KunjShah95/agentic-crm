@@ -36,7 +36,7 @@ import {
   type TooltipVariant,
 } from "@/components/evilcharts/ui/recharts-tooltip";
 import { ChartLegend, ChartLegendContent, type ChartLegendVariant } from "@/components/evilcharts/ui/recharts-legend";
-import { Brush, EvilBrush, useEvilBrush, type BrushProps, type EvilBrushRange } from "@/components/evilcharts/ui/recharts-brush";
+import { Brush, EvilBrush, useEvilBrush, type BrushProps } from "@/components/evilcharts/ui/recharts-brush";
 import { ChartBackground, type BackgroundVariant } from "@/components/evilcharts/ui/recharts-background";
 import { RectRadius } from "recharts/types/shape/Rectangle";
 import { motion, useReducedMotion } from "motion/react";

@@ -26,7 +26,6 @@
 
 import "dotenv/config"
 import fs from "node:fs"
-import path from "node:path"
 import { Client } from "pg"
 
 const SCHEMA = "prisma/schema.prisma"
