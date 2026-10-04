@@ -1,4 +1,4 @@
-import { pickAssignee, RoutingStrategy } from "@/modules/leadIngest/routing"
+import { pickAssignee } from "@/modules/leadIngest/routing"
 import { describe, it, expect } from "vitest"
 
 const members = [

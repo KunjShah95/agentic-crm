@@ -9,7 +9,13 @@ export async function generateCostSheet({ workspaceId, data }: { workspaceId: st
   const s = await auth()
   if (!s?.user?.id) throw new Error("Unauthorized")
   await requireWorkspaceMember(workspaceId, s.user.id)
-  const p = costSheetSchema.parse(data) as any
+  /* No cast: `otherCharges` is validated as `Record<string, number>`, which is
+     what Prisma's Json column accepts here. The `as any` was on the whole parsed
+     object, which meant it also covered `basePrice`, `gst` and `stampDuty` —
+     three numbers that the client would have rejected if any of them were wrong.
+     One cast cannot be narrower than its target, so a cast on the object is a
+     cast on all of it. */
+  const p = costSheetSchema.parse(data)
   const unit = await db.unit.findFirst({ where: { id: p.unitId, workspaceId } })
   if (!unit) throw new Error("Unit not found in this workspace")
   const total = calcTotal({ basePrice: p.basePrice, gst: p.gst, stampDuty: p.stampDuty, otherCharges: p.otherCharges })

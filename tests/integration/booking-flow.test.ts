@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import type { Mock } from "vitest"
 
 const db = vi.hoisted(() => ({
   deal: { findFirst: vi.fn(), update: vi.fn() },
@@ -32,8 +33,24 @@ const dealRow = {
   contact: { firstName: "Ravi", lastName: "Patel" },
 }
 
+/**
+ * Reset every mock in the hoisted `db` double.
+ *
+ * The cast is to vitest's own `Mock` interface rather than `any`. `db` is a
+ * `vi.hoisted` literal of plain `vi.fn()`s, so TypeScript infers each one as
+ * `Mock<Procedure>` — the reset exists on that interface, and reaching for it
+ * through `any` threw away the only type information the double has. `Mock`
+ * without a type argument is the un-parameterised form, which is exactly what a
+ * mock with no enforced signature should be.
+ */
+const resetMocks = () => {
+  Object.values(db).forEach((model) =>
+    Object.values(model).forEach((fn) => (fn as Mock).mockReset()),
+  )
+}
+
 beforeEach(() => {
-  Object.values(db).forEach((m) => Object.values(m).forEach((fn) => (fn as any).mockReset?.()))
+  resetMocks()
   db.deal.findFirst.mockResolvedValue(dealRow)
   db.deal.update.mockResolvedValue({})
   db.unit.update.mockResolvedValue({})

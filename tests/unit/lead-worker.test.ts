@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
+import type { Mock } from "vitest"
 
 const db = vi.hoisted(() => ({
   webhookEvent: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
@@ -13,7 +14,9 @@ vi.mock("@/lib/db", () => ({ db }))
 import { processLead } from "@/modules/leadIngest/worker"
 
 beforeEach(() => {
-  Object.values(db).forEach((m) => Object.values(m).forEach((fn) => (fn as any).mockReset?.()))
+  Object.values(db).forEach((model) =>
+    Object.values(model).forEach((fn) => (fn as Mock).mockReset()),
+  )
   db.webhookEvent.findUnique.mockResolvedValue(null)
   db.webhookEvent.create.mockResolvedValue({ id: "we1" })
   db.webhookEvent.update.mockResolvedValue({})

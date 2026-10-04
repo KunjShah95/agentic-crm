@@ -1,5 +1,4 @@
 import { describe, it, expect, vi } from "vitest"
-import { AppError } from "@/lib/errors"
 
 describe("contact quota gate", () => {
   it("blocks contact create when quota exceeded", async () => {

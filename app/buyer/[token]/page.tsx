@@ -3,7 +3,7 @@ import { notFound } from "next/navigation"
 import { getBuyerPortal } from "@/modules/buyerPortal/actions"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Building2, Wallet, FileText } from "lucide-react"
+import { Building2, FileText } from "lucide-react"
 
 // Magic-link pages must never be indexed.
 export const metadata: Metadata = { robots: { index: false, follow: false } }
