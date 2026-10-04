@@ -5,14 +5,16 @@ import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { DragDropContext, Draggable, Droppable, type DropResult } from "@hello-pangea/dnd"
-import { GripVertical, Undo2 } from "lucide-react"
+import { GripVertical } from "lucide-react"
 
 import { moveDealStageAction } from "@/lib/actions/deals"
+
+/** How long a stage-move toast stays actionable. See the `toast.success` call. */
+const MOVE_UNDO_WINDOW_MS = 8_000
 import { formatDate, formatMoney } from "@/lib/format"
 import { initials } from "@/lib/format"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
 import {
   Select,
   SelectContent,
@@ -59,7 +61,22 @@ export function KanbanBoard({
   const router = useRouter()
   const [localDeals, setLocalDeals] = React.useState(deals)
   const [prevDeals, setPrevDeals] = React.useState(deals)
-  const [undoStack, setUndoStack] = React.useState<{ dealId: string; fromStageId: string; toStageId: string }[]>([])
+  /**
+   * One stage move, recorded so it can be reverted from the toast.
+   *
+   * This was held in an array used as a LIFO stack, and the Undo button in the
+   * toast popped the top entry. That is only correct if there is ever exactly one
+   * undoable move on screen — and there is not: every drag produces its own toast
+   * that lives for `MOVE_UNDO_WINDOW_MS`, so dragging deal A then deal B leaves two
+   * toasts on screen and clicking the *older* one reverted B. The state was also
+   * capped at five entries, so an undo on a move that had aged out silently did
+   * nothing while the toast still offered it.
+   *
+   * Per-move is the correct granularity: the toast *is* the affordance, so it
+   * already identifies which move it is for. The array was the only thing
+   * preventing that, and it is gone.
+   */
+  type StageMove = { dealId: string; fromStageId: string; toStageId: string }
   const [mobileStage, setMobileStage] = React.useState(stages[0]?.id ?? "")
 
   if (prevDeals !== deals) {
@@ -96,10 +113,11 @@ export function KanbanBoard({
       )
     )
 
-    setUndoStack((prev) => [
-      ...prev.slice(-4),
-      { dealId: draggableId, fromStageId: source.droppableId, toStageId: destination.droppableId },
-    ])
+    const move: StageMove = {
+      dealId: draggableId,
+      fromStageId: source.droppableId,
+      toStageId: destination.droppableId,
+    }
 
     const res = await moveDealStageAction(
       workspaceId,
@@ -108,39 +126,54 @@ export function KanbanBoard({
     )
     if (res.error) {
       setLocalDeals(previous)
-      setUndoStack((prev) => prev.slice(0, -1))
       toast.error(res.error.message)
       return
     }
     toast.success("Deal moved", {
       action: {
         label: "Undo",
-        onClick: () => undoLastMove(),
+        onClick: () => undoMove(move),
       },
-      duration: 5000,
+      // A stage change is not a cosmetic toggle — it can change commission,
+      // forecast and reporting — so the window to take it back should be longer
+      // than the window in which the toast can be read. Sonner's default for an
+      // action toast is 4s, which is about how long it takes to glance at a
+      // message and not process the button.
+      duration: MOVE_UNDO_WINDOW_MS,
     })
     router.refresh()
   }
 
-  function undoLastMove() {
-    setUndoStack((prev) => {
-      const last = prev[prev.length - 1]
-      if (!last) return prev
+  /**
+   * Revert one specific move — the one this toast belongs to.
+   *
+   * Guarded on the deal still being in the stage the move put it in. Dragging a
+   * deal twice leaves the first toast's Undo still on screen, and honouring it
+   * would throw away the second, newer decision and leave the board showing a
+   * stage the user moved it away from. In that case the toast is simply spent.
+   */
+  async function undoMove(move: StageMove) {
+    const current = localDeals.find((d) => d.id === move.dealId)
+    if (!current || current.stageId !== move.toStageId) return
 
-      setLocalDeals((dl) =>
-        dl.map((deal) =>
-          deal.id === last.dealId
-            ? { ...deal, stageId: last.fromStageId }
-            : deal
-        )
+    setLocalDeals((dl) =>
+      dl.map((deal) =>
+        deal.id === move.dealId ? { ...deal, stageId: move.fromStageId } : deal
       )
+    )
 
-      moveDealStageAction(workspaceId, last.dealId, last.fromStageId).then(() => {
-        router.refresh()
-      })
-
-      return prev.slice(0, -1)
-    })
+    const res = await moveDealStageAction(workspaceId, move.dealId, move.fromStageId)
+    if (res.error) {
+      // Put the card back where it was rather than leaving the optimistic revert
+      // standing — the server still has it in the newer stage.
+      setLocalDeals((dl) =>
+        dl.map((deal) => (deal.id === move.dealId ? current : deal))
+      )
+      toast.error(`Could not undo the move: ${res.error.message}`)
+      return
+    }
+    toast.success("Move undone")
+    router.refresh()
   }
 
   const [isMobile, setIsMobile] = React.useState(false)

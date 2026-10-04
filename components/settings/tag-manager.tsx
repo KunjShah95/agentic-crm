@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { Plus, Pencil, Trash2, Check, X } from "lucide-react"
+import { Plus, Pencil, Trash2, Check, X, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -48,6 +48,23 @@ export function TagManager({ workspaceId, initialTags }: Props) {
   const router = useRouter()
   const [tags, setTags] = useState<Tag[]>(initialTags)
   const [isPending, startTransition] = useTransition()
+
+  /**
+   * Which tag, if any, is mid-mutation.
+   *
+   * `creating` already guarded the create button, but rename and delete had no
+   * guard at all — nothing between the click and the resolved server action
+   * disabled the button, so a double-click issued two identical mutations. For
+   * delete that is a second request for a row the first one already removed; the
+   * second comes back as an error and the user sees a failure toast for an
+   * action that actually succeeded.
+   *
+   * Tracked per-id rather than as one global flag so only the row being changed
+   * is inert — disabling the whole list would make a single slow rename feel
+   * like the page had hung.
+   */
+  const [savingId, setSavingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [newTagName, setNewTagName] = useState("")
   const [newTagColor, setNewTagColor] = useState(TAG_COLORS[0])
   const [creating, setCreating] = useState(false)
@@ -82,25 +99,38 @@ export function TagManager({ workspaceId, initialTags }: Props) {
       toast.error("Tag name cannot be empty")
       return
     }
-    const result = await updateTagAction(workspaceId, id, { name: editName.trim(), color: editColor })
-    if (result.error) {
-      toast.error(result.error.message)
-      return
+    setSavingId(id)
+    try {
+      const result = await updateTagAction(workspaceId, id, {
+        name: editName.trim(),
+        color: editColor,
+      })
+      if (result.error) {
+        toast.error(result.error.message)
+        return
+      }
+      toast.success("Tag updated")
+      setEditingId(null)
+      refreshTags()
+    } finally {
+      setSavingId(null)
     }
-    toast.success("Tag updated")
-    setEditingId(null)
-    refreshTags()
   }
 
   async function handleDelete(id: string) {
-    const result = await deleteTagAction(workspaceId, id)
-    if (result.error) {
-      toast.error(result.error.message)
-      return
+    setDeletingId(id)
+    try {
+      const result = await deleteTagAction(workspaceId, id)
+      if (result.error) {
+        toast.error(result.error.message)
+        return
+      }
+      toast.success("Tag deleted")
+      setDeleteId(null)
+      refreshTags()
+    } finally {
+      setDeletingId(null)
     }
-    toast.success("Tag deleted")
-    setDeleteId(null)
-    refreshTags()
   }
 
   function refreshTags() {
@@ -156,7 +186,14 @@ export function TagManager({ workspaceId, initialTags }: Props) {
             No tags yet. Create one above to start organizing.
           </p>
         ) : (
-          <div className="space-y-1">
+          /* `aria-busy` from `useTransition`, which covers `refreshTags` — the
+             refetch after a successful mutation. It was destructured and never
+             read, so nothing told the user the list was being re-fetched: the
+             row stayed fully interactive against values the server had already
+             superseded. `aria-busy` is the honest signal here — a live region
+             would announce a toast the user has already seen, and dimming the
+             whole list reads as breakage on a slow connection. */
+          <div className="space-y-1" aria-busy={isPending}>
             {tags.map((tag) => (
               <div
                 key={tag.id}
@@ -191,14 +228,26 @@ export function TagManager({ workspaceId, initialTags }: Props) {
                         variant="ghost"
                         size="icon"
                         className="size-7"
+                        aria-label={savingId === tag.id ? "Saving tag" : "Save tag"}
+                        disabled={savingId === tag.id}
                         onClick={() => handleUpdate(tag.id)}
                       >
-                        <Check className="size-3.5 text-status-positive-fg" />
+                        {savingId === tag.id ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <Check className="size-3.5 text-status-positive-fg" />
+                        )}
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="size-7"
+                        aria-label="Cancel rename"
+                        /* Held disabled mid-save: leaving edit mode while the
+                           request is in flight discards the fields and then
+                           repaints the row from the server's older values, so
+                           the rename appears to silently undo itself. */
+                        disabled={savingId === tag.id}
                         onClick={() => setEditingId(null)}
                       >
                         <X className="size-3.5" />
@@ -232,6 +281,8 @@ export function TagManager({ workspaceId, initialTags }: Props) {
                         variant="ghost"
                         size="icon"
                         className="size-7 text-destructive"
+                        aria-label={`Delete ${tag.name}`}
+                        disabled={savingId === tag.id}
                         onClick={() => setDeleteId(tag.id)}
                       >
                         <Trash2 className="size-3.5" />
@@ -254,12 +305,18 @@ export function TagManager({ workspaceId, initialTags }: Props) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel disabled={!!deletingId}>Cancel</AlertDialogCancel>
               <AlertDialogAction
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                /* Disabled while the delete is in flight. `AlertDialogAction`
+                   closes the dialog on click, so without this the dialog vanishes
+                   immediately, `deleteId` is cleared by the close handler, and a
+                   second click in that window re-entered with a null id. The
+                   button reads "Deleting…" so the wait is legible. */
+                disabled={!!deletingId}
                 onClick={() => deleteId && handleDelete(deleteId)}
               >
-                Delete
+                {deletingId ? "Deleting…" : "Delete"}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>

@@ -7,6 +7,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Circle,
+  Filter,
   Link as LinkIcon,
   Mail,
   MessageSquare,
@@ -69,6 +70,23 @@ const SOURCE_ICONS: Record<string, React.ElementType> = {
   system: CheckCircle2,
   WEBSITE_CONTACT_FORM: Mail,
 }
+
+/**
+ * The order filter chips appear in.
+ *
+ * These ids used to be repeated a third time, inline in `sourceEntries` with
+ * their own hardcoded labels — alongside `SOURCE_LABELS` and `SOURCE_ICONS`. The
+ * duplication had already drifted: `WEBSITE_CONTACT_FORM` is produced by
+ * `activitySource` and has an entry in both maps, but was missing from that
+ * inline list. A timeline whose only activity came from the website contact form
+ * therefore had `sourceEntries` resolve to empty, which meant no chips, and —
+ * once the filter is actually applied — `enabledSources` would be empty too and
+ * the whole timeline would render nothing.
+ *
+ * Deriving from the keys means a source added to `SOURCE_LABELS` shows up here
+ * without anyone remembering to edit a second list.
+ */
+const SOURCE_ORDER = ["manual", "social", "agent", "system", "WEBSITE_CONTACT_FORM"] as const
 
 function SourceFilterBar({
   sources,
@@ -152,16 +170,11 @@ export function Timeline({
   }
 
   // Build filter bar entries — show only sources that have data
-  const sourceEntries = [
-    { id: "manual", label: "Manual", icon: StickyNote },
-    { id: "social", label: "Social", icon: MessageSquare },
-    { id: "agent", label: "AI", icon: LinkIcon },
-    { id: "system", label: "System", icon: CheckCircle2 },
-  ].filter((e) => allSources.has(e.id)).map((e) => ({
-    id: e.id,
-    label: SOURCE_LABELS[e.id] ?? e.id,
-    icon: e.icon,
-    count: sourceCounts[e.id] ?? 0,
+  const sourceEntries = SOURCE_ORDER.filter((id) => allSources.has(id)).map((id) => ({
+    id,
+    label: SOURCE_LABELS[id] ?? id,
+    icon: SOURCE_ICONS[id] ?? StickyNote,
+    count: sourceCounts[id] ?? 0,
     enabled: true,
   }))
 
@@ -172,9 +185,23 @@ export function Timeline({
     .map((e) => e.id)
 
   const [enabledSources, setEnabledSources] = useState<string[]>(initialEnabled)
-  const filteredActivities = enabledSources.length === sourceEntries.length
-    ? activities
-    : activities.filter((a) => enabledSources.includes(activitySource(a)))
+  /**
+   * The list actually rendered.
+   *
+   * This was computed and then never used — the timeline mapped over
+   * `activities`, so every chip in the filter bar was inert. Toggling "Calls" off
+   * changed the button state and left the list identical, which is worse than not
+   * offering the control: it tells the user their timeline is showing one thing
+   * when it is showing another.
+   *
+   * The length check short-circuits the common all-on case, where the filter
+   * would return a new array with identical contents for no reason.
+   */
+  const isFiltering = enabledSources.length < sourceEntries.length
+  const filteredActivities =
+    !isFiltering
+      ? activities
+      : activities.filter((a) => enabledSources.includes(activitySource(a)))
 
   function handleSourceToggle(sources: string[]) {
     setEnabledSources(sources)
@@ -202,7 +229,7 @@ export function Timeline({
     )
   }
 
-  const hasFilters = enabledSources.length < sourceEntries.length
+  const hasFilters = isFiltering
 
   return (
     <div>
@@ -230,8 +257,28 @@ export function Timeline({
         </div>
       )}
 
+      {filteredActivities.length === 0 ? (
+        /* Every source is switched off. Distinct from the "No activity yet" state
+           above, because there *is* activity here — the user just filtered it
+           out, and a bare vertical timeline rule with nothing on it reads as a
+           rendering bug rather than an empty result. */
+        <div className="flex flex-col items-center gap-2 rounded-md border border-dashed px-4 py-8 text-center">
+          <Filter className="size-7 text-muted-foreground/50" />
+          <p className="text-sm font-medium">No matching activity</p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            {activities.length} {activities.length === 1 ? "entry is" : "entries are"} hidden by
+            the filter above.
+          </p>
+          <button
+            onClick={() => setEnabledSources(sourceEntries.map((s) => s.id))}
+            className="mt-1 text-sm font-medium text-primary underline-offset-4 hover:underline"
+          >
+            Show all
+          </button>
+        </div>
+      ) : (
       <ol className="relative flex flex-col gap-4 before:absolute before:top-2 before:bottom-2 before:left-[13px] before:w-px before:bg-border">
-      {activities.map((activity) => {
+      {filteredActivities.map((activity) => {
         const Icon = ICONS[activity.type]
         const author = users.get(activity.createdBy)
         const isTask = activity.type === "TASK"
@@ -331,6 +378,7 @@ export function Timeline({
         )
       })}
     </ol>
+      )}
     </div>
   )
 }

@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   ArrowRight,
   Upload,
-  X,
   AlertTriangle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -41,6 +40,21 @@ const CRM_FIELDS: Omit<MappedField, "csvColumn">[] = [
   { crmField: "jobTitle", required: false, label: "Job title" },
   { crmField: "linkedinUrl", required: false, label: "LinkedIn URL" },
 ]
+
+/**
+ * The two fields that make an imported contact usable.
+ *
+ * Separate from `CRM_FIELDS.required` because "required to save a row" and
+ * "required for the row to be worth anything" are different questions, and the
+ * second one is the one that has no enforcement anywhere else — see the
+ * `reachWarning` comment below.
+ */
+const REACH_FIELDS = ["phone", "email"] as const
+
+const REACH_FIELDS_LABELS: Record<(typeof REACH_FIELDS)[number], string> = {
+  phone: "phone number",
+  email: "email address",
+}
 
 function parseCsv(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.trim().split("\n")
@@ -86,7 +100,13 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
   const [fieldMap, setFieldMap] = useState<Record<string, string | null>>({})
   const [importing, setImporting] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [result, setResult] = useState<{ imported: number; skipped: number; errors: string[] } | null>(null)
+  const [result, setResult] = useState<{
+    imported: number
+    skipped: number
+    failedBatches: number
+    batchSize: number
+    errors: string[]
+  } | null>(null)
 
   const reset = () => {
     setStep("upload")
@@ -124,6 +144,29 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
   const mappedCount = Object.values(fieldMap).filter(Boolean).length
   const requiredMapped = CRM_FIELDS.filter((f) => f.required).every((f) => fieldMap[f.crmField])
 
+  /**
+   * Whether the import will produce contacts the team can actually act on.
+   *
+   * `phone` and `email` are the only two routes out of the CRM — a contact with
+   * neither cannot be called, emailed, or matched by the deduplication in
+   * `lead-ingest`, which keys on `phoneLookupKey`. Importing without them is
+   * allowed, because a name-only contact is still a real record, but it used to
+   * happen with no signal at all: `requiredMapped` only gates on `firstName`, so
+   * every other dropdown could read "— Skip —" and the button would still say
+   * "Import 400 contacts". The user got 400 unreachable rows and a success toast.
+   *
+   * So this is stated plainly rather than left for the user to infer from a
+   * disabled button. It names the consequence, and it does not block the import —
+   * the choice belongs to whoever is doing it.
+   */
+  const missingReach = REACH_FIELDS.filter((k) => !fieldMap[k])
+  const reachWarning =
+    missingReach.length === REACH_FIELDS.length
+      ? `No phone or email column is mapped, so every contact you import will have neither. You will not be able to call or email anyone from this list, and the duplicate check cannot tell they already exist.`
+      : missingReach.length === 1
+        ? `No ${REACH_FIELDS_LABELS[missingReach[0]]} column is mapped, so those contacts will have no ${REACH_FIELDS_LABELS[missingReach[0]]}.`
+        : null
+
   const onImport = async () => {
     if (!csvData || !requiredMapped) return
     setImporting(true)
@@ -134,6 +177,11 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
       const total = csvData.rows.length
       const importedRows: Record<string, string>[] = []
       const errors: string[] = []
+      /* Rows the CSV itself ruled out (no first name). Kept apart from
+         `failedBatches` below, which means rows that were valid but did not
+         reach the database — a different problem with a different remedy. */
+      let rowSkips = 0
+      let failedBatches = 0
 
       for (let i = 0; i < total; i++) {
         const row = csvData.rows[i]
@@ -148,6 +196,7 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
           }
         }
         if (!record.firstName) {
+          rowSkips++
           errors.push(`Row ${i + 2}: missing first name`)
           continue
         }
@@ -169,15 +218,33 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
           const data = await response.json()
           created += data.created ?? batch.length
         } else {
-          errors.push(`Batch ${Math.floor(i / batchSize) + 1} failed`)
+          /* Counted separately from the row-level skips above. Both were pushed
+             into one `errors` array and then reported as `skipped`, so a batch of
+             50 that failed to save was announced as "1 row skipped due to errors"
+             — and `created` had already been incremented for the successful
+             batches, leaving a summary that read as a clean import while up to
+             `batchSize * failedBatches` rows were never written. */
+          failedBatches++
+          errors.push(
+            `Batch ${Math.floor(i / batchSize) + 1} — ${batch.length} contacts could not be saved`,
+          )
         }
         setProgress(80 + Math.round((i / importedRows.length) * 20))
       }
 
       setProgress(100)
-      setResult({ imported: created, skipped: errors.length, errors })
+      setResult({ imported: created, skipped: rowSkips, failedBatches, batchSize, errors })
       setStep("done")
-      toast.success(`Imported ${created} contacts`)
+      /* Not a success toast when a batch failed to save. The import genuinely
+         did not complete in that case, and a green "Imported 380 contacts" is how
+         someone walks away believing their list is in the CRM. */
+      if (failedBatches) {
+        toast.error(
+          `Imported ${created} contacts, but ${failedBatches * batchSize} were not saved. Check the summary.`,
+        )
+      } else {
+        toast.success(`Imported ${created} contacts`)
+      }
       router.refresh()
       onImported?.()
     } catch (err) {
@@ -265,9 +332,40 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
 
           {step === "map" && csvData && (
             <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
-              <p className="text-xs text-muted-foreground">
-                Found {csvData.rows.length} rows. Map each contact field to a CSV column.
-              </p>
+              {/* Which file, and how much of it is understood. `file` and
+                  `mappedCount` were both tracked but never rendered, so the
+                  mapping step gave no confirmation of *which* spreadsheet was
+                  loaded and no indication of how many fields were actually being
+                  carried across — every optional dropdown could read "— Skip —"
+                  and the row count in the button was the only feedback. */}
+              <div className="flex items-start justify-between gap-3 rounded-md border bg-muted/20 p-2.5">
+                <div className="flex min-w-0 items-center gap-2">
+                  <FileText className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{file?.name ?? "Uploaded file"}</p>
+                    <p className="text-xs text-muted-foreground tabular-nums">
+                      {csvData.rows.length.toLocaleString("en-IN")} rows ·{" "}
+                      {csvData.headers.length} columns
+                    </p>
+                  </div>
+                </div>
+                <p className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                  {mappedCount}/{CRM_FIELDS.length} mapped
+                </p>
+              </div>
+
+              {reachWarning && (
+                <div
+                  role="status"
+                  className="flex items-start gap-2 rounded-md border border-status-caution-fg/30 bg-status-caution-bg p-2.5"
+                >
+                  <AlertTriangle
+                    className="mt-0.5 size-4 shrink-0 text-status-caution-fg"
+                    aria-hidden
+                  />
+                  <p className="text-xs leading-relaxed text-status-caution-fg">{reachWarning}</p>
+                </div>
+              )}
               {CRM_FIELDS.map((field) => (
                 <div key={field.crmField} className="flex items-center gap-3">
                   <label className="w-28 text-sm font-medium shrink-0">
@@ -307,13 +405,43 @@ export function ImportContactsDialog({ open, onOpenChange, workspaceId, onImport
 
           {step === "done" && result && (
             <div className="space-y-4 py-4">
-                <div className="flex items-center gap-3 rounded-md border bg-status-positive-bg p-3">
-                <CheckCircle2 className="size-5 text-status-positive-fg" />
-                <div>
-                  <p className="text-sm font-medium">{result.imported} contacts imported</p>
+              <div
+                className={cn(
+                  "flex items-center gap-3 rounded-md border p-3",
+                  result.failedBatches
+                    ? "border-status-caution-fg/30 bg-status-caution-bg"
+                    : "bg-status-positive-bg",
+                )}
+              >
+                {result.failedBatches ? (
+                  <AlertTriangle className="size-5 shrink-0 text-status-caution-fg" aria-hidden />
+                ) : (
+                  <CheckCircle2 className="size-5 shrink-0 text-status-positive-fg" aria-hidden />
+                )}
+                <div className="min-w-0">
+                  <p
+                    className={cn(
+                      "text-sm font-medium",
+                      result.failedBatches && "text-status-caution-fg",
+                    )}
+                  >
+                    {result.imported} contacts imported
+                  </p>
+                  {/* The two failure kinds are reported separately because they
+                      need different responses: a bad row is fixed in the
+                      spreadsheet, a failed batch is not in the CRM at all and has
+                      to be retried. */}
+                  {result.failedBatches > 0 && (
+                    <p className="text-xs leading-relaxed text-status-caution-fg">
+                      {result.failedBatches * result.batchSize} contacts were not saved — the
+                      request to the server failed. Re-run the import; rows already in the
+                      CRM are skipped as duplicates.
+                    </p>
+                  )}
                   {result.skipped > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      {result.skipped} rows skipped due to errors
+                      {result.skipped} {result.skipped === 1 ? "row" : "rows"} skipped — no first
+                      name
                     </p>
                   )}
                 </div>
