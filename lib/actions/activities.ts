@@ -81,10 +81,15 @@ export async function createActivityAction(
  */
 export async function listActivitiesBySource(
   workspaceId: string,
-  userId: string,
   source: ActivitySource = "manual"
 ) {
-  await requireWorkspaceMember(workspaceId, userId)
+  /* `userId` used to be an argument here and was handed straight to
+     `requireWorkspaceMember`. That proves *that user* is a member, not that the
+     *caller* is — and a server-action argument is client-supplied JSON. The
+     identity now comes from the session, like every other export in this file. */
+  const session = await auth()
+  if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
+  await requireWorkspaceMember(workspaceId, session.user.id)
   return db.activity.findMany({
     where: { workspaceId, source },
     orderBy: { createdAt: "desc" },
@@ -93,9 +98,22 @@ export async function listActivitiesBySource(
 }
 
 export async function getActivityBySocialEvent(workspaceId: string, socialEventId: string) {
+  /* This had no gate at all, in a `"use server"` file, sitting directly under a
+     sibling that does gate. `include: { contact: true }` returns the whole
+     Contact row — email, phone, kycJson, requirementsJson — so an anonymous
+     caller who had any workspaceId + socialEventId pair could read a contact's
+     PII. Identity now comes from the session, and the include is narrowed to
+     the fields this read actually needs: the same three the sibling above
+     selects. */
+  const session = await auth()
+  if (!session?.user?.id) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
+  await requireWorkspaceMember(workspaceId, session.user.id)
   return db.activity.findFirst({
     where: { workspaceId, socialEventId },
-    include: { contact: true, socialEvent: true },
+    include: {
+      contact: { select: { id: true, firstName: true, lastName: true } },
+      socialEvent: true,
+    },
   })
 }
 

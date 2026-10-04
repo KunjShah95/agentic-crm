@@ -33,8 +33,27 @@ export async function holdUnit(input: { workspaceId: string; dealId: string; uni
   await advanceStage(input.workspaceId, input.dealId, "HOLD")
   const holdUntil = new Date(Date.now() + (input.hours ?? 48) * 3600_000)
 
-  await db.unit.update({ where: { id: input.unitId }, data: { status: "HOLD", holdUntil } })
-  await db.deal.update({ where: { id: input.dealId }, data: { unitId: input.unitId, bookingStage: "HOLD" } })
+  /* The unit must be proven to belong to this workspace before it is touched.
+     `authed` proves the *caller* is a member of the workspace and `advanceStage`
+     proves the *deal* is in it, but neither says anything about `input.unitId`,
+     which arrives straight from the client. The update below was keyed on the
+     bare id, so any member of any workspace could flip any unit in the database
+     to HOLD — cross-tenant inventory sabotage, denying a competitor's stock.
+
+     It also planted that foreign `unitId` on the deal, and `confirmBooking`
+     then reads `deal.unit` and marks it BOOKED, so the hole reached past the
+     hold. Validating here closes the chain at its source. */
+  const unit = await db.unit.findFirst({
+    where: { id: input.unitId, workspaceId: input.workspaceId },
+    select: { id: true },
+  })
+  if (!unit) throw new Error("Unit not found in this workspace")
+
+  await db.unit.update({ where: { id: unit.id }, data: { status: "HOLD", holdUntil } })
+  await db.deal.update({
+    where: { id: input.dealId, workspaceId: input.workspaceId },
+    data: { unitId: unit.id, bookingStage: "HOLD" },
+  })
   await db.activity.create({
     data: {
       workspaceId: input.workspaceId,

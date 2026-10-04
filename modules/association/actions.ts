@@ -2,18 +2,45 @@
 
 import { db } from "@/lib/db"
 import { requireWorkspaceMember } from "@/lib/permissions"
+import { auth } from "@/lib/auth"
 
-export async function createAssociation(args: { name: string; slug: string; city?: string; userId: string; workspaceId: string }) {
-  const ws = await db.workspace.findUnique({ where: { id: args.workspaceId } })
-  if (!ws) throw new Error("Workspace not found")
+/**
+ * Resolve the acting user from the session and prove membership of the
+ * workspace being written to.
+ *
+ * Every export in this file used to accept `userId` as a parameter and hand it
+ * straight to `requireWorkspaceMember`. That checks whether *that user* is a
+ * member — not whether *the caller* is that user. In a `"use server"` file the
+ * arguments arrive as JSON from the client, so any anonymous caller could pass
+ * a real member's id and pass the gate, then have actions written to that
+ * member's workspace attributed to them: pooled leads taken from their
+ * contacts, claimed leads, referral rows, association memberships.
+ *
+ * The identity now comes from the session, which is the same `authed()` shape
+ * every other action module in this codebase already uses (booking, payments,
+ * property, siteVisits, comms, contacts, deals, settings).
+ */
+async function authed(workspaceId: string) {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error("Unauthorized")
+  await requireWorkspaceMember(workspaceId, session.user.id)
+  return session.user.id
+}
+
+export async function createAssociation(args: { name: string; slug: string; city?: string; workspaceId: string }) {
+  /* Previously: no identity check at all, only an existence check on the
+     workspace. That let an anonymous caller enrol an arbitrary workspace into a
+     newly created association as its OWNER and inject an attacker-authored NOTE
+     into that workspace's activity timeline. */
+  const userId = await authed(args.workspaceId)
   const assoc = await db.association.create({ data: { name: args.name, slug: args.slug, city: args.city ?? "Ahmedabad" } })
   await db.associationMember.create({ data: { associationId: assoc.id, workspaceId: args.workspaceId, role: "OWNER" } })
-  await db.activity.create({ data: { workspaceId: args.workspaceId, type: "NOTE", body: `Joined association ${assoc.name} as OWNER`, createdBy: args.userId, source: "system" } })
+  await db.activity.create({ data: { workspaceId: args.workspaceId, type: "NOTE", body: `Joined association ${assoc.name} as OWNER`, createdBy: userId, source: "system" } })
   return assoc
 }
 
-export async function joinAssociation(associationId: string, workspaceId: string, userId: string) {
-  await requireWorkspaceMember(workspaceId, userId)
+export async function joinAssociation(associationId: string, workspaceId: string) {
+  const userId = await authed(workspaceId)
   const existing = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId, workspaceId } } })
   if (existing) return existing
   const m = await db.associationMember.create({ data: { associationId, workspaceId } })
@@ -21,8 +48,8 @@ export async function joinAssociation(associationId: string, workspaceId: string
   return m
 }
 
-export async function poolLead(workspaceId: string, contactId: string, associationId: string, userId: string) {
-  await requireWorkspaceMember(workspaceId, userId)
+export async function poolLead(workspaceId: string, contactId: string, associationId: string) {
+  const userId = await authed(workspaceId)
   const contact = await db.contact.findFirst({ where: { id: contactId, workspaceId } })
   if (!contact) throw new Error("Contact not found or not owned by workspace")
   const member = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId, workspaceId } } })
@@ -32,8 +59,8 @@ export async function poolLead(workspaceId: string, contactId: string, associati
   return pooled
 }
 
-export async function claimLead(associationLeadId: string, claimerWorkspaceId: string, userId: string) {
-  await requireWorkspaceMember(claimerWorkspaceId, userId)
+export async function claimLead(associationLeadId: string, claimerWorkspaceId: string) {
+  const userId = await authed(claimerWorkspaceId)
   const lead = await db.associationLead.findUnique({ where: { id: associationLeadId } })
   if (!lead) throw new Error("Pooled lead not found")
   if (lead.status !== "POOLED") throw new Error("Lead already claimed")
@@ -46,15 +73,15 @@ export async function claimLead(associationLeadId: string, claimerWorkspaceId: s
   return claimed
 }
 
-export async function listAssociationInventory(associationId: string, workspaceId: string, userId: string) {
-  await requireWorkspaceMember(workspaceId, userId)
+export async function listAssociationInventory(associationId: string, workspaceId: string) {
+  await authed(workspaceId)
   const member = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId, workspaceId } } })
   if (!member) throw new Error("Not a member")
   return db.associationListing.findMany({ where: { associationId, status: "ACTIVE" }, include: { unit: { include: { project: true } }, listedBy: { select: { id: true, name: true, slug: true } } } })
 }
 
-export async function listUnitToAssociation(associationId: string, unitId: string, workspaceId: string, userId: string) {
-  await requireWorkspaceMember(workspaceId, userId)
+export async function listUnitToAssociation(associationId: string, unitId: string, workspaceId: string) {
+  await authed(workspaceId)
   const member = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId, workspaceId } } })
   if (!member) throw new Error("Not a member")
   const unit = await db.unit.findFirst({ where: { id: unitId, workspaceId } })
@@ -62,8 +89,11 @@ export async function listUnitToAssociation(associationId: string, unitId: strin
   return db.associationListing.create({ data: { associationId, unitId, listedByWorkspaceId: workspaceId } })
 }
 
-export async function createReferral(args: { associationId: string; fromWorkspaceId: string; toWorkspaceId: string; contactId: string; dealId?: string; pct?: number; amount?: number; userId: string }) {
-  await requireWorkspaceMember(args.fromWorkspaceId, args.userId)
+export async function createReferral(args: { associationId: string; fromWorkspaceId: string; toWorkspaceId: string; contactId: string; dealId?: string; pct?: number; amount?: number }) {
+  /* Membership of `fromWorkspaceId` is what authorises creating the referral;
+     `toWorkspaceId` is the counterparty and only has to be an association
+     member, which the check below covers. */
+  await authed(args.fromWorkspaceId)
   const fromMember = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId: args.associationId, workspaceId: args.fromWorkspaceId } } })
   const toMember = await db.associationMember.findUnique({ where: { associationId_workspaceId: { associationId: args.associationId, workspaceId: args.toWorkspaceId } } })
   if (!fromMember || !toMember) throw new Error("Both workspaces must be association members")

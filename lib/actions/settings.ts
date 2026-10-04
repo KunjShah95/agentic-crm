@@ -141,6 +141,22 @@ export async function updateMemberRoleAction(
     const parsed = updateRoleSchema.safeParse({ userId, role })
     if (!parsed.success) throw new AppError("VALIDATION", "Invalid role.")
 
+    /* The action's own signature says `role: "ADMIN" | "MEMBER"`, but that is a
+       compile-time annotation on a value that arrives as JSON over the wire —
+       it is not enforced at runtime. `updateRoleSchema` is what actually gates
+       this call, and its enum is `OWNER | ADMIN | MEMBER`, so the two disagreed:
+       an ADMIN could post `"OWNER"` and pass validation. Only the
+       target-is-already-OWNER check below was stopping them, and that only
+       blocks demoting an existing owner.
+
+       Promotion to OWNER is deliberately owner-only (`deleteWorkspaceAction`
+       and billing are both gated on `isOwner`). Rejecting OWNER here means an
+       ADMIN cannot mint a second owner and cross that line; assigning one is
+       an explicit, separate operation. */
+    if (parsed.data.role === "OWNER") {
+      throw new AppError("FORBIDDEN", "Only the workspace owner can transfer ownership.", 403)
+    }
+
     const target = await db.workspaceMember.findUnique({
       where: { workspaceId_userId: { workspaceId, userId } },
       include: { user: { select: { name: true } } },

@@ -200,7 +200,7 @@ export const answerQuery = async ({
   let semanticResult = null;
   if (semanticCache.enabled()) {
     try {
-      semanticResult = await semanticCache.get(tenantId, enhancedQuery);
+      semanticResult = await semanticCache.get(tenantId, enhancedQuery, role);
     } catch (err) {
       console.debug("[rag] Semantic cache read failed", { error: (err as Error).message });
     }
@@ -239,7 +239,14 @@ export const answerQuery = async ({
         const d = (docMeta[c.documentId] as unknown as Record<string, unknown>) || undefined;
         if (!d) return false;
         if (scopedFilter.departments && (scopedFilter.departments as string[]).length && !(scopedFilter.departments as string[]).includes(d.department as string)) return false;
-        if (d.allowed_roles && (d.allowed_roles as string[]).length && role && !(d.allowed_roles as string[]).includes(role)) return false;
+        /* Same fail-closed rule as the SQL predicate in retrieve.ts, applied to
+           the metadata already loaded for scoring. The old condition required
+           `role` to be truthy before it would exclude anything, so a roleless
+           caller waved every restricted document through this post-filter too.
+           `allowed_roles` restricts only `confidential` documents, so that flag
+           is part of the decision rather than the role list alone. */
+        const allowed = (d.allowed_roles as string[] | undefined) ?? [];
+        if (d.confidential && (!role || !allowed.includes(role))) return false;
         return true;
       });
       const { scored, passed, topConfidence, threshold } = scoreChunks(scoped as any, docMeta as any);
@@ -335,7 +342,7 @@ export const answerQuery = async ({
     await trackCacheEntry(key, scored.map((c) => c.documentId as string));
     if (semanticCache.enabled()) {
       try {
-        await semanticCache.set(tenantId, enhancedQuery, result);
+        await semanticCache.set(tenantId, enhancedQuery, result, {}, role);
       } catch (err) {
         console.debug("[rag] Semantic cache write failed", { error: (err as Error).message });
       }

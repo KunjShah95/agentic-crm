@@ -360,12 +360,28 @@ async function hierarchicalRetrieve({
     clauses.push(Prisma.sql`AND d.id IN (${Prisma.join(f.documentIds)})`);
   }
   const roles = normalizeRoles(role);
-  if (roles && roles.length > 0) {
-    // Full role set: confidential docs are visible when ANY granted role matches.
-    clauses.push(
-      Prisma.sql`AND (d.confidential = false OR (${Prisma.join(roles)}) && d.allowed_roles)`
-    );
-  }
+  /* The ACL is applied unconditionally, and it fails CLOSED.
+     This used to be `if (roles?.length) { ...push clause... }`, which meant
+     "caller supplied no roles" produced no predicate at all — so every
+     confidential and role-restricted document was retrievable. The one caller
+     that supplies no roles is the workspace API-key route, which hardcodes
+     `role: null` at query/route.ts:46. A nullable parameter was standing in for
+     "unrestricted", and the accidental reading of `null` was "trusted", so the
+     `confidential` and `allowed_roles` columns the ingest path carefully
+     populates were unenforceable over the entire REST surface.
+
+     Semantics, unchanged from the original branch: `allowed_roles` only
+     restricts documents already marked `confidential`; a non-confidential
+     document is readable by anyone in the tenant. What changed is that a caller
+     with no roles now sees the non-confidential set instead of the whole
+     corpus. Anyone who genuinely needs unrestricted tenant-wide read access has
+     to say so by passing the roles they hold, not by omitting the argument. */
+  clauses.push(
+    roles && roles.length > 0
+      ? // Full role set: confidential docs are visible when ANY granted role matches.
+        Prisma.sql`AND (d.confidential = false OR (${Prisma.join(roles)}) && d.allowed_roles)`
+      : Prisma.sql`AND d.confidential = false`,
+  );
   clauses.push(Prisma.sql`ORDER BY similarity DESC LIMIT 20`);
 
   const docResults = await db.$queryRaw(Prisma.join(clauses, " "));

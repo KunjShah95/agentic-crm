@@ -1,5 +1,16 @@
-import { describe, it, expect } from "vitest"
+import { describe, it, expect, vi } from "vitest"
 import fs from "fs"
+
+// The action module resolves the acting user from the session via @/lib/auth,
+// which pulls next-auth -> next/server. That import does not resolve under the
+// vitest node/jsdom environment, so it is mocked out here for the same reason
+// and in the same shape as the other action-module tests (comms-actions,
+// deal-won-at, booking-flow).
+vi.mock("@/lib/auth", () => ({ auth: vi.fn().mockResolvedValue({ user: { id: "u1" } }) }))
+vi.mock("@/lib/permissions", () => ({
+  requireWorkspaceMember: vi.fn().mockResolvedValue({ role: "MEMBER" }),
+}))
+vi.mock("@/lib/db", () => ({ db: {} }))
 
 describe("association schema", () => {
   it("defines Association and member + pooled lead + listing + referral + buyer portal", () => {

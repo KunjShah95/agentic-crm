@@ -7,6 +7,26 @@
 import { createClient, RedisClientType } from "redis";
 import crypto from "crypto";
 
+/**
+ * Canonical, order-independent tag for a caller's role set.
+ *
+ * Two callers holding the same roles must produce the same tag (so they share
+ * cache entries) and two callers with different roles must not (so a permissive
+ * answer is never served to a restricted one). Sorting handles the fact that
+ * role lists arrive in arbitrary order; hashing keeps the key short and avoids
+ * putting role names into a Redis key verbatim. `null`/empty — the roleless API
+ * caller — is its own distinct tag rather than a wildcard, because "no roles"
+ * now means the non-confidential subset, which is a real and different answer.
+ */
+const roleTag = (role: string | string[] | null): string => {
+  const arr = (Array.isArray(role) ? role : [role])
+    .map((r) => String(r ?? "").trim())
+    .filter(Boolean);
+  if (!arr.length) return "norole";
+  const canonical = [...new Set(arr)].sort().join(",");
+  return crypto.createHash("sha256").update(canonical).digest("hex").slice(0, 12);
+};
+
 class SemanticCache {
   private client: RedisClientType | null = null;
   private ttl: number;
@@ -41,18 +61,24 @@ class SemanticCache {
   }
 
   // Scope = hash of all document IDs + versions for this tenant
-  async getScopeHash(tenantId: string): Promise<string | null> {
+  async getScopeHash(tenantId: string, role?: string | string[] | null): Promise<string | null> {
     if (!this.enabled) return null;
     await this.connect();
     if (!this.enabled) return null;
 
+    /* The memoised scope stays keyed by tenant alone — it is the document-set
+       fingerprint and is role-independent. The role is appended afterwards to
+       derive the *variant* used in the cache key, so adding or removing a
+       caller with different privileges can never read another role's entry
+       without also invalidating the shared document fingerprint. */
     const key = `rag:scope:${tenantId}`;
     let scope = await this.client!.get(key);
     if (!scope) {
       scope = await this.computeScopeHash(tenantId);
       await this.client!.set(key, scope, { EX: this.ttl });
     }
-    return scope;
+    if (role === undefined) return scope;
+    return `${scope}:${roleTag(role)}`;
   }
 
   async computeScopeHash(tenantId: string): Promise<string> {
@@ -79,12 +105,28 @@ class SemanticCache {
       .join(" ");
   }
 
+  /**
+   * Cache key material for one tenant/role pair.
+   *
+   * The role is folded into the scope because the scope is part of the cache
+   * key, and the key was `tenantId + scope + query` with nothing distinguishing
+   * *who* asked. Since answers are now filtered by the caller's role (see the
+   * fail-closed ACL in retrieve.ts / answer.ts), that made the cache a
+   * cross-privilege channel: an ADMIN asks a question, the answer — which may
+   * quote confidential documents — is cached under the tenant-wide key, and the
+   * next caller with fewer roles gets it served verbatim.
+   *
+   * `roleTag` makes the tag order-independent and hash-short, so two callers
+   * holding the same roles share entries and two callers holding different
+   * roles cannot. There is deliberately no default that collapses privilege
+   * levels onto one key: a caller has to name the role it already resolved.
+   */
   makeCacheKey(tenantId: string, scope: string, normalizedQuery: string): string {
     const queryHash = crypto.createHash("sha256").update(normalizedQuery).digest("hex").slice(0, 16);
     return `rag:cache:${tenantId}:${scope}:${queryHash}`;
   }
 
-  async get(tenantId: string, query: string): Promise<unknown | null> {
+  async get(tenantId: string, query: string, role?: string | string[] | null): Promise<unknown | null> {
     if (!this.enabled) return null;
     await this.connect();
     if (!this.enabled) return null;
@@ -92,7 +134,7 @@ class SemanticCache {
     const normalized = this.normalizeQuery(query);
     if (!normalized) return null;
 
-    const scope = await this.getScopeHash(tenantId);
+    const scope = await this.getScopeHash(tenantId, role);
     if (!scope) return null;
 
     const key = this.makeCacheKey(tenantId, scope, normalized);
@@ -101,7 +143,7 @@ class SemanticCache {
 
     const parsed = JSON.parse(cached);
     // Verify scope still valid (documents haven't changed)
-    const currentScope = await this.getScopeHash(tenantId);
+    const currentScope = await this.getScopeHash(tenantId, role);
     if (currentScope !== scope) {
       await this.client!.del(key);
       return null;
@@ -110,7 +152,7 @@ class SemanticCache {
     return parsed;
   }
 
-  async set(tenantId: string, query: string, answer: unknown, metadata: Record<string, unknown> = {}): Promise<void> {
+  async set(tenantId: string, query: string, answer: unknown, metadata: Record<string, unknown> = {}, role?: string | string[] | null): Promise<void> {
     if (!this.enabled) return;
     await this.connect();
     if (!this.enabled) return;
@@ -118,7 +160,7 @@ class SemanticCache {
     const normalized = this.normalizeQuery(query);
     if (!normalized) return;
 
-    const scope = await this.getScopeHash(tenantId);
+    const scope = await this.getScopeHash(tenantId, role);
     if (!scope) return;
 
     const key = this.makeCacheKey(tenantId, scope, normalized);
@@ -176,9 +218,19 @@ export function getSemanticCache(): SemanticCache {
 }
 
 export const semanticCache = {
-  get: (tenantId: string, query: string) => getSemanticCache().get(tenantId, query),
-  set: (tenantId: string, query: string, answer: unknown, metadata: Record<string, unknown> = {}) =>
-    getSemanticCache().set(tenantId, query, answer, metadata),
+  /* `role` is threaded through on every read and write. This facade is what
+     `answer.ts` actually imports, so a signature here that omits it would
+     silently drop the role before it reached the key — exactly the cross-
+     privilege cache hit this was fixed to prevent. */
+  get: (tenantId: string, query: string, role?: string | string[] | null) =>
+    getSemanticCache().get(tenantId, query, role),
+  set: (
+    tenantId: string,
+    query: string,
+    answer: unknown,
+    metadata: Record<string, unknown> = {},
+    role?: string | string[] | null,
+  ) => getSemanticCache().set(tenantId, query, answer, metadata, role),
   invalidateScope: (tenantId: string) => getSemanticCache().invalidateScope(tenantId),
   getStats: (tenantId: string) => getSemanticCache().getStats(tenantId),
   enabled: () => !!process.env.REDIS_URL
