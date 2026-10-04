@@ -1,4 +1,22 @@
 import { z } from "zod"
+import { UnitStatus, UnitConfig, DocumentKind } from "@/lib/generated/prisma/enums"
+
+/**
+ * The Prisma enums are the source of truth for every closed set in this file.
+ *
+ * These were hand-written string unions that duplicated the schema, and every
+ * caller that passed a validated value to Prisma had to cast it — `status:
+ * p.status as any`, `config: r.config as any` — because `z.enum([...])` infers
+ * `"AVAILABLE" | "HOLD" | ...`, a plain string union that is *not* assignable to
+ * the generated `UnitStatus` type even though every member is spelled identically.
+ * The cast was the symptom of the duplication, so the fix is to stop duplicating:
+ * `z.enum` over the generated object's values infers the generated type directly,
+ * and a new enum member in the schema now reaches the validator on the next
+ * `prisma generate` instead of silently failing validation at runtime.
+ */
+const enumOf = <T extends Record<string, string>>(e: T) =>
+  z.enum(Object.values(e) as [T[keyof T], ...T[keyof T][]])
+
 export const projectSchema = z.object({
   name: z.string().trim().min(1).max(160),
   reraNo: z.string().trim().max(80).optional().or(z.literal("")),
@@ -19,13 +37,13 @@ export const unitSchema = z.object({
   projectId: z.string().min(1),
   floorId: z.string().optional().or(z.literal("")),
   unitNo: z.string().trim().min(1).max(40),
-  config: z.enum(["BHK1", "BHK2", "BHK3", "BHK4", "VILLA", "PLOT", "SHOP", "OFFICE"]).default("BHK2"),
+  config: enumOf(UnitConfig).default(UnitConfig.BHK2),
   area: z.coerce.number().min(0).optional().nullable(),
   carpetArea: z.coerce.number().min(0).optional().nullable(),
   builtUp: z.coerce.number().min(0).optional().nullable(),
   facing: z.string().trim().max(20).optional().or(z.literal("")),
   price: z.coerce.number().min(0).optional().nullable(),
-  status: z.enum(["AVAILABLE", "HOLD", "BOOKED", "SOLD"]).default("AVAILABLE"),
+  status: enumOf(UnitStatus).default(UnitStatus.AVAILABLE),
 })
 export const costSheetSchema = z.object({
   unitId: z.string().min(1),
@@ -36,14 +54,14 @@ export const costSheetSchema = z.object({
   otherCharges: z.record(z.string(), z.number()).optional(),
 })
 export const documentTemplateSchema = z.object({
-  kind: z.enum(["DEMAND_LETTER", "ALLOTMENT", "BOOKING_FORM", "RECEIPT", "POSSESSION"]),
+  kind: enumOf(DocumentKind),
   name: z.string().trim().min(1).max(160),
   bodyHtml: z.string().trim().min(1).max(50000),
   reraAligned: z.boolean().default(true),
 })
 export const updateUnitStatusSchema = z.object({
   unitId: z.string().min(1),
-  status: z.enum(["AVAILABLE", "HOLD", "BOOKED", "SOLD"]),
+  status: enumOf(UnitStatus),
   holdUntil: z.coerce.date().optional().nullable(),
 })
 export const webhookPayloadSchema = z.object({ source: z.string().min(1), externalId: z.string().min(1), payload: z.record(z.string(), z.any()) })
