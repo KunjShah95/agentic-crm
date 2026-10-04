@@ -8,6 +8,7 @@ import {
   KanbanSquare,
   KeyRound,
   LayoutDashboard,
+  MessagesSquare,
   Settings,
   Share2,
   Sparkles,
@@ -50,6 +51,12 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "organizations", label: "Organizations", icon: Building2 },
       { href: "deals", label: "Deals", icon: KanbanSquare },
       { href: "channel-partners", label: "Brokers", icon: Handshake, hint: "Channel partners" },
+      // The inbox is the omnichannel surface over Activity rows — calls, notes,
+      // leads and WhatsApp on one timeline. Listed unconditionally rather than
+      // gated on WHATSAPP_ENABLED: the route stays live with the WhatsApp channel
+      // and composer hidden, so parking the integration hides a tab rather than
+      // 404ing a link the nav still advertises.
+      { href: "inbox", label: "Inbox", icon: MessagesSquare },
     ],
   },
   {

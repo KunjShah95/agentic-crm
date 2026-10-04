@@ -13,6 +13,37 @@
   - Reports: `?format=pdf` on the reports export route + PDF/Excel buttons in the reports UI.
 - [x] **`.env.example`** documents `PUPPETEER_EXECUTABLE_PATH` for local dev.
 
+## WhatsApp integration status
+
+The integration is **parked by an env switch, not removed**. `WHATSAPP_ENABLED`
+defaults to `"false"`, and that one flag gates every entry point: the settings UI,
+the inbound webhook, the drain cron, and outbound send.
+
+Routes are **live regardless of the switch**, which is the part worth knowing:
+
+| Route | When `WHATSAPP_ENABLED=false` |
+| --- | --- |
+| `/<slug>/inbox` | Renders. The inbox is the omnichannel `Activity` timeline — calls, notes, leads and WhatsApp on one view — so it stays useful with WhatsApp off. The WhatsApp channel filter and the reply composer are hidden, and `?channel=WHATSAPP` degrades to "all". |
+| `/<slug>/settings/social` | Renders an "integration is currently disabled" notice with a link back to settings. The connection panel is not rendered. |
+
+Both routes were `notFound()` stubs while parked. They are now restored, and
+`tests/unit/shell-structure.test.ts` asserts that a restored route is not a stub
+and that no nav item points at one — parking a module should hide its tab, not
+leave a dead link in the sidebar.
+
+`Inbox` was re-added to `NAV_GROUPS` (Pipeline). `Sidebar`, `MobileNav` and the
+command palette all read that one array, so there is no second list to update.
+
+To re-enable: set `WHATSAPP_ENABLED="true"` and fill in `WHATSAPP_APP_ID`,
+`WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_TOKEN`,
+`WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_WABA_ID`. The panel's readiness check
+lists whatever is still missing. Inbound verification fails closed until
+`WHATSAPP_VERIFY_TOKEN` is set — see `docs/whatsapp-setup.md`.
+
+Broker scoping applies to the inbox reads *and* to outbound send: a BROKER only
+sees, and can only message, contacts attached to their own deals. See
+`docs/security/open-findings.md`.
+
 ## Search (2026-10-03)
 
 Search was broken four ways at once, and three of them were invisible to CI.

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { BadgeCheck, Copy, Plug, RefreshCw, Unlink, TriangleAlert, Wifi } from "lucide-react"
@@ -9,7 +10,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import {
-  getWhatsAppStatusAction,
   linkPlatformNumberAction,
   subscribeWhatsAppWebhookAction,
   testWhatsAppConnectionAction,
@@ -22,6 +22,7 @@ type Readiness = { ok: boolean; missing: string[]; configured: string[] }
 
 export function WhatsAppPanel({
   workspaceId,
+  slug,
   canManage,
   connection,
   readiness,
@@ -31,6 +32,8 @@ export function WhatsAppPanel({
   stats,
 }: {
   workspaceId: string
+  /** Workspace slug — routes are slug-addressed, `workspaceId` is a cuid. */
+  slug: string
   canManage: boolean
   connection: WhatsAppConnectionView | null
   readiness: Readiness
@@ -150,6 +153,16 @@ export function WhatsAppPanel({
           ) : null}
 
           <div className="flex flex-wrap gap-2">
+            {/* The setup checklist below ends by telling the admin to send a test
+                message and watch it arrive. That instruction is unactionable
+                without a way to reach the inbox, and the settings/social page
+                used to carry an "Open inbox" link that was commented out when
+                the route was parked. Restored alongside the route. */}
+            {connection ? (
+              <Button size="sm" variant="outline" render={<Link href={`/${slug}/inbox`} />}>
+                Open inbox
+              </Button>
+            ) : null}
             {canManage && !connection ? (
               <Button size="sm" onClick={handleLink} disabled={busy !== null || !readiness.ok}>
                 <Plug className="mr-1 size-3.5" />

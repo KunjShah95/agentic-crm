@@ -72,13 +72,25 @@ describe("navigation", () => {
     for (const href of new Set(hrefs)) {
       const page = path.join(APP, href, "page.tsx")
       expect(exists(path.relative(REPO_ROOT, page)), `/${href} has no page.tsx`).toBe(true)
+    }
+  })
 
-      // `inbox` is a deliberate `notFound()` stub while WhatsApp is parked.
-      // It must not be reintroduced to navigation — a nav item that 404s is
-      // worse than no nav item.
-      if (href === "inbox") {
-        expect(navConfig).not.toMatch(/href:\s*"inbox"/)
-      }
+  it("does not put a notFound() stub back into navigation", () => {
+    // `inbox` was a deliberate `notFound()` stub while WhatsApp was parked, and
+    // the nav item was removed with it. A nav item that 404s is worse than no
+    // nav item, so this asserts the stub is gone rather than re-adding an
+    // exclusion for whichever route happens to be disabled today: parking a
+    // module should hide its tab, not leave a dead link advertised.
+    const stubbed = routeDirs().filter((dir) => {
+      const file = `app/(app)/[workspace]/${dir}/page.tsx`
+      if (!exists(file)) return false
+      const src = read(file)
+      return /export default function \w+\(\)\s*\{\s*notFound\(\)/.test(src)
+    })
+    for (const dir of stubbed) {
+      expect(navConfig, `/${dir} is a notFound() stub but is in the nav`).not.toMatch(
+        new RegExp(`href:\\s*"${dir}"`),
+      )
     }
   })
 
@@ -90,11 +102,84 @@ describe("navigation", () => {
 
 describe("route feedback", () => {
   it("gives every workspace route a loading state", () => {
-    // `inbox` 404s by design and has no data to wait for.
-    const missing = routeDirs()
-      .filter((d) => d !== "inbox")
-      .filter((d) => !exists(`app/(app)/[workspace]/${d}/loading.tsx`))
+    // Settings is one segment with several sub-routes (`settings/members`,
+    // `settings/social`, …) sharing the parent boundary, so the parent
+    // `loading.tsx` covers them. `routeDirs()` only reads top-level directories,
+    // so sub-routes never appear in this list and need no file of their own.
+    const missing = routeDirs().filter((d) => !exists(`app/(app)/[workspace]/${d}/loading.tsx`))
     expect(missing, "routes with no loading.tsx").toEqual([])
+  })
+
+  it("restores a parked integration without leaving a notFound() stub behind", () => {
+    // WhatsApp was parked by commenting out two routes into `notFound()` stubs
+    // (`inbox` and `settings/social`) and removing the nav entry. The stubs were
+    // the trap: restoring the route meant deleting them, and leaving one behind
+    // would 404 a link the nav advertises. This asserts the restored shape so the
+    // next park/unpark does not have to rediscover it.
+    expect(exists("app/(app)/[workspace]/inbox/page.tsx")).toBe(true)
+    expect(exists("app/(app)/[workspace]/settings/social/page.tsx")).toBe(true)
+
+    for (const rel of [
+      "app/(app)/[workspace]/inbox/page.tsx",
+      "app/(app)/[workspace]/settings/social/page.tsx",
+    ]) {
+      const src = read(rel)
+      expect(src, `${rel} is still a notFound() stub`).not.toMatch(
+        /ROUTE DISABLED|ORIGINAL IMPLEMENTATION \(disabled\)/,
+      )
+      expect(src, `${rel} must be an async server component`).toMatch(/export default async function/)
+    }
+  })
+
+  it("keeps the WhatsApp master switch as the single gate on the integration", () => {
+    // Both restored routes are reachable while `WHATSAPP_ENABLED` is false — the
+    // switch hides the WhatsApp surface inside them rather than 404ing the route.
+    // That inversion is deliberate (the inbox is the omnichannel timeline, useful
+    // with or without WhatsApp) so it needs pinning: the alternative reading is
+    // "parked means unroutable", which reintroduces dead nav links.
+    const inbox = read("app/(app)/[workspace]/inbox/page.tsx")
+    expect(inbox).toMatch(/whatsappEnabled\(\)/)
+    expect(inbox).toMatch(/waOn && selected && replyContext/)
+
+    const settings = read("app/(app)/[workspace]/settings/social/page.tsx")
+    expect(settings).toMatch(/if \(!whatsappEnabled\(\)\)/)
+  })
+
+  it("gates every WhatsApp entry point on one helper, not scattered env reads", () => {
+    // The risk of an env-gated integration is drift: a second `process.env
+    // .WHATSAPP_ENABLED` read somewhere new is a path that disagrees with the
+    // master switch. So the rule is structural — the switch is read through
+    // `whatsappEnabled()` and nowhere else.
+    const roots = ["app", "components", "lib", "modules"]
+    const files: string[] = []
+    for (const root of roots) {
+      const walk = (dir: string) => {
+        for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+          if (e.name === "node_modules" || e.name.startsWith(".")) continue
+          const full = path.join(dir, e.name)
+          if (e.isDirectory()) walk(full)
+          else if (/\.tsx?$/.test(e.name)) files.push(full)
+        }
+      }
+      walk(path.join(REPO_ROOT, root))
+    }
+
+    // Bracket and optional-chain forms included deliberately. `process.env?.X` and
+    // `process.env["X"]` are both real shapes at a call site and both bypass the
+    // master switch as effectively as the plain read — an earlier version of this
+    // regex missed all three and would have reported a clean codebase while a
+    // bypass sat in it. `WHATSAPP_TOKEN` must NOT match, or the guard is useless.
+    const DIRECT_ENV_READ =
+      /process\.env(?:\?\.|\.|\[)\s*\(?\s*["']?WHATSAPP_ENABLED\b/
+    const direct = files.filter((f) => {
+      const rel = f.replace(/\\/g, "/")
+      if (rel.includes("modules/whatsapp/config")) return false
+      return DIRECT_ENV_READ.test(fs.readFileSync(f, "utf8"))
+    })
+    expect(
+      direct.map((f) => path.relative(REPO_ROOT, f)),
+      "WHATSAPP_ENABLED must only be read in modules/whatsapp/config",
+    ).toEqual([])
   })
 
   it("has a route-level error boundary for the workspace", () => {

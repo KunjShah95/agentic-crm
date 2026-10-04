@@ -90,4 +90,42 @@ test.describe("WhatsApp settings", () => {
     const body = await page.locator("body").innerText()
     expect(body).not.toContain("testws")
   })
+
+  test("the WhatsApp settings route renders rather than 404ing", async ({ page }) => {
+    // The route used to be a `notFound()` stub while the integration was parked.
+    // It is reachable now regardless of WHATSAPP_ENABLED — the switch hides the
+    // connection panel inside the page. So the assertion is that *some* known
+    // state renders, not that the panel is present: which of the two the page
+    // shows depends on an env var the e2e run does not control.
+    await loginAsDemo(page)
+    const base = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000"
+    const res = await page.goto(`${base}/${DEMO.workspace}/settings/social`)
+    expect(res?.status()).toBe(200)
+    await expect(
+      page.getByRole("heading", { name: /whatsapp/i }).first(),
+    ).toBeVisible()
+  })
+
+  test("the inbox route renders rather than 404ing", async ({ page }) => {
+    await loginAsDemo(page)
+    const base = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000"
+    const res = await page.goto(`${base}/${DEMO.workspace}/inbox`)
+    expect(res?.status()).toBe(200)
+    // The rail is present whether or not there are conversations, so this works
+    // against an empty seed too.
+    await expect(page.getByRole("heading", { name: /^inbox$/i }).first()).toBeVisible()
+  })
+
+  test("the Inbox nav item resolves to a real page", async ({ page }) => {
+    // Guards the failure mode the shell-structure unit test cannot see: a nav
+    // entry that renders but 404s. Reintroducing `inbox` to navigation while the
+    // route is a stub is exactly the regression being pinned here.
+    await loginAsDemo(page)
+    const link = page.getByRole("link", { name: /^inbox$/i }).first()
+    await expect(link).toBeVisible()
+    await link.click()
+    await page.waitForLoadState("domcontentloaded")
+    expect(page.url()).toContain("/inbox")
+    expect(page.url()).not.toContain("_not-found")
+  })
 })
