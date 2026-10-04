@@ -66,7 +66,23 @@ export function PricingSection({
   isAuthed: boolean
   workspaceSlug?: string | null
 }) {
-  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/contacts` : "/signup"
+  /**
+   * Where "Start free" actually goes.
+   *
+   * This was hardcoded to `/contact` while every other landing section built the
+   * same href from the session: `isAuthed && workspaceSlug ? /${slug}/dashboard :
+   * "/signup"` in `hero.tsx`, `site-header.tsx`, `wins.tsx` and `site-footer.tsx`.
+   * So the pricing table — the section where a visitor is closest to converting —
+   * was the one place the button did not do what its label said. An anonymous
+   * visitor clicked "Start free" and got a sales enquiry form; a signed-in one was
+   * sent to a contact form instead of back into the product they already had a
+   * workspace for. `workspaceSlug` was passed in from `landing-client.tsx` and
+   * never read, which is the tell that this was left behind rather than chosen.
+   *
+   * `/contact` still has its own entry points — the header and footer links to it
+   * directly — so nothing becomes unreachable by fixing this.
+   */
+  const cta = isAuthed && workspaceSlug ? `/${workspaceSlug}/dashboard` : "/signup"
 
   return (
     <section id="pricing" className="border-t border-border/70 bg-background">
@@ -152,17 +168,22 @@ export function PricingSection({
               <Button
                 variant="brand"
                 className="mt-7 w-full gap-1.5"
-                 render={
-                   <Link
-                     href={cta}
-                     onClick={() =>
-                       !isAuthed &&
-                       trackEvent(GTM_EVENTS.pricingStartFree, { plan: p.name })
-                     }
-                   />
-                 }
-               >
-                 Start free
+                render={
+                  <Link
+                    href={cta}
+                    /* Only the anonymous path is tracked. The event is named
+                       `pricingStartFree`, and for an already-signed-in visitor
+                       this button no longer starts a trial — it re-enters an
+                       existing workspace. Counting those inflates the signup
+                       number with users who signed up earlier. */
+                    onClick={() =>
+                      !isAuthed &&
+                      trackEvent(GTM_EVENTS.pricingStartFree, { plan: p.name })
+                    }
+                  />
+                }
+              >
+                {isAuthed ? "Open your workspace" : "Start free"}
                 <ArrowRight
                   className="size-4 transition-transform group-hover:translate-x-0.5"
                   aria-hidden
