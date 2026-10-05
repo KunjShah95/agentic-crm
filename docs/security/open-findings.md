@@ -67,6 +67,62 @@ would still pass. That residual risk is exactly what RLS would close.
 describing the system as defence-in-depth. What should not persist is a README
 claiming a backstop that is not deployed — that part is now fixed.
 
+### Correction — measured against the live database (2026-10-04)
+
+The finding above says RLS is "not deployed for any CRM table". Read literally
+that is true, and it is also misleading in a way that matters. Querying the live
+database:
+
+```sql
+SELECT relrowsecurity, count(*) FROM pg_class c
+  JOIN pg_namespace n ON n.oid = c.relnamespace
+ WHERE n.nspname = 'public' AND c.relkind = 'r' GROUP BY 1;
+--  relrowsecurity | count
+--  true           |    43      ← every table
+--  false          |     0
+```
+
+```sql
+SELECT tablename, policyname FROM pg_policies WHERE schemaname = 'public';
+--  12 policies, all on RagChunk / RagDocument / RagFeedback / RagQueryLog
+```
+
+So:
+
+- **All 43 tables already have `relrowsecurity = true`.** That is the Supabase
+  default, not something this schema did.
+- **Only the 4 RAG tables have policies.** `Contact`, `Deal`, `Unit` and the
+  other 27 tenant tables have RLS enabled and **zero policies**, which means they
+  are *already deny-all* for any role subject to RLS.
+- **The app reads them anyway** because `DATABASE_URL` connects as `postgres`,
+  which carries `BYPASSRLS` **and owns every table** — and a table owner bypasses
+  its own RLS regardless of policies. Both attributes were confirmed against
+  `pg_roles` (`rolbypassrls = true`) and `pg_tables` (`tableowner = postgres`).
+- No `FORCE ROW LEVEL SECURITY` anywhere.
+
+**This inverts the shape of the fix.** It is not "enable RLS" — RLS is already
+enabled. It is:
+
+1. write the missing policies (done — `prisma/migrations/20261004120000_rls_policies`),
+2. stop connecting as a role that ignores them.
+
+Step 2 is a credential change and is irreversible in the sense that matters: get
+it wrong and every tenant query returns zero rows. `scripts/enable-rls.ts`
+verifies the precondition that makes it safe — that `app.current_tenant_id` is
+actually set per request — and refuses to proceed otherwise. Current status:
+
+```
+[FAIL] current_user lacks BYPASSRLS          postgres carries BYPASSRLS
+[FAIL] all tenant tables have a policy       31 missing (migration not yet applied)
+[PASS] GUC round-trip                        helper resolved cmtjp855e0002is9sqdqok5wq
+[PASS] tenant predicate returns rows         6 contacts visible
+[FAIL] current_user does not own the tables  postgres owns them — owner bypasses own RLS
+```
+
+The GUC round-trip passing is the encouraging part: `private.current_tenant_id()`
+already resolves correctly when the GUC is set, so the remaining work is setting
+it per request in `lib/db.ts` and switching the role.
+
 ---
 
 ## MEDIUM-HIGH — `brokerScopeFilter` is applied to 3 of ~10 read paths

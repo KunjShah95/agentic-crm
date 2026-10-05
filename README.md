@@ -136,19 +136,38 @@ deployed, and this section exists so the difference is not rediscovered.
 | --- | --- |
 | App gate — `requireWorkspaceMember` | Deployed on every server action and route. |
 | Query scoping — `workspaceId` in the `where` | Deployed, and **mechanically enforced** by `tests/unit/tenant-scope-guard.test.ts`, which scans every `db.<tenantModel>.*` call site in `app/`, `lib/` and `modules/`. |
-| Postgres RLS | **Not deployed for any CRM table.** |
+| Postgres RLS | **Enabled on every table, but has no policies for CRM tables.** |
+
+The RLS row needs unpacking, because the naive reading of it is wrong in both
+directions. Measured against the live database:
+
+- All 43 tables in `public` have `relrowsecurity = true`. That is the Supabase
+  default, not something this schema did.
+- Only the four `Rag*` tables have policies. `Contact`, `Deal`, `Unit` and the
+  rest have RLS on and **zero policies**, which means they are already deny-all
+  for any role subject to RLS.
+- The app reads them regardless, because `DATABASE_URL` connects as `postgres`,
+  which has `BYPASSRLS` and owns every table — and an owner bypasses its own RLS.
+
+So the missing work is *policies*, plus a role that respects them — not an
+`ALTER TABLE`. `prisma/migrations/20261004120000_rls_policies` writes the 31
+policies (safe to apply: policies are inert for a `BYPASSRLS` role), and
+`scripts/enable-rls.ts` verifies the tenant GUC round-trips before the role is
+switched.
 
 Why the third does not count, in detail:
 
 - `prisma/migrations/20260913000001_enable_rag_rls` enables RLS on exactly four
-  tables — `RagDocument`, `RagChunk`, `RagFeedback`, `RagQueryLog`. No CRM table
-  has RLS or any policy.
-- Even those four policies would not engage. They read the tenant from
+  tables — `RagDocument`, `RagChunk`, `RagFeedback`, `RagQueryLog`. Every other
+  table has RLS enabled with no policy at all.
+- Those four policies would not engage either. They read the tenant from
   `auth.jwt()` or an `app.current_tenant_id` GUC, and nothing sets one:
   `lib/db.ts` builds a single long-lived `PrismaClient` with no per-request
   `set_config`, and there are no `set_config` callers in the codebase.
 - `.env.example` documents `DATABASE_URL` as the Supabase `postgres` role, which
-  carries `BYPASSRLS`, so RLS is skipped whether or not a policy exists.
+  carries `BYPASSRLS` **and owns every table**, so policies are skipped whether
+  or not they exist. An owner bypasses its own RLS; nothing sets `FORCE ROW LEVEL
+  SECURITY`.
 
 **So a forgotten `workspaceId` is an immediate, unrecoverable cross-tenant read
 or write.** That is why scoping is enforced by tests rather than left to review:
@@ -159,10 +178,31 @@ or write.** That is why scoping is enforced by tests rather than left to review:
 | `tests/unit/broker-scope-registry.test.ts` | Every tenant read path has a recorded broker-visibility decision. |
 | `tests/unit/broker-scope-reads.test.ts` | The broker predicate actually reaches Prisma, and is absent for other roles. |
 
-To actually deploy RLS takes two changes, not one: policies per table **and** a
-non-`BYPASSRLS` application role with a per-request `set_config` on a
-transaction. Doing the first alone is worse than doing nothing — it returns
-zero rows for every query while appearing to work. Tracked as the HIGH finding in
+Deploying the third layer takes three changes, and the first is already written:
+
+1. **Policies** — `prisma/migrations/20261004120000_rls_policies`. 31 policies
+   for the 25 tenant tables carrying `workspaceId`, plus 6 child tables
+   (`Tower`, `Floor`, `PaymentPlan`, `PaymentMilestone`, `ContactTag`, `DealTag`)
+   that reach a tenant through a parent. Safe to apply now: policies are inert
+   for the `BYPASSRLS` role the app still uses.
+2. **Set the tenant per request** — `lib/db.ts` must issue
+   `set_config('app.current_tenant_id', …)` on the transaction, which it does
+   not today. Until this exists, switching the role returns zero rows for every
+   tenant query.
+3. **A role that respects RLS** — `estate360_app`, created `NOBYPASSRLS` and
+   without `LOGIN` (the operator creates the credential). Point `DATABASE_URL`
+   at it.
+
+`scripts/enable-rls.ts` gates step 3: it refuses to proceed unless the current
+role lacks `BYPASSRLS`, does not own the tables, every tenant table has a policy,
+and the GUC round-trips against real rows.
+
+```bash
+npx tsx scripts/enable-rls.ts --check     # report only, safe anywhere
+npx tsx scripts/enable-rls.ts --enable    # gated on the checks above
+```
+
+Tracked as the HIGH finding in
 [`docs/security/open-findings.md`](docs/security/open-findings.md).
 
 ## RAG configuration
