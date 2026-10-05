@@ -625,63 +625,11 @@ export const reindexTenant = async ({ tenantId }: { tenantId: string }) => {
   return { queued };
 };
 
-export const listDocuments = async ({ tenantId }: { tenantId: string }) => {
-  const docs = await db.ragDocument.findMany({
-    where: { tenantId },
-    select: {
-      id: true,
-      title: true,
-      modality: true,
-      status: true,
-      lang: true,
-      version: true,
-      externalId: true,
-      chunkCount: true,
-      error: true,
-      department: true,
-      docType: true,
-      tags: true,
-      authority: true,
-      confidential: true,
-      allowedRoles: true,
-      syncSource: true,
-      syncCursor: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
-  return docs;
-};
-
-export const getDocument = async ({ tenantId, documentId }: { tenantId: string; documentId: string }) => {
-  const doc = await db.ragDocument.findFirst({
-    where: { tenantId, id: documentId },
-    select: {
-      id: true,
-      title: true,
-      modality: true,
-      status: true,
-      lang: true,
-      version: true,
-      externalId: true,
-      chunkCount: true,
-      error: true,
-      department: true,
-      docType: true,
-      tags: true,
-      authority: true,
-      confidential: true,
-      allowedRoles: true,
-      syncSource: true,
-      syncCursor: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  });
-  if (!doc) throw new AppError("NOT_FOUND", "Document not found", 404);
-  return doc;
-};
+/* Both live in ./documents now, which needs only `db` — see the note there for why
+   a read path should not drag the parser graph in behind it. Re-exported so the
+   REST routes under `app/api/v1/tenants/[tenantId]/rag/*` keep importing them from
+   here and nothing outside this module has to change. */
+export { listDocuments, getDocument } from "./documents";
 
 export const deleteDocument = async ({ tenantId, documentId }: { tenantId: string; documentId: string }) => {
   const doc = await db.ragDocument.findFirst({ where: { tenantId, id: documentId }, select: { id: true } });

@@ -193,12 +193,24 @@ class SemanticCache {
     return `rag:cache:${tenantId}:${scope}:${variant ? `${variant}:` : ""}${queryHash}`;
   }
 
-  async get(
+  /**
+   * Read a cached value.
+   *
+   * Generic so a caller can state what it stored, matching `getCached<T>` in
+   * ./cache. It was `Promise<unknown | null>`, which meant `answerQuery` — the
+   * only caller — spread an `unknown` and got a return type with none of the
+   * answer's fields on it, so every property access downstream needed a cast.
+   *
+   * The single cast is at the JSON boundary, where the stored shape is genuinely
+   * only known by whoever wrote it. Callers are responsible for asking for the
+   * right type; the alternative was asking them to cast the *answer*.
+   */
+  async get<T = unknown>(
     tenantId: string,
     query: string,
     role?: string | string[] | null,
     variant = ""
-  ): Promise<unknown | null> {
+  ): Promise<T | null> {
     if (!this.enabled) return null;
     await this.connect();
     if (!this.enabled) return null;
@@ -238,7 +250,7 @@ class SemanticCache {
 
        The exact-answer cache in `cache.ts` stores and returns its value bare, so
        this now matches it: `set`'s `answer` argument is what `get` yields. */
-    return parsed.answer;
+    return parsed.answer as T;
   }
 
   async set(
@@ -323,13 +335,20 @@ export const semanticCache = {
      Both are positional-optional, which is why the comment exists: dropping
      either from this facade would not fail to compile at the call sites, it
      would fail to *discriminate* in the key, and the only symptom would be a
-     user in the wrong language with a confidently cited answer. */
-  get: (
+     user in the wrong language with a confidently cited answer.
+
+     `get` is generic so the caller's type argument reaches the instance method.
+     An arrow property cannot re-expose a generic on its own, so this forwards it
+     explicitly — without that, `semanticCache.get<AnswerResult>(...)` fails to
+     compile while `getSemanticCache().get<AnswerResult>(...)` works, which is the
+     kind of asymmetry that gets "fixed" by deleting the type argument at the call
+     site and casting the answer instead. */
+  get: <T = unknown>(
     tenantId: string,
     query: string,
     role?: string | string[] | null,
     variant = ""
-  ) => getSemanticCache().get(tenantId, query, role, variant),
+  ): Promise<T | null> => getSemanticCache().get<T>(tenantId, query, role, variant),
   set: (
     tenantId: string,
     query: string,

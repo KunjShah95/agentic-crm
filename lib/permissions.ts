@@ -31,6 +31,31 @@ export function canManageBilling(role: Role) {
   return role === "OWNER" || role === "ADMIN"
 }
 
+/**
+ * Roles that may change the shared knowledge-base corpus.
+ *
+ * Membership plus an explicit list, deliberately **not** `minRole`. `ROLE_RANK`
+ * puts VIEWER, BROKER, MEMBER and SALES all at 0, so
+ * `requireWorkspaceMember(ws, user, "MEMBER")` admits a VIEWER — the rank
+ * comparison cannot express "a human who works here, but not a read-only
+ * account". That is the same defect recorded as the VIEWER-can-mutate finding in
+ * `docs/security/open-findings.md`, and it is why this is a list.
+ *
+ * Why the corpus needs a gate at all when reads do not: every document here is
+ * retrieved by *everybody's* answers. An upload changes what the next question
+ * from any member will be answered with, so it is a shared-state write rather
+ * than a personal one — the same category as deleting a deal.
+ *
+ * SALES is included because the person who holds a project's RERA registration
+ * or its approved pricing note is routinely a sales role, and excluding them
+ * would make the feature something only an admin can use.
+ */
+const CORPUS_WRITERS: readonly Role[] = ["OWNER", "ADMIN", "MEMBER", "SALES"]
+
+export function canWriteCorpus(role: Role) {
+  return CORPUS_WRITERS.includes(role)
+}
+
 /*
  * No `canManageInventory` / `canViewInventory` here. Both were defined and never
  * called, and they were the only two members of this group that did not gate

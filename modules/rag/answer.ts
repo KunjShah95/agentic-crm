@@ -182,6 +182,54 @@ interface AnswerQueryOptions {
   context?: string | null;
 }
 
+/**
+ * What every `answerQuery` caller gets, whichever path produced it.
+ *
+ * Declared because the function had three return statements with three different
+ * inferred shapes: the fresh path builds the full object literal, while the two
+ * cache hits return `{ ...cached, cached: true, intent, scope }` where `cached`
+ * came from `getCached` with no type argument — so `T` inferred as `unknown`, the
+ * spread contributed nothing, and TypeScript saw a union in which `citations` and
+ * `answer` simply did not exist on the cached variants.
+ *
+ * That is not a cosmetic problem. It forced every caller reaching for
+ * `result.citations` to cast, and a cast there is a cast on the *answer*, which
+ * is the one value in this pipeline that must not be misread.
+ *
+ * The cached value genuinely does have these fields: `setCached` stores the same
+ * object the fresh path returns, so the annotation describes runtime rather than
+ * widening it. `warning` and `faithfulness` are optional because the refusal path
+ * genuinely omits them — a refused answer has no claims to check.
+ */
+export interface AnswerResult {
+  answer: string;
+  refused: boolean;
+  citations: Array<{
+    source: number;
+    documentId: string;
+    title?: string | null;
+    department?: string | null;
+    metadata?: Record<string, unknown>;
+    confidence: number;
+  }>;
+  warning?: { type: string; claims: unknown[] } | null;
+  faithfulness?: number;
+  confidence: { topConfidence: number; threshold: number; passed: boolean };
+  providerUsed?: string;
+  scope: string | null;
+  intent: string;
+  attempts?: number;
+  chunks?: Array<{
+    documentId: string;
+    content: string;
+    score?: number;
+    metadata?: Record<string, unknown>;
+  }>;
+  /** Present and true only on a cache hit. */
+  cached?: boolean;
+  cacheType?: string;
+}
+
 export const answerQuery = async ({
   tenantId,
   userId,
@@ -191,7 +239,7 @@ export const answerQuery = async ({
   filter = {},
   role = null,
   context = null,
-}: AnswerQueryOptions) => {
+}: AnswerQueryOptions): Promise<AnswerResult> => {
   const scopedFilter = enforceScope(filter, role);
   const intent = routeIntent(query, context || "");
   const effectiveQuery = await rewriteQuery(query, context);
@@ -266,17 +314,21 @@ export const answerQuery = async ({
     role,
     lang: language.tag,
   });
-  const cached = await getCached(key);
+  const cached = await getCached<AnswerResult>(key);
   if (cached) return { ...cached, cached: true, intent, scope };
 
-  let semanticResult = null;
+  /* Annotated, not left to inference. `let x = null` widens to `any`, so the
+     semantic hit below was spreading an `any` and returning an object TypeScript
+     believed had only the four literal fields — which is how a cache hit ended up
+     typed as not having an `answer` on it. */
+  let semanticResult: AnswerResult | null = null;
   if (semanticCache.enabled()) {
     try {
       /* The tag is passed as `variant` rather than being folded into the query
          text: this cache matches on embedding similarity, so appending a
          language marker to the string would put a non-linguistic token into the
          vector and shift every score. See `makeCacheKey`. */
-      semanticResult = await semanticCache.get(
+      semanticResult = await semanticCache.get<AnswerResult>(
         tenantId,
         enhancedQuery,
         role,
