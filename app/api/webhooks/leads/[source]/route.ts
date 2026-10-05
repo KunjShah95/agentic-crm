@@ -6,7 +6,24 @@ import { hitRateLimit, getClientIp } from "@/modules/web-contact/rate-limit"
 
 export const dynamic = "force-dynamic"
 
-type RouteParams = { source: string } | Promise<{ source: string }>
+/**
+ * Next 16 hands route params in as a Promise, and its generated route types
+ * require it: `ParamCheck<RouteContext>` is only satisfied when `params` is
+ * assignable to `Promise<any>`.
+ *
+ * This was `{ source: string } | Promise<{ source: string }>` — a union written to
+ * be liberal about what callers might pass. Runtime-wise `await` handles both, so
+ * it worked; but the union is not assignable to `Promise<any>`, so it fails the
+ * generated check, and `npm run build` does not complete.
+ *
+ * Worth naming because the union reads as robustness and is actually the opposite:
+ * it turns a framework invariant off rather than satisfying it. The same shape
+ * appears in `modules/rag/validation.ts`, where `z.string().uuid().or(z.string().min(1))`
+ * validated nothing for the same reason.
+ *
+ * A one-line signature, so the build gate that would have caught it can exist.
+ */
+type RouteParams = Promise<{ source: string }>
 
 const KNOWN_SOURCES = new Set([
   "ninety_nine_acres", "99acres", "magic_bricks", "magicbricks", "housing",
