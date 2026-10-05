@@ -8,6 +8,7 @@ import {
   KanbanSquare,
   KeyRound,
   LayoutDashboard,
+  Library,
   MessagesSquare,
   Settings,
   Share2,
@@ -74,6 +75,11 @@ export const NAV_GROUPS: NavGroup[] = [
       { href: "tasks", label: "Tasks", icon: CheckSquare },
       { href: "reports", label: "Reports", icon: BarChart3 },
       { href: "ai", label: "AI", icon: Sparkles, hint: "Forecasts & scoring" },
+      /* Separate from "AI" on purpose. That entry answers from CRM rows; this one
+         answers from the workspace's own documents and cites them. Same question
+         shape, different corpus, and a user needs to know which one they are
+         looking at before they trust the answer. */
+      { href: "knowledge", label: "Knowledge base", icon: Library, hint: "Ask your documents" },
       { href: "association", label: "Association", icon: Share2 },
     ],
   },
