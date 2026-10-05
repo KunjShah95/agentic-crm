@@ -7,7 +7,11 @@ import { AppError, PermissionError } from "@/lib/errors"
 import { canManageData, canWriteCorpus, resolveViewerScope } from "@/lib/permissions"
 import { revalidatePath } from "next/cache"
 import { answerQuery } from "@/modules/rag/answer"
-import { deleteDocument, ingestDocument, listDocuments } from "@/modules/rag/ingest"
+/* `deleteDocument` and `ingestDocument` are write paths and live in ./ingest with
+   the parser graph they need. `listDocuments` comes from ./documents, which needs
+   only `db`. */
+import { deleteDocument, ingestDocument } from "@/modules/rag/ingest"
+import { listDocuments } from "@/modules/rag/documents"
 import { submitFeedback } from "@/modules/rag/feedback"
 import { querySchema } from "@/modules/rag/validation"
 

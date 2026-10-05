@@ -2,7 +2,10 @@ import { notFound } from "next/navigation"
 import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
 import { canManageData, canWriteCorpus, resolveViewerScope } from "@/lib/permissions"
-import { listDocuments } from "@/modules/rag/ingest"
+/* From ./documents, not ./ingest — this page only lists rows, and `ingest.ts`
+   transitively imports the parser graph (PDF/DOCX/image/audio/video/ffmpeg) plus
+   queue and pgvector. See the note in modules/rag/documents.ts. */
+import { listDocuments } from "@/modules/rag/documents"
 import type { KnowledgeDocument } from "@/lib/actions/knowledge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
