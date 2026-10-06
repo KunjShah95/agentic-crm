@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/worker/leads",
+      "schedule": "*/5 * * * *",
+      "method": "POST",
+      "headers": {
+        "x-estate360-worker-key": "REPLACE_WITH_WORKER_SECRET"
+      },
+      "body": "{\"limit\":50}"
+    }
+  ]
+}

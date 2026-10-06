@@ -54,3 +54,94 @@ export function collectionForecast(
   }
   return { due30: Math.round(due30), overdue: Math.round(overdue), nextDueDate: nextDue ? nextDue.toISOString().slice(0, 10) : null }
 }
+
+export interface StageBreakdown {
+  stage: string
+  count: number
+  pipeline: number
+  weighted: number
+}
+
+export function dealFunnel(
+  deals: { bookingStage?: string | null; value?: number | null }[],
+): StageBreakdown[] {
+  const map = new Map<string, { count: number; pipeline: number; weighted: number }>()
+  for (const d of deals) {
+    const stage = d.bookingStage ?? "UNKNOWN"
+    const v = d.value ?? 0
+    const prob = stageProbability(stage)
+    const entry = map.get(stage) ?? { count: 0, pipeline: 0, weighted: 0 }
+    entry.count += 1
+    entry.pipeline += v
+    entry.weighted += v * prob
+    map.set(stage, entry)
+  }
+  return Array.from(map.entries())
+    .map(([stage, { count, pipeline, weighted }]) => ({
+      stage,
+      count,
+      pipeline: Math.round(pipeline),
+      weighted: Math.round(weighted),
+    }))
+    .sort((a, b) => b.weighted - a.weighted)
+}
+
+export interface TopDeal {
+  id: string
+  title: string
+  stage: string
+  value: number
+  weighted: number
+}
+
+export function topDeals(
+  deals: { id?: string; title?: string; bookingStage?: string | null; value?: number | null }[],
+  limit = 5,
+): TopDeal[] {
+  return deals
+    .map((d) => {
+      const v = d.value ?? 0
+      const prob = stageProbability(d.bookingStage)
+      return {
+        id: d.id ?? "",
+        title: d.title ?? "Untitled",
+        stage: d.bookingStage ?? "UNKNOWN",
+        value: Math.round(v),
+        weighted: Math.round(v * prob),
+      }
+    })
+    .sort((a, b) => b.weighted - a.weighted)
+    .slice(0, limit)
+}
+
+export interface TimelineEntry {
+  id: string
+  amount: number
+  dueDate: string
+  status: string
+  dealTitle?: string
+}
+
+export function collectionsTimeline(
+  payments: { id?: string; status: string; amount: number; dueDate?: string | Date | null; dealTitle?: string }[],
+  now: Date = new Date(),
+  days = 30,
+): TimelineEntry[] {
+  const cutoff = now.getTime() + days * 24 * 60 * 60 * 1000
+  return payments
+    .filter((p) => {
+      if (p.status === "PAID") return false
+      const due = p.dueDate ? new Date(p.dueDate) : null
+      if (!due) return false
+      const t = due.getTime()
+      return t >= now.getTime() && t <= cutoff
+    })
+    .map((p) => ({
+      id: p.id ?? "",
+      amount: Math.round(p.amount),
+      dueDate: new Date(p.dueDate!).toISOString().slice(0, 10),
+      status: p.status,
+      dealTitle: p.dealTitle,
+    }))
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+}

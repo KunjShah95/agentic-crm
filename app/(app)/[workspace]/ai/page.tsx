@@ -3,7 +3,7 @@ import { db } from "@/lib/db"
 import { auth } from "@/lib/auth"
 import { brokerScopeFilter, resolveViewerScope } from "@/lib/permissions"
 import { getReportsSnapshot } from "@/modules/reports/queries"
-import { revenueForecast, collectionForecast } from "@/modules/ai/forecast"
+import { revenueForecast, collectionForecast, dealFunnel, topDeals, collectionsTimeline } from "@/modules/ai/forecast"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
@@ -37,14 +37,19 @@ export default async function AIPage({
   // the whole tenant's revenue is indistinguishable from a big month.
   const dealScope = brokerScopeFilter(scope.role, scope.brokerId)
   const [deals, payments] = await Promise.all([
-    db.deal.findMany({ where: { workspaceId: ws.id, ...dealScope }, select: { bookingStage: true, value: true } }),
+    db.deal.findMany({ where: { workspaceId: ws.id, ...dealScope }, select: { id: true, title: true, bookingStage: true, value: true } }),
     db.payment.findMany({
       where: { workspaceId: ws.id, deal: { workspaceId: ws.id, ...dealScope } },
-      select: { status: true, amount: true, dueDate: true },
+      select: { id: true, status: true, amount: true, dueDate: true, deal: { select: { title: true } } },
     }),
   ])
   const rev = revenueForecast(deals)
   const coll = collectionForecast(payments)
+  const funnel = dealFunnel(deals)
+  const top = topDeals(deals)
+  const timeline = collectionsTimeline(
+    payments.map((p) => ({ ...p, dealTitle: p.deal.title })),
+  )
   const snapshot = await getReportsSnapshot(scope, { projectId: undefined })
 
   const askResult = q ? await askPipeline(scope, q) : null
@@ -91,6 +96,95 @@ export default async function AIPage({
           </CardContent>
         </Card>
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Deal Funnel</CardTitle>
+            <CardDescription>Deals by stage with weighted value</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {funnel.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No deals in pipeline.</p>
+            ) : (
+              funnel.map((row) => {
+                const maxWeighted = Math.max(...funnel.map((r) => r.weighted), 1)
+                const pct = Math.round((row.weighted / maxWeighted) * 100)
+                return (
+                  <div key={row.stage} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-medium">{row.stage}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {row.count} deal{row.count !== 1 ? "s" : ""} · ₹{row.pipeline.toLocaleString("en-IN")} · weighted ₹{row.weighted.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                    <div className="h-2 w-full rounded-full bg-muted">
+                      <div className="h-2 rounded-full bg-brand" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2"><TrendingUp className="size-4 text-brand" /> Top Deals</CardTitle>
+            <CardDescription>Top 5 by weighted value</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {top.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No deals in pipeline.</p>
+            ) : (
+              top.map((deal, i) => (
+                <div key={deal.id} className="flex items-center justify-between gap-3 text-sm">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-medium text-muted-foreground tabular-nums">
+                      {i + 1}
+                    </span>
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{deal.title}</div>
+                      <div className="text-xs text-muted-foreground">{deal.stage}</div>
+                    </div>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="font-medium tabular-nums">₹{deal.weighted.toLocaleString("en-IN")}</div>
+                    <div className="text-xs text-muted-foreground tabular-nums">₹{deal.value.toLocaleString("en-IN")}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Wallet className="size-4 text-brand" /> Collections Timeline</CardTitle>
+          <CardDescription>Upcoming due dates (next 30 days)</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {timeline.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No upcoming collections in the next 30 days.</p>
+          ) : (
+            timeline.map((entry) => (
+              <div key={entry.id} className="flex items-center justify-between gap-3 text-sm">
+                <div className="min-w-0">
+                  <div className="truncate font-medium">{entry.dealTitle ?? "Payment"}</div>
+                  <div className="text-xs text-muted-foreground">{entry.dueDate}</div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="font-medium tabular-nums">₹{entry.amount.toLocaleString("en-IN")}</div>
+                  <Badge variant={entry.status === "OVERDUE" ? "destructive" : "secondary"} className="text-[10px]">
+                    {entry.status}
+                  </Badge>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

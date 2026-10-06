@@ -21,9 +21,33 @@ const SOURCE_POINTS: Record<string, number> = {
   GOOGLE: 15,
   NINETY_NINE_ACRES: 12,
   MAGIC_BRICKS: 12,
+  INDIAMART: 12,
   HOUSING: 10,
+  JUSTDIAL: 10,
   NOBROKER: 8,
+  HUBSPOT: 8,
+  ZOHO: 8,
+  SALESFORCE: 8,
+  ORACLE_CX: 8,
+  ZAPIER: 6,
   PABBLY: 5,
+}
+
+/**
+ * Enterprise fallback: a custom company slug (`ACME_CRM`) has no tuned
+ * weight yet, so it scores like a generic aggregator pipe rather than zero —
+ * zero would silently deprioritize every new partner's leads until someone
+ * tunes the table. Known sources keep exact weights above.
+ */
+export const ENTERPRISE_SOURCE_POINTS = 6
+
+export function sourcePoints(source?: string): number {
+  const key = (source ?? "").toUpperCase()
+  if (key in SOURCE_POINTS) return SOURCE_POINTS[key]
+  // Any non-empty canonical source (ACME_CRM, LOBELLO_ESTATES, …) is a real
+  // integration partner, not junk — give it the pipe default. Empty stays 0.
+  if (key && key !== "WEBSITE") return ENTERPRISE_SOURCE_POINTS
+  return SOURCE_POINTS[key] ?? 0
 }
 
 const INTENT_POINTS: Record<string, number> = {
@@ -40,7 +64,7 @@ export function calcLeadScore(input: LeadScoreInput): number {
   let score = BASE
   const source = (input.source ?? "").toUpperCase()
   const intent = (input.intent ?? "").toUpperCase()
-  score += SOURCE_POINTS[source] ?? 0
+  score += sourcePoints(source)
   score += INTENT_POINTS[intent] ?? 0
   if (input.config) score += 10
   if ((input.budgetMax ?? 0) > 0) score += 10

@@ -210,8 +210,10 @@ export function LeadIngestSettings({
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Send as header <code className="font-mono" data-mono="id">x-estate360-ingest-key</code>. Valid sources:{" "}
-              meta, facebook, 99acres, magicbricks, housing, nobroker, google, website, pabbly.
+              Send as header <code className="font-mono" data-mono="id">x-estate360-ingest-key</code>. Known sources:{" "}
+              meta, 99acres, magicbricks, housing, nobroker, google, website, pabbly, zapier, indiamart, justdial,
+              hubspot, zoho — plus any company slug (e.g. <code className="font-mono">acme-crm</code>) with zero code
+              change. Full guide: <code className="font-mono">docs/integrations/lead-ingest.md</code>.
             </p>
           </div>
 

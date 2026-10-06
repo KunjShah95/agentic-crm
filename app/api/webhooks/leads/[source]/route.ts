@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/db"
-import { processLead } from "@/modules/leadIngest/worker"
+import { enqueueLead } from "@/modules/leadIngest/queue"
 import { requireIngressAuth } from "@/modules/leadIngest/ingress"
+import { isAcceptedSourceSlug, normalizeSlug } from "@/modules/leadIngest/sources"
 import { hitRateLimit, getClientIp } from "@/modules/web-contact/rate-limit"
 
 export const dynamic = "force-dynamic"
@@ -25,20 +26,20 @@ export const dynamic = "force-dynamic"
  */
 type RouteParams = Promise<{ source: string }>
 
-const KNOWN_SOURCES = new Set([
-  "ninety_nine_acres", "99acres", "magic_bricks", "magicbricks", "housing",
-  "nobroker", "meta", "facebook", "google", "website", "walk_in", "pabbly",
-])
-
 async function resolveSource(params: RouteParams): Promise<string> {
   const r = await params
-  return (r?.source ?? "").toLowerCase().trim()
+  return normalizeSlug(r?.source)
 }
 
 /**
  * Lead ingress for server-to-server callers (Meta lead forms, portal
- * exporters, Zapier). Authenticated, rate limited, workspace-resolved, then
- * materializes the lead.
+ * exporters, Zapier, enterprise CRMs). Authenticated, rate limited,
+ * workspace-resolved, then materializes the lead.
+ *
+ * Accepted slugs come from `modules/leadIngest/sources`: known portals plus
+ * any well-formed company slug (`acme-crm`, `lobello_estates`), so a new
+ * partner onboards with zero code change. Malformed slugs 400 before any
+ * DB work.
  *
  * The workspace slug in the query is a routing hint, not a credential — it is
  * visible in public micro-site URLs. The `x-estate360-ingest-key` header is
@@ -51,8 +52,8 @@ async function resolveSource(params: RouteParams): Promise<string> {
  */
 export async function POST(req: Request, { params }: { params: RouteParams }) {
   const source = await resolveSource(params)
-  if (!KNOWN_SOURCES.has(source)) {
-    return NextResponse.json({ error: `Unknown source: ${source}` }, { status: 400 })
+  if (!isAcceptedSourceSlug(source)) {
+    return NextResponse.json({ error: `Unknown source: ${source || "(empty)"}. Use a company slug like acme-crm.` }, { status: 400 })
   }
 
   const url = new URL(req.url)
@@ -110,18 +111,14 @@ export async function POST(req: Request, { params }: { params: RouteParams }) {
   }
 
   try {
+    // Enqueue for async processing — the worker endpoint drains the queue.
     // Ingress was authenticated, so this lead may trigger the workspace's
-    // opted-in WhatsApp auto-ack.
-    const result = await processLead({
-      workspaceId: ws.id,
-      source,
-      payload: body,
-      trusted: true,
-    })
-    return NextResponse.json({ received: true, ...result }, { status: 200 })
+    // opted-in WhatsApp auto-ack (when processed by the worker).
+    const result = await enqueueLead(ws.id, source, body, true)
+    return NextResponse.json({ received: true, queued: true, eventId: result.eventId }, { status: 202 })
   } catch (e) {
-    console.error(`[webhook:leads:${source}] process error`, e)
-    // Ingress stays 200 — WebhookEvent row holds FAILED status for replay.
-    return NextResponse.json({ received: true, queued: false, note: "recorded for replay" }, { status: 200 })
+    console.error(`[webhook:leads:${source}] enqueue error`, e)
+    // Ingress stays 200 — the failure is logged and can be investigated.
+    return NextResponse.json({ received: true, queued: false, note: "enqueue failed" }, { status: 200 })
   }
 }

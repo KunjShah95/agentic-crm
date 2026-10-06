@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CompletenessBadge } from "@/components/ui/completeness-badge"
 import { WhatsAppContactCard } from "@/components/contacts/whatsapp-contact-card"
+import { NextBestActionsCard } from "@/components/ai/next-best-actions-card"
 import { whatsappEnabled } from "@/modules/whatsapp/config"
 import {
   Card,
@@ -204,6 +205,8 @@ export default async function ContactDetailPage({
               <CompletenessBadge data={completeness} />
             </CardContent>
           </Card>
+
+          <NextBestActionsCard workspaceId={workspace.id} contactId={contact.id} />
 
           <Card>
             <CardHeader>

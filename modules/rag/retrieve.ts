@@ -14,6 +14,7 @@ import { rerank } from "./providers/rerank";
 import { extractClauseHint } from "./chunk";
 import { generate } from "./providers/llm";
 import type { DocMeta, ScoredChunk } from "./types";
+import { EMBEDDING_DIM } from "./pgvector";
 
 const DEFAULT_ALPHA = Number(process.env.RAG_ALPHA || 0.5);
 const POOL = Number(process.env.RAG_POOL || 30);
@@ -39,7 +40,34 @@ const alphaFor = (explicit: number | undefined, departments?: string[]): number 
   return d ? DEPT_ALPHA[d] ?? DEFAULT_ALPHA : DEFAULT_ALPHA;
 };
 
-const toVectorLiteral = (arr: number[]): string => `[${arr.join(",")}]`;
+/**
+ * Serialise a query vector for the `::vector` cast.
+ *
+ * Validated here because this is the one query vector that reaches SQL with no
+ * guard at all: `embed`'s checks cover its own return value, but `vectors[0]` is
+ * then read positionally and nothing confirms it is present or the right length.
+ * A short provider response made it `undefined` — `arr.join` on undefined throws
+ * `Cannot read properties of undefined` — and a wrong-dimension vector produced
+ * `[1,2,3]`, which Postgres rejects as a vector parse error naming neither the
+ * provider nor the caller.
+ *
+ * `NaN` is rejected for the same reason `pgvector.setEmbedding` rejects it: it
+ * serialises into the literal and fails server-side with nothing to identify it by.
+ */
+const toVectorLiteral = (arr: number[]): string => {
+  if (!Array.isArray(arr)) {
+    throw new Error("query embedding missing: provider returned no vector");
+  }
+  if (arr.length !== EMBEDDING_DIM) {
+    throw new Error(
+      `query embedding dimension mismatch: expected ${EMBEDDING_DIM}, received ${arr.length}`,
+    );
+  }
+  if (!arr.every((n) => Number.isFinite(n))) {
+    throw new Error("query embedding contains a non-finite value");
+  }
+  return `[${arr.join(",")}]`;
+};
 
 async function generateHyDE(query: string): Promise<string | null> {
   try {

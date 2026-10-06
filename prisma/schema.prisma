@@ -109,6 +109,7 @@ model Workspace {
   referralsFrom     Referral[] @relation("ReferralFrom")
   referralsTo       Referral[] @relation("ReferralTo")
   buyerAccesses     BuyerPortalAccess[]
+  leadSourceConfigs LeadSourceConfig[]
 
   @@index([slug])
 }
@@ -790,6 +791,24 @@ model BuyerPortalAccess {
   @@index([workspaceId])
   @@index([contactId])
   @@index([token])
+}
+
+model LeadSourceConfig {
+  id            String   @id @default(cuid())
+  workspaceId   String
+  source        String   // canonical source name, e.g. "ACME_CRM"
+  fieldMap      Json?    // { "name": "contact_name", "phone": "mobileNumber", ... }
+  secretHash    String?  // sha256 hash of the ingest secret for this source
+  enabled       Boolean  @default(true)
+  trusted       Boolean  @default(false) // whether this source is trusted for auto-ack
+  autoAck       Boolean  @default(false) // per-source auto-ack override
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, source])
+  @@index([workspaceId])
 }
 
 // ============================================================

@@ -22,6 +22,7 @@ import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { CompletenessBadge } from "@/components/ui/completeness-badge"
+import { NextBestActionsCard } from "@/components/ai/next-best-actions-card"
 import {
   Card,
   CardContent,
@@ -181,6 +182,10 @@ export default async function DealDetailPage({
               <SeparatorRow label="Updated" value={formatDate(deal.updatedAt)} />
             </CardContent>
           </Card>
+
+          {deal.contactId && (
+            <NextBestActionsCard workspaceId={workspace.id} contactId={deal.contactId} />
+          )}
 
           <Card>
             <CardHeader>

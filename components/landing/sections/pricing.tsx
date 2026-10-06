@@ -189,6 +189,29 @@ export function PricingSection({
                   aria-hidden
                 />
               </Button>
+
+              {/*
+                A card has one action, and the plan above it is a price. Some
+                visitors cannot decide from a price alone — migration from a
+                spreadsheet, per-project cost, or whether the trial needs a card —
+                and the only place they can ask is a person. Previously that
+                option existed only in the page hero and below the FAQ, so the
+                decision point itself (the card) offered no way out except
+                signing up. `/contact` is reached from the header, footer and both
+                hero CTAs, so nothing about its reachability changes here.
+              */}
+              <Link
+                href="/contact"
+                onClick={() => trackEvent(GTM_EVENTS.pricingContact, { plan: p.name })}
+                className={cn(
+                  "tap-target mt-3 text-center text-[13px] underline underline-offset-4 transition-colors",
+                  p.featured
+                    ? "text-background/70 hover:text-background"
+                    : "text-muted-foreground hover:text-foreground"
+                )}
+              >
+                Questions about {p.name}? Ask us
+              </Link>
             </div>
           ))}
         </div>

@@ -38,6 +38,7 @@ export const GTM_EVENTS = {
   heroStartFree: "cta_hero_start_free",
   stickyStartFree: "cta_sticky_start_free",
   pricingStartFree: "cta_pricing_start_free",
+  pricingContact: "cta_pricing_contact",
   contactSubmit: "contact_submit",
   signupCompleted: "signup_completed",
 } as const
