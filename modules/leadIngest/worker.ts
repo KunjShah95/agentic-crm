@@ -14,7 +14,9 @@ import { normalizeLead } from "./normalize"
 import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
 import { isAutoAckEnabled } from "./ingress"
-import { getSourceConfig, isSourceEnabled, isSourceTrusted, isAutoAckEnabled as isSourceAutoAckEnabled } from "./source-config"
+import { requireQuota } from "@/modules/billing/quota"
+import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
+import { getSourceConfig } from "./source-config"
 import { scheduleFollowUps } from "@/modules/ai/scheduler"
 import { sendWhatsApp, renderWaTemplate } from "@/modules/whatsapp/adapter"
 
@@ -90,9 +92,15 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     })
 
     // 3. Route → assignee
-    const members = (await db.workspaceMember.findMany({ where: { workspaceId } })) as RoutableMember[]
-    const counter = await db.deal.count({ where: { workspaceId } })
-    const assigneeId = pickAssignee(members, { strategy, counter, locality: lead.locality }) ?? members[0]?.userId
+    // Skipped entirely when the workspace turned auto-assign off: the lead
+    // lands unowned and a manager hands it out from Contacts.
+    const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { settingsJson: true } })
+    let assigneeId: string | undefined
+    if (readPipelineSettings(ws?.settingsJson).autoAssign) {
+      const members = (await db.workspaceMember.findMany({ where: { workspaceId } })) as RoutableMember[]
+      const counter = await db.deal.count({ where: { workspaceId } })
+      assigneeId = pickAssignee(members, { strategy, counter, locality: lead.locality }) ?? members[0]?.userId
+    }
 
     // 4. Find or create Contact (match by phone or email within workspace)
     const orConds: Array<Record<string, string>> = []
@@ -104,6 +112,10 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     const isNewContact = !contact
 
     if (!contact) {
+      // Inbound leads land contacts too: the Free headcount cap applies to
+      // this path exactly like manual creation, or the trial→Free fallback
+      // would only bite for one of the two ways contacts enter the CRM.
+      await requireQuota(workspaceId, "contacts")
       contact = await db.contact.create({
         data: {
           workspaceId,
@@ -132,14 +144,25 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     // 5. Create Deal in first pipeline stage
     let dealId: string | undefined
     const stage = await db.pipelineStage.findFirst({ where: { workspaceId }, orderBy: { order: "asc" } })
-    if (stage && assigneeId) {
+    // `Deal.ownerId` is required. With auto-assign off the contact stays
+    // unowned for a manager to hand out, and the deal sits with the workspace
+    // owner as the unassigned queue, so the enquiry still reaches the pipeline.
+    const dealOwnerId =
+      assigneeId ??
+      (
+        await db.workspaceMember.findFirst({
+          where: { workspaceId, role: "OWNER" },
+          select: { userId: true },
+        })
+      )?.userId
+    if (stage && dealOwnerId) {
       const deal = await db.deal.create({
         data: {
           workspaceId,
           title: `${lead.firstName} ${lead.lastName}`.trim() || "New Lead",
           contactId: contact.id,
           stageId: stage.id,
-          ownerId: assigneeId,
+          ownerId: dealOwnerId,
           bookingStage: "INQUIRY",
         },
       })

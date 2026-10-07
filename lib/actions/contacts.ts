@@ -106,12 +106,17 @@ export async function createContactAction(
     }
     const data = clean(parsed.data as unknown as Record<string, unknown>)
 
+    // Gate on the workspace-wide headcount before doing any duplicate
+    // lookup: once a lapsed trial drops the workspace to Free, `maxContacts`
+    // (500) is the count of rows that actually exist, and it must be enforced
+    // on every create path.
+    await requireQuota(workspaceId, "contacts")
+
     // Check for duplicates before creating
     const email = (data.email as string) || undefined
     const phone = (data.phone as string) || undefined
     const duplicates = await checkContactDuplicatesInternal(workspaceId, email, phone)
 
-    await requireQuota(workspaceId, "contacts")
     const contact = await db.contact.create({
       data: {
         workspaceId,

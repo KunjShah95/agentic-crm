@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { requireWorkspaceMember } from "@/lib/permissions"
-import { stripe } from "@/modules/billing/stripe"
+import { priceIdForPlan, stripe } from "@/modules/billing/stripe"
 
 export async function POST(req: Request) {
   const session = await auth()
@@ -34,22 +34,24 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: msg }, { status })
   }
 
-  let priceId = priceIdParam
-  if (!priceId && planParam) {
-    if (planParam === "pro") priceId = process.env.STRIPE_PRICE_PRO ?? "price_pro_xxx"
-    else if (planParam === "scale") priceId = process.env.STRIPE_PRICE_SCALE ?? "price_scale_xxx"
-  }
-  if (!priceId) priceId = process.env.STRIPE_PRICE_PRO ?? "price_pro_xxx"
-
-  // Validate priceId allowlist: only env-configured prices or price_ prefix
-  {
-    const allowed = new Set(
-      [process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_SCALE].filter(Boolean) as string[]
+  /* Plan name in, env price out. The route used to accept a raw `priceId` from
+     the browser and allow anything starting with "price_", so a signed-in admin
+     could check out on any price in the Stripe account (an old discount, a test
+     price) and still be mapped to a paid plan. Only the three configured plan
+     prices are reachable now; `priceId` is honoured only if it is one of them. */
+  const configured = new Set(
+    [process.env.STRIPE_PRICE_BUILDER, process.env.STRIPE_PRICE_PRO, process.env.STRIPE_PRICE_SCALE].filter(
+      Boolean
+    ) as string[]
+  )
+  const priceId =
+    (priceIdParam && configured.has(priceIdParam) ? priceIdParam : null) ??
+    priceIdForPlan(planParam ?? "pro")
+  if (!priceId) {
+    return NextResponse.json(
+      { error: "Billing is not configured for this plan yet. Contact support to upgrade." },
+      { status: 503 }
     )
-    const isAllowed = allowed.has(priceId) || priceId.startsWith("price_")
-    if (!isAllowed) {
-      return NextResponse.json({ error: "Invalid priceId" }, { status: 400 })
-    }
   }
 
   const existing = await db.subscription.findUnique({ where: { workspaceId } })

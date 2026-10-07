@@ -150,7 +150,7 @@ export function LeadIngestSettings({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Lead webhook secret</CardTitle>
+          <CardTitle>Lead webhook secret</CardTitle>
           <CardDescription>
             Required on every server-to-server lead webhook. Without it,{" "}
             <code className="font-mono text-xs" data-mono="url">/api/webhooks/leads/*</code> refuses the request —
@@ -173,12 +173,12 @@ export function LeadIngestSettings({
           </div>
 
           {revealed ? (
-            <div className="space-y-2 rounded-sm border border-amber-300 bg-amber-50 p-3">
-              <p className="text-xs font-medium text-amber-900">
+            <div className="space-y-2 rounded-sm border border-status-caution-fg/25 bg-status-caution-bg p-3">
+              <p className="text-xs font-medium text-status-caution-fg">
                 Copy this now — only a hash is stored, so it cannot be shown again.
               </p>
               <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 truncate rounded-sm bg-white px-2 py-1.5 font-mono text-xs" data-mono="secret">
+                <code className="min-w-0 flex-1 truncate rounded-sm bg-background px-2 py-1.5 font-mono text-xs" data-mono="secret">
                   {revealed}
                 </code>
                 <Button
@@ -212,8 +212,8 @@ export function LeadIngestSettings({
             <p className="text-xs text-muted-foreground">
               Send as header <code className="font-mono" data-mono="id">x-estate360-ingest-key</code>. Known sources:{" "}
               meta, 99acres, magicbricks, housing, nobroker, google, website, pabbly, zapier, indiamart, justdial,
-              hubspot, zoho — plus any company slug (e.g. <code className="font-mono">acme-crm</code>) with zero code
-              change. Full guide: <code className="font-mono">docs/integrations/lead-ingest.md</code>.
+              hubspot, zoho — plus any company slug (e.g. <code className="font-mono" data-mono="id">acme-crm</code>) with zero code
+              change. Full guide: <code className="font-mono" data-mono="url">docs/integrations/lead-ingest.md</code>.
             </p>
           </div>
 
@@ -245,7 +245,7 @@ export function LeadIngestSettings({
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">WhatsApp auto-ack</CardTitle>
+          <CardTitle>WhatsApp auto-ack</CardTitle>
           <CardDescription>
             Sends an acknowledgement to each brand-new lead that has a phone number.{" "}
             <strong>Off by default.</strong> On means real messages leave your business number to

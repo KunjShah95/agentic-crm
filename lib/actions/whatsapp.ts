@@ -3,6 +3,7 @@
 import crypto from "crypto"
 import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { mergeWorkspaceSettings } from "@/modules/workspace/settings-json"
 import { handleAction, type Result } from "@/lib/actions"
 import { AppError } from "@/lib/errors"
 import { requireWorkspaceMember } from "@/lib/permissions"
@@ -124,12 +125,10 @@ export async function linkPlatformNumberAction(
     })
 
     // Persisting the binding on the workspace keeps the legacy router in sync.
-    await db.workspace
-      .update({
-        where: { id: workspaceId },
-        data: { settingsJson: { whatsappPhoneId: info.phoneNumberId } as never },
-      })
-      .catch(() => undefined)
+    // An atomic key merge, never an assignment: `settingsJson` also holds the
+    // lead-ingest secret hash, auto-ack, API key hashes and pipeline
+    // preferences, and a bare `{ whatsappPhoneId }` used to wipe all of them.
+    await mergeWorkspaceSettings(workspaceId, { whatsappPhoneId: info.phoneNumberId }).catch(() => undefined)
 
     const provider = getProvider("whatsapp")
     const sub = await provider.subscribeWebhook?.({ accessToken: cfg.accessToken, metadata: { phoneNumberId: info.phoneNumberId } })

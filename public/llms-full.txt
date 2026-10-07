@@ -84,7 +84,7 @@ A single team can be running the same afternoon: create a workspace, import your
 
 ### Is there a free trial?
 
-Fourteen days, no card required. The trial is a real workspace, not a read-only demo, and you can export your data at any point during it.
+Fourteen days of the Team plan, no card required. The trial is a real workspace, not a read-only demo. When it ends, the workspace drops to Free limits until you choose a plan; nothing is deleted, and you can export your data at any point.
 
 ## Contact
 

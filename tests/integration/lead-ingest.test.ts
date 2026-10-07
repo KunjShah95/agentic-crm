@@ -3,12 +3,13 @@ import type { Mock } from "vitest"
 
 const db = vi.hoisted(() => ({
   webhookEvent: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
   pipelineStage: { findFirst: vi.fn() },
   deal: { create: vi.fn(), count: vi.fn() },
   activity: { create: vi.fn() },
   workspaceMember: { findMany: vi.fn() },
   workspace: { findUnique: vi.fn() },
+  leadSourceConfig: { findUnique: vi.fn() },
 }))
 vi.mock("@/lib/db", () => ({ db }))
 
@@ -28,6 +29,15 @@ function channels() {
   return db.activity.create.mock.calls.map((c) => c[0].data.channel)
 }
 
+/** Outbound WhatsApp rows only. Scheduled follow-up tasks also carry
+ *  channel WHATSAPP ("Share cost sheet on WhatsApp") but are reminders for
+ *  staff with no direction, not messages sent to the lead. */
+function outboundWhatsApp() {
+  return db.activity.create.mock.calls.filter(
+    (c) => c[0].data.channel === "WHATSAPP" && c[0].data.direction === "OUT"
+  )
+}
+
 function autoAckOff() {
   db.workspace.findUnique.mockResolvedValue({ settingsJson: {} })
 }
@@ -43,10 +53,12 @@ beforeEach(() => {
     Object.values(model).forEach((fn) => (fn as Mock).mockReset()),
   )
   db.webhookEvent.findUnique.mockResolvedValue(null)
+  db.leadSourceConfig.findUnique.mockResolvedValue(null)
   db.webhookEvent.create.mockResolvedValue({ id: "we1" })
   db.webhookEvent.update.mockResolvedValue({})
   db.contact.findFirst.mockResolvedValue(null)
   db.contact.create.mockResolvedValue({ id: "c1", firstName: "Meera", lastName: "Shah", phone: "+919800000000", optedOut: false })
+  db.contact.count.mockResolvedValue(0)
   db.pipelineStage.findFirst.mockResolvedValue({ id: "stage1" })
   db.deal.create.mockResolvedValue({ id: "d1" })
   db.deal.count.mockResolvedValue(0)
@@ -96,7 +108,7 @@ describe("WhatsApp auto-ack gating", () => {
       trusted: true,
     })
     expect(r.acked).toBe(false)
-    expect(channels()).not.toContain("WHATSAPP")
+    expect(outboundWhatsApp()).toHaveLength(0)
   })
 
   it("sends when the workspace opted in and the ingress was trusted", async () => {
@@ -127,7 +139,7 @@ describe("WhatsApp auto-ack gating", () => {
       payload: LEAD,
     })
     expect(r.acked).toBe(false)
-    expect(channels()).not.toContain("WHATSAPP")
+    expect(outboundWhatsApp()).toHaveLength(0)
   })
 
   it("still captures the lead when the ack is suppressed", async () => {

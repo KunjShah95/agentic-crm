@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { formatDate } from "@/lib/format"
 import { canManageBilling } from "@/lib/permissions"
-import { PLAN_LIMITS, type PlanName } from "@/modules/billing/limits"
+import { PLAN_LABELS, isPayingStatus, resolveEffectivePlan } from "@/modules/billing/limits"
 import { periodKey, periodKeyFor } from "@/modules/billing/quota"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -45,9 +45,10 @@ export default async function BillingSettingsPage({
     where: { workspaceId: workspace.id },
   })
 
-  const plan = (subscription?.plan ?? workspace.plan ?? "free") as PlanName
-  const limits = PLAN_LIMITS[plan as PlanName] ?? PLAN_LIMITS.free
-  void limits
+  // Same resolution the quota gate uses, so the page shows the limits that are
+  // actually enforced, including the no-card trial.
+  const now = new Date()
+  const { plan, trialEndsAt, trialExpired } = resolveEffectivePlan(workspace, subscription, now)
 
   const canManage = canManageBilling(membership.role)
 
@@ -88,7 +89,13 @@ export default async function BillingSettingsPage({
         plan={plan}
         status={subscription?.status ?? null}
         canManageBilling={canManage}
-        hasSubscription={!!subscription}
+        // Only a paying subscription hides the plan picker. A canceled, unpaid
+        // or expired one keeps its stripeSubId, and its owner must still be
+        // able to start a new checkout.
+        hasSubscription={!!subscription?.stripeSubId && isPayingStatus(subscription.status)}
+        lapsed={!!subscription && !isPayingStatus(subscription.status)}
+        trialDaysLeft={trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / 86_400_000)) : null}
+        trialExpired={trialExpired}
       />
 
       <QuotaBars plan={plan} counters={counters} />
@@ -101,7 +108,7 @@ export default async function BillingSettingsPage({
         <CardContent className="flex flex-col gap-3 text-sm">
           <div className="flex items-center gap-2">
             <span className="text-muted-foreground">Plan</span>
-            <Badge className="capitalize">{plan}</Badge>
+            <Badge>{PLAN_LABELS[plan]}</Badge>
             {subscription?.status ? (
               <Badge variant="outline" className="capitalize">
                 {subscription.status}

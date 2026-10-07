@@ -23,6 +23,7 @@ const PLANS = [
   {
     name: "Builder",
     price: "₹1,499",
+    perDay: "₹50",
     note: "per month · 1 project",
     pitch: "One site, enquiry through to possession.",
     features: [
@@ -35,6 +36,7 @@ const PLANS = [
   {
     name: "Team",
     price: "₹3,999",
+    perDay: "₹133",
     note: "per month · up to 6 staff",
     pitch: "Sales, Accounts and Site on the same loop.",
     features: [
@@ -48,6 +50,7 @@ const PLANS = [
   {
     name: "Network",
     price: "₹7,999",
+    perDay: "₹267",
     note: "per month · up to 12 staff · multi-site",
     pitch: "Two to ten projects without a spreadsheet.",
     features: [
@@ -106,7 +109,7 @@ export function PricingSection({
             >
               {p.featured ? (
                 <span className="absolute -top-2.5 left-6 rounded-sm border border-foreground bg-background px-2 py-0.5 text-[10px] font-medium uppercase tracking-[0.14em] text-foreground">
-                  Most chosen
+                  Recommended
                 </span>
               ) : null}
 
@@ -132,6 +135,18 @@ export function PricingSection({
                   {p.note}
                 </span>
               </div>
+
+              {/* The per-day figure is the price divided by thirty, nothing
+                  more. It is there because a builder weighs this against a
+                  day of a salesperson's time, not against other software. */}
+              <p
+                className={cn(
+                  "mt-2 text-[11px] font-medium uppercase tracking-[0.12em]",
+                  p.featured ? "text-background/60" : "text-muted-foreground"
+                )}
+              >
+                About {p.perDay} a day · not per seat
+              </p>
 
               <p
                 className={cn(
@@ -183,7 +198,7 @@ export function PricingSection({
                   />
                 }
               >
-                {isAuthed ? "Open your workspace" : "Start free"}
+                {isAuthed ? "Open your workspace" : "Start 14-day trial"}
                 <ArrowRight
                   className="size-4 transition-transform group-hover:translate-x-0.5"
                   aria-hidden
@@ -222,7 +237,7 @@ export function PricingSection({
               <CreditCard className="size-4" aria-hidden />
             </span>
             <span className="text-[14px] font-medium">
-              ₹0 today. Billing starts after your 14-day trial.
+              ₹0 today. 14 days of the full Team plan, then pick a plan or stay on Free.
             </span>
           </span>
           <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">

@@ -3,11 +3,13 @@ import type { Mock } from "vitest"
 
 const db = vi.hoisted(() => ({
   webhookEvent: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
   pipelineStage: { findFirst: vi.fn() },
   deal: { create: vi.fn(), count: vi.fn() },
   activity: { create: vi.fn() },
   workspaceMember: { findMany: vi.fn() },
+  workspace: { findUnique: vi.fn() },
+  leadSourceConfig: { findUnique: vi.fn() },
 }))
 vi.mock("@/lib/db", () => ({ db }))
 
@@ -23,11 +25,14 @@ beforeEach(() => {
   db.contact.findFirst.mockResolvedValue(null)
   db.contact.create.mockResolvedValue({ id: "c1", firstName: "Ravi", lastName: "Patel" })
   db.contact.update.mockResolvedValue({ id: "c1" })
+  db.contact.count.mockResolvedValue(0)
   db.pipelineStage.findFirst.mockResolvedValue({ id: "stage1" })
   db.deal.create.mockResolvedValue({ id: "d1", title: "Ravi Patel" })
   db.deal.count.mockResolvedValue(0)
   db.activity.create.mockResolvedValue({ id: "a1" })
   db.workspaceMember.findMany.mockResolvedValue([{ userId: "u1", role: "MEMBER" }])
+  db.workspace.findUnique.mockResolvedValue({ settingsJson: {} })
+  db.leadSourceConfig.findUnique.mockResolvedValue(null)
 })
 
 describe("processLead", () => {
@@ -60,5 +65,21 @@ describe("processLead", () => {
     const r = await processLead({ workspaceId: "w1", source: "meta", payload: { lead_id: "m-2", name: "Ravi Patel", phone: "+919812345678" } })
     expect(db.contact.create).not.toHaveBeenCalled()
     expect(r.contactId).toBe("existing")
+  })
+})
+
+describe("processLead with auto-assign off", () => {
+  it("still creates the deal, owned by the workspace owner, with an unowned contact", async () => {
+    db.workspace.findUnique.mockResolvedValue({ settingsJson: { pipeline: { holdDays: 2, autoAssign: false } } })
+    ;(db.workspaceMember as unknown as { findFirst: Mock }).findFirst = vi.fn().mockResolvedValue({ userId: "owner1" })
+    const r = await processLead({
+      workspaceId: "w1",
+      source: "meta",
+      payload: { lead_id: "m-9", name: "Asha Desai", phone: "+919800000001" },
+    })
+    expect(r.dealId).toBe("d1")
+    expect(db.deal.create.mock.calls[0][0].data.ownerId).toBe("owner1")
+    expect(db.contact.create.mock.calls[0][0].data.ownerId).toBeNull()
+    expect(db.workspaceMember.findMany).not.toHaveBeenCalled()
   })
 })

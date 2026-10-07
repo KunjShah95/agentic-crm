@@ -2,32 +2,71 @@
 
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Flame, CalendarClock, TriangleAlert } from "lucide-react"
+import {
+  ArrowRight,
+  CalendarClock,
+  Check,
+  CheckCheck,
+  FileCheck2,
+  FileText,
+  Flame,
+  Languages,
+  MapPinCheck,
+  MessageCircle,
+  TriangleAlert,
+} from "lucide-react"
+import { cn } from "@/lib/utils"
 import { GTM_EVENTS, trackEvent } from "@/lib/analytics"
 
 /**
  * Hero.
  *
- * The old hero failed on four counts and all four are fixed here:
- *  1. It rendered a div-built fake browser window (macOS traffic lights in raw
- *     red-400/amber-400/green-400) pretending to be a screenshot. There is no
- *     screenshot to show, so it is gone rather than faked harder.
- *  2. Subtext ran 28 words over a six-item noun pile. Now 19 words, one claim.
- *  3. "No card required" and a Cmd-K hint strip sat under the CTAs. Both are
- *     banned hero furniture — the hint moved to the command-bar section, the
- *     reassurance moved to pricing.
- *  4. Everything was a rounded-full pill on a rounded-md shell. One radius
- *     scale now: controls and surfaces are both --radius (10px).
+ * Studied against Sell.Do, Follow Up Boss, Lofty and LeadSquared. They share a
+ * structure that works (a centred claim, trial plus demo, proof, then a big
+ * product visual) and a habit that does not: the claim is "AI" and scale, and
+ * the visual is a generic dashboard any CRM could ship.
  *
- * The visual is a real component preview — the actual Next Best Action row the
- * team sees on open — not an illustration of one.
+ * This keeps the structure and swaps the substance:
+ *  - The claim is scope, not technology: enquiry to possession. No other
+ *    category of CRM ends at possession, so the headline sorts the visitor.
+ *  - The proof row states shipped capabilities. There are no customer logos
+ *    yet, and inventing them is not an option (see manifesto.tsx).
+ *  - The visual is a composed stage of three things only a builder's CRM has:
+ *    the ranked call queue, a tower's unit board, and a Gujarati WhatsApp
+ *    thread carrying a cost sheet. One panel carries the page's single
+ *    signature effect (`.beam-border`); the other two are still.
  *
- * Hierarchy note: the second headline line used to be tinted `text-brand`. Now
- * that the primary CTA carries hue 68, tinting the headline too put the accent
- * on two elements and split the emphasis between them. The headline is the
- * largest thing on the page and does not need colour to win; the button is the
- * clickable thing and does. One accent, one job.
+ * Everything on the stage is static illustration, so the fake buttons inside it
+ * are `tabIndex={-1}` and the stage is `aria-hidden` with a text summary.
  */
+const PROOF = [
+  { icon: FileCheck2, label: "RERA demand notices" },
+  { icon: MessageCircle, label: "WhatsApp with UPI links" },
+  { icon: MapPinCheck, label: "GPS-verified site visits" },
+  { icon: Languages, label: "English, ગુજરાતી, हिन्दी" },
+]
+
+type UnitStatus = "available" | "hold" | "booked" | "sold"
+
+const TOWER: { floor: number; units: { no: string; s: UnitStatus }[] }[] = [
+  { floor: 14, units: [{ no: "A-1401", s: "available" }, { no: "A-1402", s: "available" }, { no: "A-1403", s: "hold" }, { no: "A-1404", s: "available" }] },
+  { floor: 13, units: [{ no: "A-1301", s: "booked" }, { no: "A-1302", s: "available" }, { no: "A-1303", s: "available" }, { no: "A-1304", s: "booked" }] },
+  { floor: 12, units: [{ no: "A-1201", s: "sold" }, { no: "A-1202", s: "booked" }, { no: "A-1203", s: "hold" }, { no: "A-1204", s: "available" }] },
+  { floor: 11, units: [{ no: "A-1101", s: "sold" }, { no: "A-1102", s: "sold" }, { no: "A-1103", s: "booked" }, { no: "A-1104", s: "sold" }] },
+]
+
+const UNIT_CELL: Record<UnitStatus, string> = {
+  available: "bg-status-positive-bg text-status-positive-fg border-status-positive-fg/25",
+  hold: "bg-status-caution-bg text-status-caution-fg border-status-caution-fg/25",
+  booked: "bg-status-info-bg text-status-info-fg border-status-info-fg/25",
+  sold: "bg-surface-sunken text-muted-foreground border-hairline",
+}
+
+const counts = TOWER.flatMap((f) => f.units).reduce<Record<UnitStatus, number>>(
+  (acc, u) => ({ ...acc, [u.s]: acc[u.s] + 1 }),
+  { available: 0, hold: 0, booked: 0, sold: 0 }
+)
+
 export function HeroSection({
   isAuthed,
   workspaceSlug,
@@ -39,79 +78,112 @@ export function HeroSection({
 
   return (
     <section className="relative isolate overflow-hidden">
-      {/* Gradient field. Fixed layer, pointer-events-none, no scroll repaint. */}
       <div aria-hidden className="field-gradient -z-10" />
-      <div
-        aria-hidden
-        className="absolute inset-x-0 bottom-0 -z-10 h-40 bg-gradient-to-t from-background to-transparent"
-      />
 
       <div className="mx-auto max-w-[1280px] px-6 lg:px-8">
-        <div className="grid items-center gap-12 pt-16 pb-20 lg:grid-cols-[1.05fr_0.95fr] lg:gap-16 lg:pt-20 lg:pb-28">
-          {/* ── LEFT: the claim ── */}
-          <div>
-            <p className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-brand-solid">
-              <span className="h-px w-6 bg-brand/50" aria-hidden />
-              For real-estate sales teams
-            </p>
+        {/* ── The claim ── */}
+        <div className="mx-auto max-w-[860px] pt-16 text-center lg:pt-24">
+          <p
+            className="animate-rise-in text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-solid"
+            style={{ animationDelay: "0ms" }}
+          >
+            CRM for real-estate builders<span className="hidden sm:inline"> · Made in Ahmedabad</span>
+          </p>
 
-            <h1 className="mt-6 font-display text-[40px] font-semibold leading-[1.03] tracking-[-0.035em] text-balance sm:text-[52px] lg:text-[60px]">
-              Stop managing leads.
-              <br />
-              Start closing them.
-            </h1>
+          <h1
+            className="animate-rise-in mt-5 font-display text-[42px] font-semibold leading-[1.02] tracking-[-0.035em] text-balance sm:text-[56px] lg:text-[68px]"
+            style={{ animationDelay: "70ms" }}
+          >
+            From first enquiry
+            <br className="hidden sm:block" />{" "}
+            <span className="text-muted-foreground">to possession, on one screen.</span>
+          </h1>
 
-            <p className="mt-6 max-w-[46ch] text-[17px] leading-8 text-pretty text-muted-foreground">
-              One screen for enquiries, WhatsApp, site visits and bookings. Open it
-              and it tells the team what to do next.
-            </p>
+          <p
+            className="animate-rise-in mx-auto mt-6 max-w-[58ch] text-[17px] leading-8 text-balance text-muted-foreground"
+            style={{ animationDelay: "140ms" }}
+          >
+            Leads, WhatsApp, site visits, unit holds, cost sheets and CLP
+            collections in one place. Open it at 9 AM and it tells your team who
+            to call first.
+          </p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button
-                variant="brand"
-                size="lg"
-                className="h-11 gap-2 px-6"
-                render={
-                  <Link
-                    href={primaryHref}
-                    onClick={() =>
-                      !isAuthed && trackEvent(GTM_EVENTS.heroStartFree, { location: "hero" })
-                    }
-                  />
-                }
-              >
-                {isAuthed ? "Open your workspace" : "Start free"}
-                <ArrowRight className="size-4" aria-hidden />
-              </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                className="h-11 gap-2 border-border bg-card px-6"
-                render={<Link href="#story" />}
-              >
-                See a day
-                <ArrowRight className="size-4" aria-hidden />
-              </Button>
-            </div>
+          <div
+            className="animate-rise-in mt-9 flex flex-wrap items-center justify-center gap-3"
+            style={{ animationDelay: "210ms" }}
+          >
+            <Button
+              variant="brand"
+              size="lg"
+              className="h-12 gap-2 px-6 text-[15px]"
+              render={
+                <Link
+                  href={primaryHref}
+                  onClick={() =>
+                    !isAuthed && trackEvent(GTM_EVENTS.heroStartFree, { location: "hero" })
+                  }
+                />
+              }
+            >
+              {isAuthed ? "Open your workspace" : "Start your 14-day trial"}
+              <ArrowRight className="size-4" aria-hidden />
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 gap-2 bg-card px-6 text-[15px]"
+              render={<Link href="/demo" />}
+            >
+              Book a 20-minute demo
+            </Button>
           </div>
 
-          {/* ── RIGHT: the one thing the product does on open ── */}
-          <div className="relative">
-            <div className="rounded-md border border-border/70 bg-card p-5 shadow-e3">
+          {!isAuthed ? (
+            <p
+              className="animate-rise-in mt-4 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+              style={{ animationDelay: "280ms" }}
+            >
+              No card · Real workspace, not a demo · Export anytime
+            </p>
+          ) : null}
+        </div>
+
+        {/* ── Proof: shipped capabilities, in place of logos we do not have ── */}
+        <ul
+          className="animate-rise-in mx-auto mt-10 flex max-w-[920px] flex-wrap items-center justify-center gap-x-7 gap-y-3"
+          style={{ animationDelay: "320ms" }}
+        >
+          {PROOF.map(({ icon: Icon, label }) => (
+            <li key={label} className="flex items-center gap-2 text-[13px] text-muted-foreground">
+              <Icon className="size-4 shrink-0 text-brand" aria-hidden />
+              {label}
+            </li>
+          ))}
+        </ul>
+
+        {/* ── The stage ── */}
+        <p className="sr-only">
+          Product preview: a ranked list of who to call next, a tower inventory
+          board showing available, held, booked and sold units, and a WhatsApp
+          conversation in Gujarati with a cost sheet attached.
+        </p>
+        <div
+          aria-hidden
+          className="animate-rise-in relative mt-14 pb-16 lg:mt-16 lg:pb-24"
+          style={{ animationDelay: "380ms" }}
+        >
+          <div className="grid items-start gap-4 md:grid-cols-[1fr_1.1fr] lg:grid-cols-[1.05fr_1fr_0.95fr]">
+            {/* 1 · Who to call — the signature panel */}
+            <div className="beam-border rounded-md border border-border/70 bg-card p-5 lg:mt-10">
               <div className="flex items-baseline justify-between gap-4">
-                <p className="text-[13px] font-medium text-muted-foreground">
-                  Next Best Action
-                </p>
-                {/* A clock label in a mock UI — chrome, not a figure. */}
+                <p className="label-caps">Next best action</p>
                 <p className="text-[11px] tabular-nums text-muted-foreground">9:02 AM</p>
               </div>
 
-              {/* One queue row. Enough to show the product's actual opinion,
-                  not enough to impersonate a dashboard. */}
               <div className="mt-4 rounded-sm border border-border/70 bg-surface-sunken p-4">
                 <div className="flex items-start gap-3">
                   <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-sm bg-brand text-brand-foreground">
-                    <Flame className="size-4" aria-hidden />
+                    <Flame className="size-4" />
                   </span>
                   <div className="min-w-0">
                     <p className="text-[15px] font-semibold leading-snug tracking-[-0.01em]">
@@ -122,37 +194,120 @@ export function HeroSection({
                     </p>
                   </div>
                 </div>
-
                 <div className="mt-4 flex items-center gap-2">
-                  <Button size="sm" className="h-8 px-3 text-[13px]">
+                  <Button size="sm" className="h-8 px-3 text-[13px]" tabIndex={-1}>
                     Call now
                   </Button>
-                  <Button size="sm" variant="outline" className="h-8 px-3 text-[13px]">
+                  <Button size="sm" variant="outline" className="h-8 px-3 text-[13px]" tabIndex={-1}>
                     WhatsApp
                   </Button>
                 </div>
               </div>
 
-              {/* Two quieter rows establish that the queue is ranked, without
-                  turning the hero back into a fake dashboard. */}
               <ul className="mt-2 rule-y">
                 <li className="flex items-center gap-3 py-3">
-                  <CalendarClock className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <p className="min-w-0 flex-1 truncate text-[13px]">
-                    Priya Mehta — site visit tomorrow
-                  </p>
-                  <span className="shrink-0 text-[12px] text-muted-foreground">
-                    Send cost sheet
-                  </span>
+                  <CalendarClock className="size-4 shrink-0 text-muted-foreground" />
+                  <p className="min-w-0 flex-1 truncate text-[13px]">Priya Mehta, site visit tomorrow</p>
+                  <span className="shrink-0 text-[12px] text-muted-foreground">Send cost sheet</span>
                 </li>
                 <li className="flex items-center gap-3 py-3">
-                  <TriangleAlert className="size-4 shrink-0 text-status-critical-fg" aria-hidden />
-                  <p className="min-w-0 flex-1 truncate text-[13px]">
-                    A-1204 — payment milestone overdue
-                  </p>
-                  <span className="shrink-0 text-[12px] text-muted-foreground">Follow up</span>
+                  <TriangleAlert className="size-4 shrink-0 text-status-critical-fg" />
+                  <p className="min-w-0 flex-1 truncate text-[13px]">A-1203 hold expires in 2h</p>
+                  <span className="shrink-0 text-[12px] text-muted-foreground">Extend or release</span>
                 </li>
               </ul>
+            </div>
+
+            {/* 2 · The tower — what a builder actually sells */}
+            <div className="rounded-md border border-border/70 bg-card p-5">
+              <div className="flex items-baseline justify-between gap-4">
+                <div>
+                  <p className="text-[14px] font-semibold tracking-[-0.01em]">Shanti Heights · Tower A</p>
+                  <p className="mt-0.5 text-[12px] text-muted-foreground">SG Highway, Ahmedabad</p>
+                </div>
+                <p className="label-caps">Live</p>
+              </div>
+
+              <div className="mt-5 space-y-1.5">
+                {TOWER.map((row) => (
+                  <div key={row.floor} className="flex items-center gap-2.5">
+                    <span className="w-5 shrink-0 text-right text-[11px] tabular-nums text-muted-foreground">
+                      {row.floor}
+                    </span>
+                    <div className="grid flex-1 grid-cols-4 gap-1.5">
+                      {row.units.map((u) => (
+                        <span
+                          key={u.no}
+                          className={cn(
+                            "rounded-sm border px-1.5 py-1.5 text-center",
+                            UNIT_CELL[u.s],
+                            u.no === "A-1204" && "ring-1 ring-foreground"
+                          )}
+                        >
+                          <span data-mono="id" className="font-mono text-[11px] tabular-nums">
+                            {u.no.slice(2)}
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <dl className="mt-5 grid grid-cols-4 gap-2 border-t border-hairline pt-4">
+                {(
+                  [
+                    ["available", "Open"],
+                    ["hold", "Held"],
+                    ["booked", "Booked"],
+                    ["sold", "Sold"],
+                  ] as const
+                ).map(([key, label]) => (
+                  <div key={key}>
+                    <dt className="text-[11px] text-muted-foreground">{label}</dt>
+                    <dd className="mt-0.5 font-display text-[20px] font-medium leading-none tabular-nums">
+                      {counts[key]}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+
+            {/* 3 · The conversation — the buyer's language, the real number */}
+            <div className="hidden rounded-md border border-border/70 bg-card p-5 md:col-span-2 md:block lg:col-span-1 lg:mt-16">
+              <div className="flex items-center gap-3 border-b border-hairline pb-3">
+                <span className="flex size-8 items-center justify-center rounded-full bg-muted text-[12px] font-semibold">
+                  RS
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold">Rahul Shah</p>
+                  <p className="text-[11px] text-muted-foreground">WhatsApp · ગુજરાતી</p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-2.5">
+                <p className="max-w-[85%] rounded-md rounded-tl-sm bg-surface-sunken px-3 py-2 text-[13px] leading-5">
+                  A-1204 no final rate su che? Parking sathe?
+                </p>
+                <div className="ml-auto max-w-[88%] rounded-md rounded-tr-sm bg-status-positive-bg px-3 py-2 text-[13px] leading-5 text-foreground">
+                  નમસ્તે રાહુલભાઈ, A-1204 ની કોસ્ટ શીટ અહીં છે. પાર્કિંગ સામેલ છે.
+                  <div className="mt-2 flex items-center gap-2.5 rounded-sm border border-border/70 bg-card px-2.5 py-2">
+                    <FileText className="size-4 shrink-0 text-muted-foreground" />
+                    <span className="min-w-0 flex-1 truncate text-[12px] font-medium">Cost sheet · A-1204.pdf</span>
+                    <span data-mono="money" className="shrink-0 font-mono text-[12px] tabular-nums">
+                      ₹82,00,000
+                    </span>
+                  </div>
+                  <p className="mt-1 flex items-center justify-end gap-1 text-[10px] text-muted-foreground">
+                    10:14 <CheckCheck className="size-3" />
+                  </p>
+                </div>
+              </div>
+
+              <p className="mt-4 flex items-center gap-1.5 border-t border-hairline pt-3 text-[11px] text-muted-foreground">
+                <Check className="size-3.5 text-status-positive-fg" />
+                Logged on the deal. Follow-up set for tomorrow.
+              </p>
             </div>
           </div>
         </div>

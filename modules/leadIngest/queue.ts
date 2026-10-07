@@ -49,7 +49,9 @@ export async function enqueueLead(
   workspaceId: string,
   source: string,
   payload: unknown,
-  trusted?: boolean
+  // Accepted for call-site compatibility and deliberately ignored: queued
+  // leads are never auto-acked (see the note above).
+  _trusted?: boolean
 ): Promise<EnqueueResult> {
   const lead = normalizeLead(source, payload)
 

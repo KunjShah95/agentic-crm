@@ -71,7 +71,7 @@ const h = vi.hoisted(() => {
           : inWs.filter((e) => e.processedAt !== null).length
       }),
     },
-    contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+    contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
     pipelineStage: { findFirst: vi.fn() },
     deal: { create: vi.fn(), count: vi.fn() },
     activity: { create: vi.fn() },
@@ -99,10 +99,6 @@ const LEAD = {
   intent: "HOT",
   locality: "Bopal",
   budget: "80-90 Lakh",
-}
-
-function channels() {
-  return db.activity.create.mock.calls.map((c) => c[0].data.channel)
 }
 
 /**
@@ -134,6 +130,7 @@ beforeEach(() => {
   db.contact.findFirst.mockResolvedValue(null)
   db.contact.create.mockResolvedValue({ id: "c1", firstName: "Meera", lastName: "Shah", phone: "+919800000000", optedOut: false })
   db.contact.update.mockResolvedValue({ id: "c1" })
+  db.contact.count.mockResolvedValue(0)
   db.pipelineStage.findFirst.mockResolvedValue({ id: "stage1" })
   db.deal.create.mockResolvedValue({ id: "d1" })
   db.deal.count.mockResolvedValue(0)
