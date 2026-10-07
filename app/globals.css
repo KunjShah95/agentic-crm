@@ -593,6 +593,47 @@
     radial-gradient(50rem 30rem at 50% 108%, oklch(0.55 0.09 245 / 0.12), transparent 65%);
 }
 
+/* ── Hero beam border ──────────────────────────────────────────────────────
+   The landing page's one signature effect: a short arc of brand light that
+   travels the hero artifact's border. Everything else on the page stays still,
+   which is what lets this read as deliberate rather than decorative. A conic
+   gradient on a registered angle, masked to a 1px ring, so it costs no layout
+   and no transform. Under reduced motion the global rule stops the animation
+   and the arc simply rests at its starting angle. */
+@property --beam-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+.beam-border {
+  position: relative;
+  isolation: isolate;
+}
+.beam-border::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  padding: 1px;
+  pointer-events: none;
+  background: conic-gradient(
+    from var(--beam-angle),
+    transparent 0deg,
+    transparent 250deg,
+    oklch(0.58 0.16 68 / 0.9) 320deg,
+    oklch(0.82 0.12 75) 345deg,
+    transparent 360deg
+  );
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  animation: beam-spin 6s linear infinite;
+  z-index: 1;
+}
+@keyframes beam-spin {
+  to { --beam-angle: 360deg; }
+}
+
 /* Hairline rule used to separate stacked rows instead of wrapping each in a
    card. Cheaper visually, and it stops card-chrome from flattening hierarchy. */
 .rule-y > * + * {
