@@ -40,7 +40,9 @@ export async function requireQuota(
     include: { subscription: true },
   })
   // Trial-aware: Team limits for 14 days from creation, then Free unless paid.
-  const plan = ws ? resolveEffectivePlan(ws, ws.subscription).plan : "free"
+  const plan = ws
+    ? resolveEffectivePlan({ ...ws, createdAt: ws.createdAt ?? new Date(0) }, ws.subscription).plan
+    : "free"
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
   const key =
     kind === "social_messages"
@@ -148,7 +150,9 @@ export async function assertSeatAvailable(
   let max = limit
   if (max === undefined) {
     const ws = await c.workspace.findUnique({ where: { id: workspaceId }, include: { subscription: true } })
-    const plan = ws ? resolveEffectivePlan(ws, ws.subscription).plan : "free"
+    const plan = ws
+    ? resolveEffectivePlan({ ...ws, createdAt: ws.createdAt ?? new Date(0) }, ws.subscription).plan
+    : "free"
     max = (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free).maxSeats
   }
 

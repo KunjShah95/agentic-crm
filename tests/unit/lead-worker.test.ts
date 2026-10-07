@@ -3,7 +3,7 @@ import type { Mock } from "vitest"
 
 const db = vi.hoisted(() => ({
   webhookEvent: { findUnique: vi.fn(), create: vi.fn(), update: vi.fn() },
-  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn() },
+  contact: { findFirst: vi.fn(), create: vi.fn(), update: vi.fn(), count: vi.fn() },
   pipelineStage: { findFirst: vi.fn() },
   deal: { create: vi.fn(), count: vi.fn() },
   activity: { create: vi.fn() },
@@ -25,6 +25,7 @@ beforeEach(() => {
   db.contact.findFirst.mockResolvedValue(null)
   db.contact.create.mockResolvedValue({ id: "c1", firstName: "Ravi", lastName: "Patel" })
   db.contact.update.mockResolvedValue({ id: "c1" })
+  db.contact.count.mockResolvedValue(0)
   db.pipelineStage.findFirst.mockResolvedValue({ id: "stage1" })
   db.deal.create.mockResolvedValue({ id: "d1", title: "Ravi Patel" })
   db.deal.count.mockResolvedValue(0)

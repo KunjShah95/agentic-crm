@@ -14,6 +14,7 @@ import { normalizeLead } from "./normalize"
 import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
 import { isAutoAckEnabled } from "./ingress"
+import { requireQuota } from "@/modules/billing/quota"
 import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
 import { getSourceConfig } from "./source-config"
 import { scheduleFollowUps } from "@/modules/ai/scheduler"
@@ -111,6 +112,10 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     const isNewContact = !contact
 
     if (!contact) {
+      // Inbound leads land contacts too: the Free headcount cap applies to
+      // this path exactly like manual creation, or the trial→Free fallback
+      // would only bite for one of the two ways contacts enter the CRM.
+      await requireQuota(workspaceId, "contacts")
       contact = await db.contact.create({
         data: {
           workspaceId,
