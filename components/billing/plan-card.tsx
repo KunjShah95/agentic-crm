@@ -15,6 +15,8 @@ type PlanCardProps = {
   /** Whole days left while the no-card trial runs; null once paid or lapsed. */
   trialDaysLeft: number | null
   trialExpired: boolean
+  /** A subscription exists but is no longer paying (canceled, unpaid, expired). */
+  lapsed: boolean
 }
 
 const PAID_PLANS = ["builder", "pro", "scale"] as const
@@ -27,6 +29,7 @@ export function PlanCard({
   hasSubscription,
   trialDaysLeft,
   trialExpired,
+  lapsed,
 }: PlanCardProps) {
   const [loading, setLoading] = useState<"portal" | PlanName | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -84,7 +87,9 @@ export function PlanCard({
         <CardDescription>
           {hasSubscription
             ? "Billed monthly. Change plan, card or invoices in the billing portal."
-            : trialDaysLeft !== null
+            : lapsed
+              ? "Your subscription is no longer active, so the workspace is on Free limits. Nothing was deleted; pick a plan to restore seats and contacts."
+              : trialDaysLeft !== null
               ? `${trialDaysLeft} day${trialDaysLeft === 1 ? "" : "s"} left of full Team access. No card needed. Pick a plan any time to keep these limits.`
               : trialExpired
                 ? "Your trial has ended and the workspace is on Free limits. Nothing was deleted; pick a plan to restore seats and contacts."

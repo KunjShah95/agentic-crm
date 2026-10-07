@@ -152,3 +152,45 @@ describe("plan limits match the pricing page", () => {
     }
   })
 })
+
+describe("resolveEffectivePlan with a lapsed subscription", () => {
+  it("ignores a stale paid Workspace.plan once a subscription row exists", async () => {
+    const { resolveEffectivePlan } = await import("@/modules/billing/limits")
+    const createdAt = new Date(Date.UTC(2025, 0, 1))
+    const now = new Date(Date.UTC(2026, 0, 1))
+    const r = resolveEffectivePlan({ plan: "pro", createdAt }, { plan: "pro", status: "canceled" }, now)
+    expect(r.plan).toBe("free")
+  })
+
+  it("still honours a hand-set plan when there is no subscription", async () => {
+    const { resolveEffectivePlan } = await import("@/modules/billing/limits")
+    const createdAt = new Date(Date.UTC(2025, 0, 1))
+    const now = new Date(Date.UTC(2026, 0, 1))
+    expect(resolveEffectivePlan({ plan: "scale", createdAt }, null, now).plan).toBe("scale")
+  })
+})
+
+describe("assertSeatAvailable", () => {
+  function fakeClient(members: number, pending: number, plan = "free") {
+    return {
+      $executeRaw: async () => 0,
+      workspace: { findUnique: async () => ({ plan, createdAt: new Date(Date.UTC(2020, 0, 1)), subscription: null }) },
+      workspaceMember: { count: async () => members },
+      workspaceInvite: { count: async () => pending },
+    }
+  }
+
+  it("blocks an invite when members plus pending invites fill the plan", async () => {
+    const { assertSeatAvailable } = await import("@/modules/billing/quota")
+    await expect(assertSeatAvailable(fakeClient(2, 1) as never, "w1", 3)).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" })
+    await expect(assertSeatAvailable(fakeClient(1, 1) as never, "w1", 3)).resolves.toBeUndefined()
+  })
+
+  it("blocks accepting a trial invite after the workspace fell to Free", async () => {
+    const { assertSeatAvailable } = await import("@/modules/billing/quota")
+    // Owner alone, the accepted invite excluded from pending: Free has 1 seat.
+    await expect(
+      assertSeatAvailable(fakeClient(1, 0) as never, "w1", undefined, { acceptingInviteId: "inv1" })
+    ).rejects.toMatchObject({ code: "QUOTA_EXCEEDED" })
+  })
+})

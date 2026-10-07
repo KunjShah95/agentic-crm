@@ -49,10 +49,6 @@ function pick(obj: Record<string, unknown>, keys: string[]): string | undefined 
   return undefined
 }
 
-function splitName(name?: string): { firstName: string; lastName: string } {
-  return splitCompoundName(name)
-}
-
 function combineFirstLast(first?: string, last?: string): string | undefined {
   const f = (first ?? "").trim()
   const l = (last ?? "").trim()

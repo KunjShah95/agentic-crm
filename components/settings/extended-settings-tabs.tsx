@@ -201,7 +201,7 @@ export function ExtendedSettingsTabs({
             <CardContent className="divide-y">
               <SettingRow title="Plan" description="Usage limits and invoices live on the billing page.">
                 <div className="flex items-center gap-3">
-                  <Badge className="bg-brand-solid capitalize text-brand-foreground">{workspace.plan}</Badge>
+                  <Badge className="bg-brand-solid text-brand-foreground">{workspace.plan}</Badge>
                   <Button variant="outline" size="sm" render={<Link href={`/${slug}/settings/billing`} />}>
                     Manage billing
                   </Button>

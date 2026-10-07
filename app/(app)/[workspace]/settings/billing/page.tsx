@@ -6,7 +6,7 @@ import { auth } from "@/lib/auth"
 import { db } from "@/lib/db"
 import { formatDate } from "@/lib/format"
 import { canManageBilling } from "@/lib/permissions"
-import { PLAN_LABELS, resolveEffectivePlan } from "@/modules/billing/limits"
+import { PLAN_LABELS, isPayingStatus, resolveEffectivePlan } from "@/modules/billing/limits"
 import { periodKey, periodKeyFor } from "@/modules/billing/quota"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -89,7 +89,11 @@ export default async function BillingSettingsPage({
         plan={plan}
         status={subscription?.status ?? null}
         canManageBilling={canManage}
-        hasSubscription={!!subscription?.stripeSubId}
+        // Only a paying subscription hides the plan picker. A canceled, unpaid
+        // or expired one keeps its stripeSubId, and its owner must still be
+        // able to start a new checkout.
+        hasSubscription={!!subscription?.stripeSubId && isPayingStatus(subscription.status)}
+        lapsed={!!subscription && !isPayingStatus(subscription.status)}
         trialDaysLeft={trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt.getTime() - now.getTime()) / 86_400_000)) : null}
         trialExpired={trialExpired}
       />

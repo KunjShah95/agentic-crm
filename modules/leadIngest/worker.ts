@@ -15,7 +15,7 @@ import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
 import { isAutoAckEnabled } from "./ingress"
 import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
-import { getSourceConfig, isSourceEnabled, isSourceTrusted, isAutoAckEnabled as isSourceAutoAckEnabled } from "./source-config"
+import { getSourceConfig } from "./source-config"
 import { scheduleFollowUps } from "@/modules/ai/scheduler"
 import { sendWhatsApp, renderWaTemplate } from "@/modules/whatsapp/adapter"
 
@@ -139,14 +139,25 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     // 5. Create Deal in first pipeline stage
     let dealId: string | undefined
     const stage = await db.pipelineStage.findFirst({ where: { workspaceId }, orderBy: { order: "asc" } })
-    if (stage && assigneeId) {
+    // `Deal.ownerId` is required. With auto-assign off the contact stays
+    // unowned for a manager to hand out, and the deal sits with the workspace
+    // owner as the unassigned queue, so the enquiry still reaches the pipeline.
+    const dealOwnerId =
+      assigneeId ??
+      (
+        await db.workspaceMember.findFirst({
+          where: { workspaceId, role: "OWNER" },
+          select: { userId: true },
+        })
+      )?.userId
+    if (stage && dealOwnerId) {
       const deal = await db.deal.create({
         data: {
           workspaceId,
           title: `${lead.firstName} ${lead.lastName}`.trim() || "New Lead",
           contactId: contact.id,
           stageId: stage.id,
-          ownerId: assigneeId,
+          ownerId: dealOwnerId,
           bookingStage: "INQUIRY",
         },
       })

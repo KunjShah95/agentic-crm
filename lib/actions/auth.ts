@@ -6,6 +6,7 @@ import { AuthError } from "next-auth"
 import { handleAction, type Result } from "@/lib/actions"
 import { auth, signIn } from "@/lib/auth"
 import { db } from "@/lib/db"
+import { assertSeatAvailable } from "@/modules/billing/quota"
 import { AppError } from "@/lib/errors"
 import { slugify } from "@/lib/format"
 import { acceptInviteSchema, loginSchema, signupSchema } from "@/lib/validators"
@@ -128,6 +129,10 @@ export async function signupAction(
         )
       }
       await db.$transaction(async (tx) => {
+        // The plan may have shrunk since the invite was sent (a trial ending),
+        // so the seat is checked again at acceptance, under the same lock the
+        // invite path takes. Throws before the user row is created.
+        await assertSeatAvailable(tx, invite.workspaceId, undefined, { acceptingInviteId: invite.id })
         const user = await tx.user.create({
           data: {
             email: parsed.data.email,
@@ -142,10 +147,10 @@ export async function signupAction(
             role: invite.role as Role,
           },
         })
-      })
-      await db.workspaceInvite.update({
-        where: { id: invite.id },
-        data: { accepted: true },
+        await tx.workspaceInvite.update({
+          where: { id: invite.id },
+          data: { accepted: true },
+        })
       })
       workspaceSlug = invite.workspace.slug
     } else {
@@ -221,23 +226,24 @@ export async function acceptInviteAction(
       )
     }
 
-    await db.workspaceMember.upsert({
-      where: {
-        workspaceId_userId: {
-          workspaceId: invite.workspaceId,
-          userId: session.user.id,
-        },
-      },
-      create: {
-        workspaceId: invite.workspaceId,
-        userId: session.user.id,
-        role: invite.role as Role,
-      },
-      update: {},
-    })
-    await db.workspaceInvite.update({
-      where: { id: invite.id },
-      data: { accepted: true },
+    const userId = session.user.id
+    await db.$transaction(async (tx) => {
+      const already = await tx.workspaceMember.findUnique({
+        where: { workspaceId_userId: { workspaceId: invite.workspaceId, userId } },
+        select: { userId: true },
+      })
+      // Re-checked at acceptance: the plan may have shrunk since the invite
+      // was sent. An existing member re-opening the link takes no new seat.
+      if (!already) {
+        await assertSeatAvailable(tx, invite.workspaceId, undefined, { acceptingInviteId: invite.id })
+        await tx.workspaceMember.create({
+          data: { workspaceId: invite.workspaceId, userId, role: invite.role as Role },
+        })
+      }
+      await tx.workspaceInvite.update({
+        where: { id: invite.id },
+        data: { accepted: true },
+      })
     })
 
     return {

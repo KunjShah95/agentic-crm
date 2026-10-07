@@ -74,6 +74,10 @@ export const TRIAL_DAYS = 14
 /** Subscription statuses that mean the customer is paying (or Stripe is retrying). */
 const PAID_STATUSES = new Set(["active", "trialing", "past_due"])
 
+export function isPayingStatus(status: string | null | undefined): boolean {
+  return !!status && PAID_STATUSES.has(status)
+}
+
 export type EffectivePlan = {
   plan: PlanName
   /** Set while a no-card trial is running; null once paid or lapsed. */
@@ -98,8 +102,11 @@ export function resolveEffectivePlan(
   if (subscription && PAID_STATUSES.has(subscription.status) && isPlanName(subscription.plan)) {
     return { plan: subscription.plan, trialEndsAt: null, trialExpired: false }
   }
-  // A plan set on the workspace by hand (an invoiced customer) counts as paid.
-  if (ws.plan && ws.plan !== "free" && isPlanName(ws.plan)) {
+  // A plan set on the workspace by hand (an invoiced customer) counts as paid,
+  // but only when Stripe has no say. If a subscription row exists, Stripe is
+  // authoritative: `Workspace.plan` was mirrored from it and may be stale
+  // (older rows were written "pro" even for canceled or unpaid subscriptions).
+  if (!subscription && ws.plan && ws.plan !== "free" && isPlanName(ws.plan)) {
     return { plan: ws.plan, trialEndsAt: null, trialExpired: false }
   }
   const trialEndsAt = new Date(ws.createdAt.getTime() + TRIAL_DAYS * 86_400_000)

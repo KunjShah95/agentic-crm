@@ -1,5 +1,5 @@
 import { db } from "@/lib/db"
-import { PLAN_LIMITS, resolveEffectivePlan } from "./limits"
+import { PLAN_LIMITS, UNLIMITED, resolveEffectivePlan } from "./limits"
 import { AppError } from "@/lib/errors"
 
 export function periodKey(d = new Date()): string {
@@ -51,20 +51,21 @@ export async function requireQuota(
           ? limits.maxContacts
           : limits.maxSeats
 
-  // Seats are a headcount, not a metered event: nothing increments a "seats"
-  // counter, so reading one let every plan invite without limit. Count the
-  // members plus invites still waiting to be accepted.
   if (kind === "seats") {
-    const [members, pending] = await Promise.all([
-      client.workspaceMember.count({ where: { workspaceId } }),
-      client.workspaceInvite.count({
-        where: { workspaceId, accepted: false, expiresAt: { gt: new Date() } },
-      }),
-    ])
-    if (isQuotaExceeded(members + pending, key)) {
+    await assertSeatAvailable(client, workspaceId, key)
+    return
+  }
+
+  // Contacts are a headcount too. Contact creation never incremented the
+  // "contacts" counter, so a monthly counter read here was always 0 and the
+  // Free limit after a trial never bit. Count the rows that exist.
+  if (kind === "contacts") {
+    if (key === UNLIMITED) return
+    const total = await client.contact.count({ where: { workspaceId } })
+    if (isQuotaExceeded(total, key)) {
       throw new AppError(
         "QUOTA_EXCEEDED",
-        `Your plan includes ${key} seat${key === 1 ? "" : "s"}. Upgrade to add more people.`,
+        `Your plan includes ${key.toLocaleString("en-IN")} contacts. Upgrade to add more.`,
         402
       )
     }
@@ -117,4 +118,57 @@ export async function incrementUsage(
       update: { count: { increment: count } },
     })
   })
+}
+
+/**
+ * Seat admission: members plus unexpired pending invites must stay under the
+ * plan's seat count.
+ *
+ * When `client` is a transaction, a per-workspace advisory lock is taken first
+ * so two concurrent invites (or acceptances) cannot both read the same free
+ * seat. The lock is released when the transaction ends. Outside a transaction
+ * the check is best-effort, which is why the invite and accept paths call this
+ * from inside one.
+ *
+ * `acceptingInviteId` is for the accept path: that invite already holds a
+ * reservation and is about to turn into a member, so it is excluded from the
+ * pending count and the new member is counted instead.
+ */
+export async function assertSeatAvailable(
+  client: typeof db | TxClient,
+  workspaceId: string,
+  limit?: number,
+  opts: { acceptingInviteId?: string } = {}
+): Promise<void> {
+  const c = client as unknown as typeof db
+  if (client !== db) {
+    await c.$executeRaw`SELECT 1 FROM (SELECT pg_advisory_xact_lock(hashtext(${"seats:" + workspaceId}))) AS l`
+  }
+
+  let max = limit
+  if (max === undefined) {
+    const ws = await c.workspace.findUnique({ where: { id: workspaceId }, include: { subscription: true } })
+    const plan = ws ? resolveEffectivePlan(ws, ws.subscription).plan : "free"
+    max = (PLAN_LIMITS[plan] ?? PLAN_LIMITS.free).maxSeats
+  }
+
+  const [members, pending] = await Promise.all([
+    c.workspaceMember.count({ where: { workspaceId } }),
+    c.workspaceInvite.count({
+      where: {
+        workspaceId,
+        accepted: false,
+        expiresAt: { gt: new Date() },
+        ...(opts.acceptingInviteId ? { id: { not: opts.acceptingInviteId } } : {}),
+      },
+    }),
+  ])
+  // Inviting: the new invite needs a seat. Accepting: the new member does.
+  if (isQuotaExceeded(members + pending, max)) {
+    throw new AppError(
+      "QUOTA_EXCEEDED",
+      `This workspace's plan includes ${max} seat${max === 1 ? "" : "s"}. An owner or admin needs to upgrade before anyone else can join.`,
+      402
+    )
+  }
 }

@@ -9,8 +9,9 @@ import { handleAction, type Result } from "@/lib/actions"
 import { AppError } from "@/lib/errors"
 import { canInvite, hasMinRole, isOwner, requireWorkspaceMember } from "@/lib/permissions"
 import { inviteSchema, updateRoleSchema, workspaceSchema } from "@/lib/validators"
-import { requireQuota } from "@/modules/billing/quota"
+import { assertSeatAvailable } from "@/modules/billing/quota"
 import { pipelineSettingsSchema, type PipelineSettings } from "@/modules/workspace/pipeline-settings"
+import { mergeWorkspaceSettings } from "@/modules/workspace/settings-json"
 
 function requireUserId(sessionUserId?: string) {
   if (!sessionUserId) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
@@ -61,17 +62,9 @@ export async function updatePipelineSettingsAction(
       throw new AppError("VALIDATION", parsed.error.issues[0]?.message ?? "Check the form.")
     }
 
-    // Merge, never assign: settingsJson also carries the ingest secret hash,
+    // Atomic key merge: settingsJson also carries the ingest secret hash,
     // auto-ack, API key hashes and the WhatsApp binding.
-    const ws = await db.workspace.findUnique({
-      where: { id: workspaceId },
-      select: { settingsJson: true },
-    })
-    const current = (ws?.settingsJson as Record<string, unknown> | null) ?? {}
-    await db.workspace.update({
-      where: { id: workspaceId },
-      data: { settingsJson: { ...current, pipeline: parsed.data } },
-    })
+    await mergeWorkspaceSettings(workspaceId, { pipeline: parsed.data })
     return parsed.data
   })
 }
@@ -120,17 +113,20 @@ export async function inviteMemberAction(
       )
     }
 
-    await requireQuota(workspaceId, "seats")
-
+    // Seat check and invite creation in one transaction under a per-workspace
+    // lock, so two admins inviting at once cannot both take the last seat.
     const token = randomBytes(24).toString("hex")
-    await db.workspaceInvite.create({
-      data: {
-        workspaceId,
-        email: parsed.data.email,
-        role: parsed.data.role,
-        token,
-        expiresAt: addDays(new Date(), 7),
-      },
+    await db.$transaction(async (tx) => {
+      await assertSeatAvailable(tx, workspaceId)
+      await tx.workspaceInvite.create({
+        data: {
+          workspaceId,
+          email: parsed.data.email,
+          role: parsed.data.role,
+          token,
+          expiresAt: addDays(new Date(), 7),
+        },
+      })
     })
     return { token }
   })

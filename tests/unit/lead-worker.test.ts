@@ -66,3 +66,19 @@ describe("processLead", () => {
     expect(r.contactId).toBe("existing")
   })
 })
+
+describe("processLead with auto-assign off", () => {
+  it("still creates the deal, owned by the workspace owner, with an unowned contact", async () => {
+    db.workspace.findUnique.mockResolvedValue({ settingsJson: { pipeline: { holdDays: 2, autoAssign: false } } })
+    ;(db.workspaceMember as unknown as { findFirst: Mock }).findFirst = vi.fn().mockResolvedValue({ userId: "owner1" })
+    const r = await processLead({
+      workspaceId: "w1",
+      source: "meta",
+      payload: { lead_id: "m-9", name: "Asha Desai", phone: "+919800000001" },
+    })
+    expect(r.dealId).toBe("d1")
+    expect(db.deal.create.mock.calls[0][0].data.ownerId).toBe("owner1")
+    expect(db.contact.create.mock.calls[0][0].data.ownerId).toBeNull()
+    expect(db.workspaceMember.findMany).not.toHaveBeenCalled()
+  })
+})

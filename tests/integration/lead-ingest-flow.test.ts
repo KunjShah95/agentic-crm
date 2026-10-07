@@ -101,10 +101,6 @@ const LEAD = {
   budget: "80-90 Lakh",
 }
 
-function channels() {
-  return db.activity.create.mock.calls.map((c) => c[0].data.channel)
-}
-
 /**
  * Outbound activity channels only. The follow-up scheduler also uses the
  * WHATSAPP channel for its first two tasks (they are WhatsApp-related to-dos,
