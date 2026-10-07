@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache"
 import { canTransition, isBookingStage } from "./stages"
 import { materializeCLP } from "@/modules/payments/actions"
 import { buildDocContext, renderDocument } from "@/modules/documents/render"
+import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
 
 async function authed(workspaceId: string) {
   const s = await auth()
@@ -31,7 +32,14 @@ async function advanceStage(workspaceId: string, dealId: string, to: string) {
 export async function holdUnit(input: { workspaceId: string; dealId: string; unitId: string; hours?: number }) {
   const userId = await authed(input.workspaceId)
   await advanceStage(input.workspaceId, input.dealId, "HOLD")
-  const holdUntil = new Date(Date.now() + (input.hours ?? 48) * 3600_000)
+  // An explicit `hours` wins; otherwise the workspace's configured hold window.
+  const hours =
+    input.hours ??
+    readPipelineSettings(
+      (await db.workspace.findUnique({ where: { id: input.workspaceId }, select: { settingsJson: true } }))
+        ?.settingsJson
+    ).holdDays * 24
+  const holdUntil = new Date(Date.now() + hours * 3600_000)
 
   /* The unit must be proven to belong to this workspace before it is touched.
      `authed` proves the *caller* is a member of the workspace and `advanceStage`

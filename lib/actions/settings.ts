@@ -10,6 +10,7 @@ import { AppError } from "@/lib/errors"
 import { canInvite, hasMinRole, isOwner, requireWorkspaceMember } from "@/lib/permissions"
 import { inviteSchema, updateRoleSchema, workspaceSchema } from "@/lib/validators"
 import { requireQuota } from "@/modules/billing/quota"
+import { pipelineSettingsSchema, type PipelineSettings } from "@/modules/workspace/pipeline-settings"
 
 function requireUserId(sessionUserId?: string) {
   if (!sessionUserId) throw new AppError("UNAUTHENTICATED", "Log in first.", 401)
@@ -43,6 +44,35 @@ export async function updateWorkspaceSettingsAction(
       data: { name: parsed.data.name, slug },
     })
     return { ok: true }
+  })
+}
+
+export async function updatePipelineSettingsAction(
+  workspaceId: string,
+  input: unknown
+): Promise<Result<PipelineSettings>> {
+  return handleAction(async () => {
+    const session = await auth()
+    const userId = requireUserId(session?.user?.id)
+    await requireWorkspaceMember(workspaceId, userId, "ADMIN")
+
+    const parsed = pipelineSettingsSchema.safeParse(input)
+    if (!parsed.success) {
+      throw new AppError("VALIDATION", parsed.error.issues[0]?.message ?? "Check the form.")
+    }
+
+    // Merge, never assign: settingsJson also carries the ingest secret hash,
+    // auto-ack, API key hashes and the WhatsApp binding.
+    const ws = await db.workspace.findUnique({
+      where: { id: workspaceId },
+      select: { settingsJson: true },
+    })
+    const current = (ws?.settingsJson as Record<string, unknown> | null) ?? {}
+    await db.workspace.update({
+      where: { id: workspaceId },
+      data: { settingsJson: { ...current, pipeline: parsed.data } },
+    })
+    return parsed.data
   })
 }
 

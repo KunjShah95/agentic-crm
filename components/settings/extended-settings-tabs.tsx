@@ -1,24 +1,29 @@
 "use client"
 
-import { useState } from "react"
+import * as React from "react"
+import { useState, useTransition } from "react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import {
-  Building2,
-  Globe,
-  Sliders,
-  Key,
+  ArrowUpRight,
   BellRing,
-  ShieldAlert,
-  Tag,
-  Users,
+  Building2,
   CreditCard,
+  Globe,
+  Key,
+  LoaderCircle,
   Radio,
   Share2,
+  ShieldAlert,
+  Sliders,
+  Tag,
+  Users,
 } from "lucide-react"
 
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
@@ -27,267 +32,377 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { WorkspaceSettingsForm } from "@/components/settings/workspace-settings-form"
 import { DeleteWorkspaceButton } from "@/components/settings/delete-workspace-button"
 import { LeadIngestSettings } from "@/components/settings/lead-ingest-settings"
+import { updatePipelineSettingsAction } from "@/lib/actions/settings"
+import type { PipelineSettings } from "@/modules/workspace/pipeline-settings"
+
+const SECTIONS = [
+  { value: "general", label: "General", icon: Building2 },
+  { value: "pipeline", label: "Pipeline & RERA", icon: Sliders },
+  { value: "localization", label: "Localization", icon: Globe },
+  { value: "integrations", label: "Integrations", icon: BellRing },
+  { value: "api", label: "API & Webhooks", icon: Key },
+] as const
+
+/* One trigger style for every section. The primitive is Base UI, which marks
+   the selected tab with `data-active` — the previous `data-[state=active]`
+   selectors were Radix's and never matched, so the active tab was only
+   distinguishable by the primitive's faint default. `!` is needed on the
+   sizing utilities because the primitive's are orientation-variant-scoped and
+   win on specificity otherwise. */
+const triggerClass = cn(
+  "h-9! flex-none! justify-start! gap-2 rounded-sm px-2.5 text-[13px] font-medium text-muted-foreground",
+  "hover:bg-muted hover:text-foreground",
+  "data-active:bg-card data-active:text-foreground data-active:shadow-none data-active:ring-1 data-active:ring-border",
+  "md:w-full"
+)
+
+const navLinkClass =
+  "flex h-9 shrink-0 items-center gap-2 rounded-sm px-2.5 text-[13px] font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground md:w-full"
+
+/** A label/description on the left, its control on the right; stacks below `sm`. */
+function SettingRow({
+  title,
+  description,
+  htmlFor,
+  children,
+}: {
+  title: string
+  description?: React.ReactNode
+  htmlFor?: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div className="min-w-0 space-y-0.5">
+        <Label htmlFor={htmlFor} className="text-[13px] font-medium">
+          {title}
+        </Label>
+        {description ? <p className="text-xs leading-relaxed text-muted-foreground">{description}</p> : null}
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
+  )
+}
+
+function SectionHeading({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="space-y-1">
+      <h2 className="text-base font-semibold tracking-[-0.01em]">{title}</h2>
+      <p className="text-[13px] text-muted-foreground">{description}</p>
+    </div>
+  )
+}
 
 export function ExtendedSettingsTabs({
   workspace,
   slug,
   isOwner,
+  canManage,
+  pipeline,
   whatsappEnabled = false,
 }: {
   workspace: { id: string; name: string; slug: string; plan: string; createdAt: Date; _count: { members: number } }
   slug: string
   isOwner: boolean
+  /** ADMIN or above: the pipeline action is ADMIN-gated on the server. */
+  canManage: boolean
+  pipeline: PipelineSettings
   whatsappEnabled?: boolean
 }) {
-  const [holdDays, setHoldDays] = useState("7")
-  const [clpEnabled, setClpEnabled] = useState(true)
-  const [autoAssign, setAutoAssign] = useState(true)
+  const router = useRouter()
+  const [isSaving, startSaving] = useTransition()
+  const [holdDays, setHoldDays] = useState(String(pipeline.holdDays))
+  const [autoAssign, setAutoAssign] = useState(pipeline.autoAssign)
+  const pipelineDirty = holdDays !== String(pipeline.holdDays) || autoAssign !== pipeline.autoAssign
 
-  function handleSave(section: string) {
-    toast.success(`${section} settings saved successfully`)
+  function savePipeline() {
+    startSaving(async () => {
+      const result = await updatePipelineSettingsAction(workspace.id, {
+        holdDays: Number(holdDays),
+        autoAssign,
+      })
+      if (result.error) {
+        toast.error(result.error.message)
+        return
+      }
+      toast.success("Pipeline settings saved")
+      router.refresh()
+    })
   }
 
+  const memberCount = workspace._count.members
+
+  const workspaceLinks = [
+    { href: `/${slug}/settings/members`, label: "Members", icon: Users, meta: String(memberCount) },
+    { href: `/${slug}/settings/billing`, label: "Billing", icon: CreditCard },
+    { href: `/${slug}/settings/tags`, label: "Tags", icon: Tag },
+    ...(whatsappEnabled ? [{ href: `/${slug}/settings/social`, label: "WhatsApp", icon: Radio }] : []),
+  ]
+
   return (
-    <Tabs defaultValue="general" className="w-full space-y-6">
-      {/* The strip overrides two things the vendored primitive sets, and both
-          needed `!` because the primitive's utilities are variant-scoped
-          (`group-data-horizontal/tabs:h-8`) rather than base-scoped, so a plain
-          same-property utility here does not win on cascade order.
+    <Tabs
+      defaultValue="general"
+      orientation="vertical"
+      className="flex! w-full flex-col! gap-6 md:flex-row! md:items-start md:gap-8"
+    >
+      {/* Section nav: a horizontally scrolling strip on phones, a sticky
+          sidebar from `md`. Page links sit under the in-page sections so
+          Members / Billing / Tags are reachable from the same place instead of
+          hiding behind small buttons in the General card. */}
+      <nav aria-label="Settings sections" className="min-w-0 md:sticky md:top-6 md:w-52 md:shrink-0">
+        <TabsList
+          className={cn(
+            "h-auto! w-full flex-row! justify-start! gap-1 overflow-x-auto rounded-none bg-transparent p-0",
+            "md:flex-col! md:items-stretch! md:overflow-visible"
+          )}
+        >
+          {SECTIONS.map(({ value, label, icon: Icon }) => (
+            <TabsTrigger key={value} value={value} className={triggerClass}>
+              <Icon className="size-4" />
+              {label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
 
-          `h-auto!` — the primitive pins horizontal lists to `h-8` (32px). This
-          bar wraps to a second row on narrow viewports, and the fixed 32px row
-          clipped every trigger below the fold. Important wins over the group
-          variant; height then comes from the triggers themselves.
+        <div className="mt-4 hidden border-t pt-4 md:block">
+          <p className="px-2.5 pb-2 text-[11px] font-medium tracking-wide text-muted-foreground uppercase">Workspace</p>
+          <div className="flex flex-col gap-1">
+            {workspaceLinks.map(({ href, label, icon: Icon, meta }) => (
+              <Link key={href} href={href} className={navLinkClass}>
+                <Icon className="size-4" />
+                <span className="flex-1">{label}</span>
+                {meta ? <span className="text-xs tabular-nums">{meta}</span> : <ArrowUpRight className="size-3.5 opacity-60" />}
+              </Link>
+            ))}
+          </div>
+        </div>
+      </nav>
 
-          `min-h-9` (36px) per trigger — at `text-xs` the intrinsic height is
-          ~21px, under the 24px AA target, and these are the only route to
-          Integrations, API & Webhooks and Tags.
+      <div className="min-w-0 flex-1">
+        {/* General */}
+        <TabsContent value="general" className="space-y-6">
+          <SectionHeading title="General" description="Your workspace name, URL and plan." />
 
-          `flex-none` — the primitive's `flex-1` makes every trigger claim an
-          equal share of the full-width row, so a four-character "Tags" was as
-          wide as "API & Webhooks" and the labels drifted apart. Triggers should
-          hug their text; `justify-start` on the list then does what it says.
-          `px-2.5` replaces the primitive's `px-1.5`, which is tight against a
-          14px icon at this text size. */}
-      <TabsList className="flex h-auto! w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
-        <TabsTrigger value="general" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <Building2 className="mr-1.5 size-3.5" /> General
-        </TabsTrigger>
-        <TabsTrigger value="pipeline" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <Sliders className="mr-1.5 size-3.5" /> Pipeline & RERA
-        </TabsTrigger>
-        <TabsTrigger value="localization" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <Globe className="mr-1.5 size-3.5" /> Localization
-        </TabsTrigger>
-        <TabsTrigger value="integrations" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <BellRing className="mr-1.5 size-3.5" /> Integrations
-        </TabsTrigger>
-        <TabsTrigger value="api" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <Key className="mr-1.5 size-3.5" /> API & Webhooks
-        </TabsTrigger>
-        <TabsTrigger value="tags" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
-          <Tag className="mr-1.5 size-3.5" /> Tags
-        </TabsTrigger>
-      </TabsList>
-
-      {/* General Settings */}
-      <TabsContent value="general" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg">General Information</CardTitle>
-            <CardDescription>
-              Update your workspace brand name and web slug URL.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <WorkspaceSettingsForm
-              workspaceId={workspace.id}
-              workspaceSlug={slug}
-              initial={{ name: workspace.name, slug: workspace.slug }}
-            />
-            <div className="flex flex-wrap items-center gap-3 border-t pt-4 text-xs text-muted-foreground">
-              <span>Subscription Plan:</span>
-              <Badge className="bg-brand-solid text-brand-foreground capitalize">{workspace.plan}</Badge>
-              <span>· {workspace._count.members} workspace member{workspace._count.members !== 1 ? "s" : ""}</span>
-              <div className="ml-auto flex gap-2">
-                <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/members`} />}>
-                  <Users className="mr-1 size-3" /> Members
-                </Button>
-                <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/billing`} />}>
-                  <CreditCard className="mr-1 size-3" /> Billing
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {isOwner && (
-          <Card className="border-destructive/40 bg-destructive/5">
-            <CardHeader>
-              <CardTitle className="text-base text-destructive flex items-center gap-2">
-                <ShieldAlert className="size-4" /> Danger Zone
-              </CardTitle>
-              <CardDescription className="text-xs">
-                Deleting a workspace removes all associated contacts, deals, bookings, and activities. This action cannot be undone.
-              </CardDescription>
+          <Card>
+            <CardHeader className="border-b">
+              <CardTitle>Workspace details</CardTitle>
+              <CardDescription className="text-xs">Changing the slug changes every link to this workspace.</CardDescription>
             </CardHeader>
             <CardContent>
-              <DeleteWorkspaceButton
+              <WorkspaceSettingsForm
                 workspaceId={workspace.id}
-                workspaceName={workspace.name}
+                workspaceSlug={slug}
+                initial={{ name: workspace.name, slug: workspace.slug }}
               />
             </CardContent>
           </Card>
-        )}
-      </TabsContent>
 
-      {/* Pipeline & Real Estate */}
-      <TabsContent value="pipeline" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg">Real Estate & Pipeline Preferences</CardTitle>
-            <CardDescription>
-              Configure default unit booking hold windows, RERA document templates, and payment schedules.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="grid gap-2">
-              <Label htmlFor="holdDays" className="text-sm font-medium">Default Unit Hold Duration (Days)</Label>
-              <Input
-                id="holdDays"
-                type="number"
-                value={holdDays}
-                onChange={(e) => setHoldDays(e.target.value)}
-                className="max-w-xs focus-visible:ring-brand tabular-nums"
-              />
-              <p className="text-xs text-muted-foreground">Automatic expiration timeframe for temporary HOLD stage before releasing inventory back to pool.</p>
-            </div>
-
-            <div className="flex items-center justify-between rounded-md border p-3.5">
-              <div>
-                <Label className="text-sm font-medium">Construction Linked Payment (CLP) Automation</Label>
-                <p className="text-xs text-muted-foreground">Auto-generate milestone demand letters upon milestone completion updates.</p>
-              </div>
-              <Switch checked={clpEnabled} onCheckedChange={setClpEnabled} />
-            </div>
-
-            <div className="flex items-center justify-between rounded-md border p-3.5">
-              <div>
-                <Label className="text-sm font-medium">Auto-assign Inbound Site Visit Leads</Label>
-                <p className="text-xs text-muted-foreground">Distribute unassigned inbound web/QR leads round-robin to active sales managers.</p>
-              </div>
-              <Switch checked={autoAssign} onCheckedChange={setAutoAssign} />
-            </div>
-
-            <Button variant="brand" onClick={() => handleSave("Pipeline")} className="font-medium">
-              Save Pipeline Settings
-            </Button>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      {/* Localization */}
-      <TabsContent value="localization" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg font-semibold">Regional & Currency Format</CardTitle>
-            <CardDescription>Set defaults for currency symbols, number formats, and timezones.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">Primary Currency</Label>
-              <Input value="INR (₹) — Indian Rupee" disabled className="max-w-md bg-muted text-xs" />
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">Default Timezone</Label>
-              <Input value="Asia/Kolkata (IST — UTC +05:30)" disabled className="max-w-md bg-muted text-xs" />
-            </div>
-            <div className="grid gap-2">
-              <Label className="text-sm font-medium">Supported Languages</Label>
-              <div className="flex gap-2">
-                <Badge variant="secondary" className="text-xs">English (EN)</Badge>
-                <Badge variant="secondary" className="text-xs">Gujarati (GU)</Badge>
-                <Badge variant="secondary" className="text-xs">Hindi (HI)</Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      {/* Integrations */}
-      <TabsContent value="integrations" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg font-semibold">Connected Channels & Messaging</CardTitle>
-            <CardDescription>
-              {whatsappEnabled
-                ? "Manage WhatsApp Cloud API, Meta lead ads, and email notification sync."
-                : "Manage Meta lead ads and email notification sync."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {whatsappEnabled && (
-              <div className="flex items-center justify-between rounded-md border p-4">
+          <Card>
+            <CardContent className="divide-y">
+              <SettingRow title="Plan" description="Usage limits and invoices live on the billing page.">
                 <div className="flex items-center gap-3">
-                  <span className="flex size-10 items-center justify-center rounded-sm bg-status-positive-bg text-status-positive-fg">
-                    <Radio className="size-5" />
-                  </span>
-                  <div>
-                    <p className="text-sm font-medium">WhatsApp</p>
-                    <p className="text-xs text-muted-foreground">Inbound messages land in the Inbox; replies go out through the Cloud API.</p>
-                  </div>
+                  <Badge className="bg-brand-solid capitalize text-brand-foreground">{workspace.plan}</Badge>
+                  <Button variant="outline" size="sm" render={<Link href={`/${slug}/settings/billing`} />}>
+                    Manage billing
+                  </Button>
                 </div>
-                <Button variant="outline" size="xs" render={<Link href={`/${slug}/settings/social`} />}>
-                  Configure
+              </SettingRow>
+              <SettingRow
+                title="Members"
+                description={`${memberCount} member${memberCount !== 1 ? "s" : ""} in this workspace.`}
+              >
+                <Button variant="outline" size="sm" render={<Link href={`/${slug}/settings/members`} />}>
+                  Manage members
                 </Button>
-              </div>
-            )}
+              </SettingRow>
+              <SettingRow title="Tags" description="Labels for organising contacts and deals.">
+                <Button variant="outline" size="sm" render={<Link href={`/${slug}/settings/tags`} />}>
+                  Manage tags
+                </Button>
+              </SettingRow>
+            </CardContent>
+          </Card>
 
-            <div className="flex items-center justify-between rounded-md border p-4">
-              <div className="flex items-center gap-3">
-                <span className="flex size-10 items-center justify-center rounded-sm bg-status-info-bg text-status-info-fg">
-                  <Share2 className="size-5" />
-                </span>
-                <div>
-                  <p className="text-sm font-medium">Website & portal enquiries</p>
-                  <p className="text-xs text-muted-foreground">Lead-form webhooks land in Contacts automatically — see API &amp; Webhooks below.</p>
+          {isOwner && (
+            <Card className="border-destructive/40">
+              <CardHeader className="border-b border-destructive/20">
+                <CardTitle className="flex items-center gap-2 text-destructive">
+                  <ShieldAlert className="size-4" /> Danger zone
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <SettingRow
+                  title="Delete this workspace"
+                  description="Removes all contacts, deals, bookings and activities. This cannot be undone."
+                >
+                  <DeleteWorkspaceButton workspaceId={workspace.id} workspaceName={workspace.name} />
+                </SettingRow>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        {/* Pipeline & RERA. Every control here is persisted and read by
+            something: holdDays by `holdUnit`, autoAssign by the lead-ingest
+            worker. See modules/workspace/pipeline-settings.ts. */}
+        <TabsContent value="pipeline" className="space-y-6">
+          <SectionHeading
+            title="Pipeline & RERA"
+            description="How long unit holds last and who new leads go to."
+          />
+
+          <Card>
+            <CardContent className="divide-y">
+              <SettingRow
+                title="Default unit hold"
+                htmlFor="holdDays"
+                description="How long a new hold lasts. The expiry shows on the unit and the deal; the unit is not released automatically."
+              >
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="holdDays"
+                    type="number"
+                    min={1}
+                    max={30}
+                    value={holdDays}
+                    disabled={!canManage || isSaving}
+                    onChange={(e) => setHoldDays(e.target.value)}
+                    className="w-20 tabular-nums"
+                  />
+                  <span className="text-xs text-muted-foreground">days</span>
                 </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </TabsContent>
+              </SettingRow>
+              <SettingRow
+                title="Auto-assign incoming leads"
+                htmlFor="autoAssign"
+                description="Webhook and portal leads are shared round-robin across members. Off: they arrive unassigned for a manager to hand out."
+              >
+                <Switch
+                  id="autoAssign"
+                  checked={autoAssign}
+                  disabled={!canManage || isSaving}
+                  onCheckedChange={setAutoAssign}
+                />
+              </SettingRow>
+              <SettingRow
+                title="Payment schedule on booking"
+                description="Confirming a booking always creates the CLP milestones and demand letter #1 from your DEMAND_LETTER template."
+              >
+                <Badge variant="secondary">Always on</Badge>
+              </SettingRow>
+            </CardContent>
+            <CardFooter className="justify-between gap-3">
+              <p className="text-xs text-muted-foreground">
+                {canManage ? (pipelineDirty ? "Unsaved changes" : "All changes saved") : "Only an owner or admin can change these."}
+              </p>
+              {canManage ? (
+                <Button variant="brand" size="sm" onClick={savePipeline} disabled={!pipelineDirty || isSaving}>
+                  {isSaving ? <LoaderCircle className="size-3.5 animate-spin" /> : null}
+                  Save pipeline settings
+                </Button>
+              ) : null}
+            </CardFooter>
+          </Card>
+        </TabsContent>
 
-      {/* API & Webhooks */}
-      <TabsContent value="api" className="space-y-6">
-        {/* Replaced a placeholder that generated a client-side "est_live_…"
-            string with Math.random() and showed a webhook URL missing the
-            required ?workspace= query — i.e. a key that authenticated nothing
-            and an endpoint that 400'd. LeadIngestSettings uses the real
-            ADMIN-gated server actions and shows the secret exactly once. */}
-        <LeadIngestSettings
-          workspaceId={workspace.id}
-          workspaceSlug={slug}
-          canManage={isOwner}
-        />
-      </TabsContent>
+        {/* Localization */}
+        <TabsContent value="localization" className="space-y-6">
+          <SectionHeading title="Localization" description="Currency, timezone and language defaults." />
 
-      {/* Tags */}
-      <TabsContent value="tags" className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle className=" text-lg">Tags</CardTitle>
-            <CardDescription>
-              Create and manage tags to organize your contacts and deals.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Go to the <a href={`/${slug}/settings/tags`} className="text-primary underline">tag management page</a> to create, edit, and delete tags.
-            </p>
-          </CardContent>
-        </Card>
-      </TabsContent>
+          <Card>
+            <CardContent className="divide-y">
+              <SettingRow title="Primary currency" description="Used for prices, deal values and invoices.">
+                <span className="text-[13px] font-medium">INR (₹) — Indian Rupee</span>
+              </SettingRow>
+              <SettingRow title="Timezone" description="Used for reminders, site visits and reports.">
+                <span className="text-[13px] font-medium">Asia/Kolkata (UTC +05:30)</span>
+              </SettingRow>
+              <SettingRow title="Languages" description="Languages available for templates and messages.">
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge variant="secondary">English</Badge>
+                  <Badge variant="secondary">Gujarati</Badge>
+                  <Badge variant="secondary">Hindi</Badge>
+                </div>
+              </SettingRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Integrations */}
+        <TabsContent value="integrations" className="space-y-6">
+          <SectionHeading
+            title="Integrations"
+            description={
+              whatsappEnabled
+                ? "WhatsApp Cloud API, portal enquiries and lead ads."
+                : "Portal enquiries and lead ads."
+            }
+          />
+
+          <Card>
+            <CardContent className="divide-y">
+              {whatsappEnabled && (
+                <IntegrationRow
+                  icon={<Radio className="size-4.5" />}
+                  tone="bg-status-positive-bg text-status-positive-fg"
+                  title="WhatsApp"
+                  description="Inbound messages land in the Inbox; replies go out through the Cloud API."
+                >
+                  <Button variant="outline" size="sm" render={<Link href={`/${slug}/settings/social`} />}>
+                    Configure
+                  </Button>
+                </IntegrationRow>
+              )}
+              <IntegrationRow
+                icon={<Share2 className="size-4.5" />}
+                tone="bg-status-info-bg text-status-info-fg"
+                title="Website & portal enquiries"
+                description="Lead-form webhooks land in Contacts automatically."
+              >
+                <Badge variant="secondary">Via webhook</Badge>
+              </IntegrationRow>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* API & Webhooks */}
+        <TabsContent value="api" className="space-y-6">
+          <SectionHeading
+            title="API & Webhooks"
+            description="Authenticate lead webhooks from portals, ad platforms and your website."
+          />
+          {/* LeadIngestSettings uses the real ADMIN-gated server actions and
+              shows the secret exactly once. */}
+          <LeadIngestSettings workspaceId={workspace.id} workspaceSlug={slug} canManage={canManage} />
+        </TabsContent>
+      </div>
     </Tabs>
+  )
+}
+
+function IntegrationRow({
+  icon,
+  tone,
+  title,
+  description,
+  children,
+}: {
+  icon: React.ReactNode
+  tone: string
+  title: string
+  description: string
+  children: React.ReactNode
+}) {
+  return (
+    <div className="flex flex-col gap-3 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-8">
+      <div className="flex min-w-0 items-center gap-3">
+        <span className={cn("flex size-9 shrink-0 items-center justify-center rounded-sm", tone)}>{icon}</span>
+        <div className="min-w-0">
+          <p className="text-[13px] font-medium">{title}</p>
+          <p className="text-xs text-muted-foreground">{description}</p>
+        </div>
+      </div>
+      <div className="shrink-0">{children}</div>
+    </div>
   )
 }

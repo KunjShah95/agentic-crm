@@ -124,11 +124,23 @@ export async function linkPlatformNumberAction(
     })
 
     // Persisting the binding on the workspace keeps the legacy router in sync.
+    // Merged into the existing JSON, never assigned over it: `settingsJson` also
+    // holds the lead-ingest secret hash, the auto-ack flag, API key hashes and
+    // pipeline preferences, and a bare `{ whatsappPhoneId }` here silently wiped
+    // all of them the moment a workspace connected WhatsApp.
     await db.workspace
-      .update({
-        where: { id: workspaceId },
-        data: { settingsJson: { whatsappPhoneId: info.phoneNumberId } as never },
-      })
+      .findUnique({ where: { id: workspaceId }, select: { settingsJson: true } })
+      .then((ws) =>
+        db.workspace.update({
+          where: { id: workspaceId },
+          data: {
+            settingsJson: {
+              ...((ws?.settingsJson as Record<string, unknown> | null) ?? {}),
+              whatsappPhoneId: info.phoneNumberId,
+            } as never,
+          },
+        })
+      )
       .catch(() => undefined)
 
     const provider = getProvider("whatsapp")

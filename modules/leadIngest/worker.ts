@@ -14,6 +14,7 @@ import { normalizeLead } from "./normalize"
 import { calcLeadScore } from "./scoring"
 import { pickAssignee, type RoutableMember, type RoutingStrategy } from "./routing"
 import { isAutoAckEnabled } from "./ingress"
+import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
 import { getSourceConfig, isSourceEnabled, isSourceTrusted, isAutoAckEnabled as isSourceAutoAckEnabled } from "./source-config"
 import { scheduleFollowUps } from "@/modules/ai/scheduler"
 import { sendWhatsApp, renderWaTemplate } from "@/modules/whatsapp/adapter"
@@ -90,9 +91,15 @@ export async function processLead(input: ProcessLeadInput): Promise<ProcessLeadR
     })
 
     // 3. Route → assignee
-    const members = (await db.workspaceMember.findMany({ where: { workspaceId } })) as RoutableMember[]
-    const counter = await db.deal.count({ where: { workspaceId } })
-    const assigneeId = pickAssignee(members, { strategy, counter, locality: lead.locality }) ?? members[0]?.userId
+    // Skipped entirely when the workspace turned auto-assign off: the lead
+    // lands unowned and a manager hands it out from Contacts.
+    const ws = await db.workspace.findUnique({ where: { id: workspaceId }, select: { settingsJson: true } })
+    let assigneeId: string | undefined
+    if (readPipelineSettings(ws?.settingsJson).autoAssign) {
+      const members = (await db.workspaceMember.findMany({ where: { workspaceId } })) as RoutableMember[]
+      const counter = await db.deal.count({ where: { workspaceId } })
+      assigneeId = pickAssignee(members, { strategy, counter, locality: lead.locality }) ?? members[0]?.userId
+    }
 
     // 4. Find or create Contact (match by phone or email within workspace)
     const orConds: Array<Record<string, string>> = []

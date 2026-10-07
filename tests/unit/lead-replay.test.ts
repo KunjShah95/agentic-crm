@@ -16,10 +16,14 @@ beforeEach(() => {
 
 describe("replayPending", () => {
   it("reprocesses unprocessed events and reports counts", async () => {
-    db.webhookEvent.findMany.mockResolvedValue([
-      { id: "e1", workspaceId: "w1", source: "META", payload: { lead_id: "1" } },
-      { id: "e2", workspaceId: "w1", source: "PABBLY", payload: { lead_id: "2" } },
-    ])
+    // First call: distinct workspaces with pending events. Second: that
+    // workspace's batch (processBatch queries per workspace).
+    db.webhookEvent.findMany
+      .mockResolvedValueOnce([{ workspaceId: "w1" }])
+      .mockResolvedValueOnce([
+        { id: "e1", workspaceId: "w1", source: "META", payload: { lead_id: "1" } },
+        { id: "e2", workspaceId: "w1", source: "PABBLY", payload: { lead_id: "2" } },
+      ])
     const r = await replayPending()
     expect(worker.processLead).toHaveBeenCalledTimes(2)
     expect(worker.processLead).toHaveBeenCalledWith({ workspaceId: "w1", source: "META", payload: { lead_id: "1" } })
@@ -35,10 +39,12 @@ describe("replayPending", () => {
   })
 
   it("counts failures without throwing (one bad event does not block others)", async () => {
-    db.webhookEvent.findMany.mockResolvedValue([
-      { id: "e1", workspaceId: "w1", source: "META", payload: {} },
-      { id: "e2", workspaceId: "w1", source: "META", payload: {} },
-    ])
+    db.webhookEvent.findMany
+      .mockResolvedValueOnce([{ workspaceId: "w1" }])
+      .mockResolvedValueOnce([
+        { id: "e1", workspaceId: "w1", source: "META", payload: {} },
+        { id: "e2", workspaceId: "w1", source: "META", payload: {} },
+      ])
     worker.processLead.mockRejectedValueOnce(new Error("boom"))
     const r = await replayPending()
     expect(r).toMatchObject({ total: 2, processed: 1, failed: 1 })

@@ -7,6 +7,8 @@ import { ExtendedSettingsTabs } from "@/components/settings/extended-settings-ta
 import { PageHeader } from "@/components/shell/page-header"
 import { Badge } from "@/components/ui/badge"
 import { whatsappEnabled } from "@/modules/whatsapp/config"
+import { hasMinRole } from "@/lib/permissions"
+import { readPipelineSettings } from "@/modules/workspace/pipeline-settings"
 
 export const metadata: Metadata = { title: "Workspace settings" }
 
@@ -37,16 +39,35 @@ export default async function WorkspaceSettingsPage({
   if (!membership) notFound()
 
   const isOwner = membership.role === "OWNER"
+  const canManage = hasMinRole(membership.role, "ADMIN")
+  const pipeline = readPipelineSettings(workspace.settingsJson)
 
   return (
-    <div className="flex max-w-4xl flex-col gap-6">
+    <div className="flex max-w-5xl flex-col gap-6">
       <PageHeader
         title="Workspace Settings"
         description={<>Manage preferences, integrations, pipeline parameters, and security for {workspace.name.replace(/\.*$/, "")}.</>}
         badge={<Badge className="bg-brand-solid text-brand-foreground capitalize">{workspace.plan} Plan</Badge>}
       />
 
-      <ExtendedSettingsTabs workspace={workspace} slug={slug} isOwner={isOwner} whatsappEnabled={whatsappEnabled()} />
+      {/* Picked, not spread: the full row carries `settingsJson`, which holds
+          the ingest secret hash and API key hashes, and anything handed to a
+          client component is serialized into the page payload. */}
+      <ExtendedSettingsTabs
+        workspace={{
+          id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug,
+          plan: workspace.plan,
+          createdAt: workspace.createdAt,
+          _count: workspace._count,
+        }}
+        slug={slug}
+        isOwner={isOwner}
+        canManage={canManage}
+        pipeline={pipeline}
+        whatsappEnabled={whatsappEnabled()}
+      />
     </div>
   )
 }
