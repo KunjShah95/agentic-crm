@@ -6,7 +6,7 @@ Estate360 is built by Estate360 Technologies Pvt. Ltd. in Ahmedabad, Gujarat, In
 
 Key facts:
 
-- Pricing starts at ₹1,499 per month. Plans are listed at https://estate360.vercel.com/pricing.
+- Pricing starts at ₹1,499 per month. Plans are listed at http://localhost:3000/pricing.
 - Free trial: 14 days, no card required.
 - Languages: English, Gujarati, Hindi.
 - Compliance: RERA registration numbers carried on generated documents; DPDP Act 2023 privacy policy.
@@ -14,23 +14,23 @@ Key facts:
 
 ## Pages
 
-- [Real Estate CRM for Indian Sales Teams](https://estate360.vercel.com/): : One CRM for enquiries, WhatsApp, site visits, inventory, bookings and collections. Built for Indian builders and sales teams. Start free, no card.
-- [Product](https://estate360.vercel.com/product): : Inventory, cost sheets, CLP milestones, GPS site visits, broker scoping, RERA documents and a WhatsApp inbox in Gujarati, Hindi and English.
-- [Pricing](https://estate360.vercel.com/pricing): : Straightforward pricing for Indian real-estate teams. Every plan includes RERA documents, CLP demand letters, GPS site visits and WhatsApp.
-- [Contact](https://estate360.vercel.com/contact): : Questions about Estate360, pricing, or a pilot for your sales team? Reach us on WhatsApp, email, or phone. We reply within one working day.
-- [Privacy Policy](https://estate360.vercel.com/privacy): : How Estate360 collects, uses, stores and deletes personal data, including DPDP Act 2023 rights and where your data is stored.
-- [Terms of Service](https://estate360.vercel.com/terms): : The terms governing your use of Estate360, including acceptable use, data ownership, subscriptions, and termination.
-- [Estate360 vs Excel vs Generic CRMs](https://estate360.vercel.com/compare): : Honest comparisons for Indian real-estate teams deciding between Excel, a generic CRM, and a builder-first CRM like Estate360.
-- [Estate360 vs Excel + WhatsApp for Builders](https://estate360.vercel.com/compare/excel): : Where an Excel inventory and WhatsApp groups stop working for a sales team: audit trail, broker scoping, GPS site visits, and CLP collections.
-- [Estate360 vs a Generic CRM for Real Estate](https://estate360.vercel.com/compare/generic-crm): : Generic CRMs model contacts and deals; Estate360 models units, cost sheets, CLP milestones and RERA documents — built for Indian residential sales.
-- [Start Free](https://estate360.vercel.com/signup): : Create your workspace and start tracking leads, inventory and bookings. Fourteen days free, no card required, export your data any time.
+- [Real Estate CRM for Indian Sales Teams](http://localhost:3000/): : One CRM for enquiries, WhatsApp, site visits, inventory, bookings and collections. Built for Indian builders and sales teams. Start free, no card.
+- [Product](http://localhost:3000/product): : Inventory, cost sheets, CLP milestones, GPS site visits, broker scoping, RERA documents and a WhatsApp inbox in Gujarati, Hindi and English.
+- [Pricing](http://localhost:3000/pricing): : Straightforward pricing for Indian real-estate teams. Every plan includes RERA documents, CLP demand letters, GPS site visits and WhatsApp.
+- [Contact](http://localhost:3000/contact): : Questions about Estate360, pricing, or a pilot for your sales team? Reach us on WhatsApp, email, or phone. We reply within one working day.
+- [Privacy Policy](http://localhost:3000/privacy): : How Estate360 collects, uses, stores and deletes personal data, including DPDP Act 2023 rights and where your data is stored.
+- [Terms of Service](http://localhost:3000/terms): : The terms governing your use of Estate360, including acceptable use, data ownership, subscriptions, and termination.
+- [Estate360 vs Excel vs Generic CRMs](http://localhost:3000/compare): : Honest comparisons for Indian real-estate teams deciding between Excel, a generic CRM, and a builder-first CRM like Estate360.
+- [Estate360 vs Excel + WhatsApp for Builders](http://localhost:3000/compare/excel): : Where an Excel inventory and WhatsApp groups stop working for a sales team: audit trail, broker scoping, GPS site visits, and CLP collections.
+- [Estate360 vs a Generic CRM for Real Estate](http://localhost:3000/compare/generic-crm): : Generic CRMs model contacts and deals; Estate360 models units, cost sheets, CLP milestones and RERA documents — built for Indian residential sales.
+- [Start Free](http://localhost:3000/signup): : Create your workspace and start tracking leads, inventory and bookings. Fourteen days free, no card required, export your data any time.
 
 ## Reference
 
-- [Full product and pricing detail](https://estate360.vercel.com/llms-full.txt): Every feature, the full FAQ, and plan-by-plan inclusions in one file.
-- [Privacy Policy](https://estate360.vercel.com/privacy): Data collection, storage, DPDP Act 2023 rights.
-- [Terms of Service](https://estate360.vercel.com/terms): Acceptable use, data ownership, termination.
+- [Full product and pricing detail](http://localhost:3000/llms-full.txt): Every feature, the full FAQ, and plan-by-plan inclusions in one file.
+- [Privacy Policy](http://localhost:3000/privacy): Data collection, storage, DPDP Act 2023 rights.
+- [Terms of Service](http://localhost:3000/terms): Acceptable use, data ownership, termination.
 
 ## Optional
 
-- [Contact](https://estate360.vercel.com/contact): Ask about a pilot or a migration from spreadsheets.
+- [Contact](http://localhost:3000/contact): Ask about a pilot or a migration from spreadsheets.

@@ -285,6 +285,6 @@ export const FAQ = [
   },
   {
     q: "Is there a free trial?",
-    a: "Fourteen days, no card required. The trial is a real workspace, not a read-only demo, and you can export your data at any point during it.",
+    a: "Fourteen days of the Team plan, no card required. The trial is a real workspace, not a read-only demo. When it ends, the workspace drops to Free limits until you choose a plan; nothing is deleted, and you can export your data at any point.",
   },
 ] as const

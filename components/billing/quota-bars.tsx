@@ -1,4 +1,4 @@
-import { PLAN_LIMITS, type PlanName } from "@/modules/billing/limits"
+import { PLAN_LABELS, PLAN_LIMITS, UNLIMITED, type PlanName } from "@/modules/billing/limits"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
@@ -30,6 +30,16 @@ function Bar({
   limit: number
   periodLabel: string
 }) {
+  if (limit === UNLIMITED) {
+    return (
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{label}</span>
+        <Badge variant="secondary" className="tabular-nums">
+          {used.toLocaleString()} · Unlimited
+        </Badge>
+      </div>
+    )
+  }
   const value = pct(used, limit)
   const over = used >= limit
   return (
@@ -56,7 +66,7 @@ export function QuotaBars({ plan, counters }: QuotaBarsProps) {
       <CardHeader>
         <CardTitle>Usage</CardTitle>
         <CardDescription>
-          Current period usage vs plan limits. Plan: <span className="capitalize font-medium text-foreground">{plan}</span>
+          Current period usage vs plan limits. Plan: <span className="font-medium text-foreground">{PLAN_LABELS[plan]}</span>
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">

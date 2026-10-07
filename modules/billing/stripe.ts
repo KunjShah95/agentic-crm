@@ -8,8 +8,17 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? "sk_test_dummy
 })
 
 export const PRICE_TO_PLAN: Record<string, PlanName> = {
+  [process.env.STRIPE_PRICE_BUILDER ?? "price_builder_xxx"]: "builder",
   [process.env.STRIPE_PRICE_PRO ?? "price_pro_xxx"]: "pro",
   [process.env.STRIPE_PRICE_SCALE ?? "price_scale_xxx"]: "scale",
+}
+
+/** Env price id for a paid plan, or null when billing is not configured for it. */
+export function priceIdForPlan(plan: string): string | null {
+  if (plan === "builder") return process.env.STRIPE_PRICE_BUILDER ?? null
+  if (plan === "pro") return process.env.STRIPE_PRICE_PRO ?? null
+  if (plan === "scale") return process.env.STRIPE_PRICE_SCALE ?? null
+  return null
 }
 
 export function mapStripePlan(priceId: string): PlanName {
@@ -17,13 +26,21 @@ export function mapStripePlan(priceId: string): PlanName {
   const mapped = PRICE_TO_PLAN[priceId]
   if (mapped) return mapped
   // Fallback heuristics: handle legacy hardcoded ids or substring matches
+  if (priceId === "price_builder" || priceId.includes("price_builder_")) return "builder"
   if (priceId === "price_pro" || priceId.includes("price_pro_")) return "pro"
   if (priceId === "price_scale" || priceId.includes("price_scale_")) return "scale"
   return "free"
 }
 
-async function syncWorkspacePlan(workspaceId: string, plan: PlanName) {
-  await db.workspace.update({ where: { id: workspaceId }, data: { plan } })
+/**
+ * Mirrors the subscription onto `Workspace.plan`. Only a paying status writes a
+ * paid plan: `resolveEffectivePlan` treats a non-free `Workspace.plan` as paid,
+ * so writing "pro" for a `canceled` or `unpaid` subscription would have granted
+ * Team limits indefinitely to a customer who stopped paying.
+ */
+async function syncWorkspacePlan(workspaceId: string, plan: PlanName, status = "active") {
+  const paying = status === "active" || status === "trialing" || status === "past_due"
+  await db.workspace.update({ where: { id: workspaceId }, data: { plan: paying ? plan : "free" } })
 }
 
 export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
@@ -123,7 +140,7 @@ export async function handleStripeEvent(event: Stripe.Event): Promise<void> {
           currentPeriodEnd: currentPeriodEnd ?? undefined,
         },
       })
-      await syncWorkspacePlan(workspaceId, plan)
+      await syncWorkspacePlan(workspaceId, plan, status)
       break
     }
 

@@ -1,5 +1,5 @@
 import { db } from "@/lib/db"
-import { PLAN_LIMITS } from "./limits"
+import { PLAN_LIMITS, resolveEffectivePlan } from "./limits"
 import { AppError } from "@/lib/errors"
 
 export function periodKey(d = new Date()): string {
@@ -39,7 +39,8 @@ export async function requireQuota(
     where: { id: workspaceId },
     include: { subscription: true },
   })
-  const plan = (ws?.subscription?.plan ?? ws?.plan ?? "free") as keyof typeof PLAN_LIMITS
+  // Trial-aware: Team limits for 14 days from creation, then Free unless paid.
+  const plan = ws ? resolveEffectivePlan(ws, ws.subscription).plan : "free"
   const limits = PLAN_LIMITS[plan] ?? PLAN_LIMITS.free
   const key =
     kind === "social_messages"
@@ -49,6 +50,26 @@ export async function requireQuota(
         : kind === "contacts"
           ? limits.maxContacts
           : limits.maxSeats
+
+  // Seats are a headcount, not a metered event: nothing increments a "seats"
+  // counter, so reading one let every plan invite without limit. Count the
+  // members plus invites still waiting to be accepted.
+  if (kind === "seats") {
+    const [members, pending] = await Promise.all([
+      client.workspaceMember.count({ where: { workspaceId } }),
+      client.workspaceInvite.count({
+        where: { workspaceId, accepted: false, expiresAt: { gt: new Date() } },
+      }),
+    ])
+    if (isQuotaExceeded(members + pending, key)) {
+      throw new AppError(
+        "QUOTA_EXCEEDED",
+        `Your plan includes ${key} seat${key === 1 ? "" : "s"}. Upgrade to add more people.`,
+        402
+      )
+    }
+    return
+  }
 
   const period = periodKeyFor(kind)
 

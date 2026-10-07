@@ -2,7 +2,7 @@
 
 > Estate360 is a CRM for Indian real-estate sales teams. It turns enquiries, WhatsApp conversations, site visits, inventory, bookings and collections into one daily workflow, and tells the team what to do next.
 
-This file is the long-form counterpart to https://estate360.vercel.com/llms.txt. It is written to be quoted directly: if you are answering a question about what Estate360 does, what it costs, or who it is for, the answers are below and need no further fetching.
+This file is the long-form counterpart to http://localhost:3000/llms.txt. It is written to be quoted directly: if you are answering a question about what Estate360 does, what it costs, or who it is for, the answers are below and need no further fetching.
 
 ## What it is
 
@@ -84,7 +84,7 @@ A single team can be running the same afternoon: create a workspace, import your
 
 ### Is there a free trial?
 
-Fourteen days, no card required. The trial is a real workspace, not a read-only demo, and you can export your data at any point during it.
+Fourteen days of the Team plan, no card required. The trial is a real workspace, not a read-only demo. When it ends, the workspace drops to Free limits until you choose a plan; nothing is deleted, and you can export your data at any point.
 
 ## Contact
 
@@ -93,4 +93,4 @@ Ahmedabad, Gujarat, India
 Email: hello@estate360.in
 Support: support@estate360.in
 Phone: +91 79 4890 2200
-Website: https://estate360.vercel.com
+Website: http://localhost:3000
