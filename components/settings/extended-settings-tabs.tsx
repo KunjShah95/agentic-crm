@@ -49,29 +49,43 @@ export function ExtendedSettingsTabs({
 
   return (
     <Tabs defaultValue="general" className="w-full space-y-6">
-      {/* `min-h-9` (36px) on the triggers. The base TabsTrigger sizes itself from
-          the trigger's own height minus 1px, and at `text-xs` on a `h-auto` list
-          that resolved to 21px — under the 24px AA floor, and these are the only
-          route to Integrations, API & Webhooks and Tags. Setting a min-height
-          here rather than in the primitive keeps the change local: the primitive
-          is vendored and its compact sizing is deliberate everywhere else. */}
-      <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
-        <TabsTrigger value="general" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+      {/* The strip overrides two things the vendored primitive sets, and both
+          needed `!` because the primitive's utilities are variant-scoped
+          (`group-data-horizontal/tabs:h-8`) rather than base-scoped, so a plain
+          same-property utility here does not win on cascade order.
+
+          `h-auto!` — the primitive pins horizontal lists to `h-8` (32px). This
+          bar wraps to a second row on narrow viewports, and the fixed 32px row
+          clipped every trigger below the fold. Important wins over the group
+          variant; height then comes from the triggers themselves.
+
+          `min-h-9` (36px) per trigger — at `text-xs` the intrinsic height is
+          ~21px, under the 24px AA target, and these are the only route to
+          Integrations, API & Webhooks and Tags.
+
+          `flex-none` — the primitive's `flex-1` makes every trigger claim an
+          equal share of the full-width row, so a four-character "Tags" was as
+          wide as "API & Webhooks" and the labels drifted apart. Triggers should
+          hug their text; `justify-start` on the list then does what it says.
+          `px-2.5` replaces the primitive's `px-1.5`, which is tight against a
+          14px icon at this text size. */}
+      <TabsList className="flex h-auto! w-full flex-wrap justify-start gap-1 rounded-sm border bg-muted/50 p-1">
+        <TabsTrigger value="general" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Building2 className="mr-1.5 size-3.5" /> General
         </TabsTrigger>
-        <TabsTrigger value="pipeline" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="pipeline" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Sliders className="mr-1.5 size-3.5" /> Pipeline & RERA
         </TabsTrigger>
-        <TabsTrigger value="localization" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="localization" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Globe className="mr-1.5 size-3.5" /> Localization
         </TabsTrigger>
-        <TabsTrigger value="integrations" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="integrations" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <BellRing className="mr-1.5 size-3.5" /> Integrations
         </TabsTrigger>
-        <TabsTrigger value="api" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="api" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Key className="mr-1.5 size-3.5" /> API & Webhooks
         </TabsTrigger>
-        <TabsTrigger value="tags" className="min-h-9 rounded-sm text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
+        <TabsTrigger value="tags" className="min-h-9 flex-none rounded-sm px-2.5 text-xs font-medium data-[state=active]:bg-card data-[state=active]:shadow-xs">
           <Tag className="mr-1.5 size-3.5" /> Tags
         </TabsTrigger>
       </TabsList>
